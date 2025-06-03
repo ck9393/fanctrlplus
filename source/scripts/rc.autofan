@@ -1,0 +1,116 @@
+#!/bin/bash
+#=======================================================================================
+#  Modified for fanctrlplus: 自动侦测 fan、以 disks include 模式控制 PWM 风扇
+#=======================================================================================
+plugin=dynamix.system.autofan
+script=autofan
+cfg_path=/boot/config/plugins/$plugin
+
+log() {
+  logger -t fanctrlplus "$1"
+}
+
+get_fan_path() {
+  local pwm_path="$1"
+  local idx="${pwm_path##*pwm}"
+  local fan_path="${pwm_path%/}/fan${idx}_input"
+  [[ -e "$fan_path" ]] && echo "$fan_path" || echo ""
+}
+
+read_temp() {
+  local disk="$1"
+  local dev="/dev/disk/by-id/$disk"
+  local path=$(realpath "$dev")
+  [[ ! -b "$path" ]] && return
+  if smartctl -n standby -A "$path" 2>&1 | grep -q "Device is in STANDBY"; then
+    return  # skip spun down disk
+  fi
+  if [[ "$path" == /dev/nvme* ]]; then
+    smartctl -A "$path" | awk '/Temperature:/ {print $2; exit}'
+  else
+    smartctl -A "$path" | awk '/^194|Temperature_Celsius/ {print $10; exit}'
+  fi
+}
+
+calculate_pwm() {
+  local temp="$1" low="$2" high="$3" min_pwm="$4"
+  if (( temp <= low )); then
+    echo "$min_pwm"
+  elif (( temp >= high )); then
+    echo 255
+  else
+    local range=$((high - low))
+    local delta=$((temp - low))
+    echo $((min_pwm + delta * (255 - min_pwm) / range))
+  fi
+}
+
+autofan.start() {
+  for cfg in $cfg_path/$plugin*.cfg; do
+    source "$cfg"
+    [[ "$service" != "1" ]] && continue
+
+    # 自动侦测 fan
+    if [[ -z "$fan" && -n "$controller" ]]; then
+      fan=$(get_fan_path "$controller")
+    fi
+
+    [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
+
+    prev_pwm=-1
+
+    while true; do
+      IFS=',' read -ra disks_list <<< "$disks"
+      max_temp=0
+
+      for disk in "${disks_list[@]}"; do
+        temp=$(read_temp "$disk")
+        [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
+      done
+
+      pwm_val=$(calculate_pwm "$max_temp" "$low" "$high" "$pwm")
+
+      if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
+        echo "$pwm_val" > "$controller"
+        sleep 4
+        rpm=$(cat "$fan" 2>/dev/null || echo 0)
+        log "Temp: ${max_temp}°C, PWM: $pwm_val, RPM: $rpm"
+        prev_pwm="$pwm_val"
+      fi
+
+      sleep "$((interval * 60))"
+    done &
+    echo "$script started for [$controller → $fan]"
+  done
+}
+
+autofan.stop() {
+  pkill -f "$script"
+  for cfg in $cfg_path/$plugin*.cfg; do
+    source "$cfg"
+    [[ -n "$controller" ]] && echo 255 > "$controller"
+  done
+  echo "$script stopped"
+}
+
+autofan.speed() {
+  for cfg in $cfg_path/$plugin*.cfg; do
+    source "$cfg"
+    [[ -f "$controller" && $(cat "$fan" 2>/dev/null) -gt 0 ]] && \
+      echo -n "$(( $(cat "$controller") * 100 / 255 )) " || echo -n "0 "
+  done
+}
+
+autofan.restart() {
+  autofan.stop
+  sleep 2
+  autofan.start
+}
+
+case "$1" in
+  'start')   autofan.start ;;
+  'stop')    autofan.stop ;;
+  'speed')   autofan.speed ;;
+  'restart') autofan.restart ;;
+  *)         echo "Usage: $(basename "$0") start|stop|restart|speed" ;;
+esac

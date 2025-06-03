@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<PLUGIN name="fanctrlplus" author="ck9393" version="2025.06.04" pluginURL="https://github.com/ck9393/fanctrlplus" support="https://github.com/ck9393/fanctrlplus/issues">
+  <display>
+    <Title>FanCtrl Plus</Title>
+    <Author>ck9393</Author>
+    <Category>System</Category>
+  </display>
+
+  <!-- 页面 UI -->
+  <file>
+    <source>source/FanSettings.page</source>
+    <destination>/usr/local/emhttp/plugins/fanctrlplus/FanSettings.page</destination>
+  </file>
+
+  <!-- 页面处理逻辑 -->
+  <file>
+    <source>source/include/SystemFan.php</source>
+    <destination>/usr/local/emhttp/plugins/fanctrlplus/include/SystemFan.php</destination>
+  </file>
+
+  <file>
+    <source>source/include/update.autofan.php</source>
+    <destination>/usr/local/emhttp/plugins/fanctrlplus/include/update.autofan.php</destination>
+  </file>
+
+  <!-- 风扇控制主脚本 -->
+  <file>
+    <source>source/scripts/rc.autofan</source>
+    <destination>/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan</destination>
+    <mode>0755</mode>
+  </file>
+
+  <!-- 默认配置 -->
+  <file>
+    <source>source/default.cfg</source>
+    <destination>/boot/config/plugins/fanctrlplus/fanctrlplus.cfg</destination>
+  </file>
+
+  <!-- 插件图标（左侧 Settings 图标） -->
+  <file>
+    <source>source/icons/fanautocontrol.png</source>
+    <destination>/usr/local/emhttp/plugins/fanctrlplus/icons/fanautocontrol.png</destination>
+  </file>
+
+  <!-- 插件顶部标题图标（页面上方） -->
+  <file>
+    <source>source/images/dynamix.system.autofan.png</source>
+    <destination>/usr/local/emhttp/plugins/fanctrlplus/images/dynamix.system.autofan.png</destination>
+  </file>
+
+  <postinstall>
+    echo "[fanctrlplus] installed"
+  </postinstall>
+
+  <postremove>
+    rm -rf /usr/local/emhttp/plugins/fanctrlplus
+    rm -rf /boot/config/plugins/fanctrlplus
+  </postremove>
+</PLUGIN>

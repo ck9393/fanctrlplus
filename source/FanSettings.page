@@ -1,0 +1,165 @@
+Menu="Utilities"
+Title="Fan Auto Control"
+Icon="dynamix.system.autofan.png"
+---
+<?PHP
+$plugin = "dynamix.system.autofan";
+
+function parse_autofan_cfg($plugin,$index) {
+  global $docroot;
+  $ram = "$docroot/plugins/$plugin/default.cfg";
+  $rom = "/boot/config/plugins/$plugin/{$plugin}{$index}.cfg";
+  $cfg = file_exists($ram) ? parse_ini_file($ram) : [];
+  return file_exists($rom) ? array_replace_recursive($cfg, parse_ini_file($rom)) : $cfg;
+}
+
+$index  = $_POST['index'] ?: '';
+$cfg    = parse_autofan_cfg($plugin,$index);
+$sName  = "autofan";
+$fName  = "$docroot/plugins/$plugin/scripts/$sName";
+$width  = strstr('gray,azure',$display['theme']) ? 305 : 300;
+
+function list_pwm() {
+  $out = [];
+  exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
+  foreach ($chips as $chip) {
+    $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
+    foreach (glob("$chip/pwm[0-9]") as $pwm) {
+      $out[] = ['chip'=>$name, 'name'=>basename($pwm), 'sensor'=>$pwm];
+    }
+  }
+  return $out;
+}
+
+function list_valid_disks_by_id() {
+  $seen = [];  // 记录实际设备路径，避免重复
+  $result = [];
+  foreach (glob("/dev/disk/by-id/*") as $dev) {
+    if (!is_link($dev)) continue;
+    if (strpos($dev, "part") !== false) continue;  // 排除分区
+
+    $real = realpath($dev);
+    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
+
+    // 排除 Flash Drive
+    if (strpos($real, "/dev/sd") !== false) {
+      $mountinfo = shell_exec("lsblk -no MOUNTPOINT $real");
+      if (strpos($mountinfo, "/boot") !== false) continue;
+    }
+
+    // 若该路径已存在，跳过重复
+    if (in_array($real, $seen)) continue;
+    $seen[] = $real;
+
+    $result[] = ['id' => basename($dev), 'dev' => $real];
+  }
+  return $result;
+}
+?>
+<script>
+function detectFanLow() {
+  var pwm = $('select[name=controller]').val();
+  var fan = $('input[name=fan]').val();
+  if (pwm && fan) {
+    $('input[name=pwm]').val('Detecting...');
+    $.get('/plugins/<?=$plugin?>/include/SystemFan.php', {op:'pwm', pwm:pwm, fan:fan}, function(data) {
+      $('input[name=pwm]').val(data);
+    });
+  }
+}
+function pauseFan(pwm, btn) {
+  $(btn).prop('disabled', true).text("Pausing...");
+  $.get('/plugins/<?=$plugin?>/include/SystemFan.php', {op:'pause', pwm:pwm}, function() {
+    let seconds = 30;
+    let interval = setInterval(function() {
+      if (seconds <= 0) {
+        clearInterval(interval);
+        $(btn).text("Pause 30s").prop('disabled', false);
+      } else {
+        $(btn).text("Paused (" + seconds + "s)");
+        seconds--;
+      }
+    }, 1000);
+  });
+}
+$(function() {
+  $('#s1').dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
+});
+</script>
+
+<form method="POST" action="/update.php" target="progressFrame">
+  <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin.$index?>.cfg">
+  <input type="hidden" name="#include" value="plugins/<?=$plugin?>/include/update.autofan.php">
+  <input type="hidden" name="#prefix" value="service=s&controller=c&fan=f&pwm=l&low=t&high=T&interval=m&disks=e">
+
+  <table>
+    <tr>
+      <td>Fan Control:</td>
+      <td>
+        <select name="service">
+          <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
+          <option value="1" <?=($cfg['service']??'')=='1'?'selected':''?>>Enabled</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr>
+      <td>PWM Controller:</td>
+      <td>
+        <select name="controller">
+          <?foreach (list_pwm() as $pwm):?>
+          <option value="<?=$pwm['sensor']?>" <?=($cfg['controller'] ?? '')==$pwm['sensor'] ? 'selected' : ''?>>
+            <?=$pwm['chip']?> - <?=$pwm['name']?>
+          </option>
+          <?endforeach;?>
+        </select>
+        <button type="button" onclick="pauseFan($('select[name=controller]').val(), this)">Pause 30s</button>
+      </td>
+    </tr>
+
+    <tr>
+      <td>Min PWM:</td>
+      <td>
+        <input type="text" name="pwm" value="<?=$cfg['pwm']??''?>" placeholder="">
+        <button type="button" onclick="detectFanLow()">Detect</button>
+      </td>
+    </tr>
+
+    <tr>
+      <td>Low Temp (°C):</td>
+      <td><input type="number" name="low" min="0" max="100" value="<?=$cfg['low']??''?>"></td>
+    </tr>
+
+    <tr>
+      <td>High Temp (°C):</td>
+      <td><input type="number" name="high" min="0" max="100" value="<?=$cfg['high']??''?>"></td>
+    </tr>
+
+    <tr>
+      <td>Refresh Interval (min):</td>
+      <td><input type="number" name="interval" min="1" max="60" value="<?=$cfg['interval']??''?>"></td>
+    </tr>
+
+    <tr>
+      <td>Include Disks (by-id):</td>
+      <td>
+        <select id="s1" name="disks" multiple style="width:400px;">
+          <?foreach (list_valid_disks_by_id() as $d):
+            $id = $d['id'];
+            $selected = in_array($id, explode(',', $cfg['disks'] ?? '')) ? 'selected' : '';
+          ?>
+            <option value="<?=$id?>" <?=$selected?>><?=$id?> → <?=$d['dev']?></option>
+          <?endforeach;?>
+        </select>
+      </td>
+    </tr>
+
+    <tr>
+      <td></td>
+      <td>
+        <input type="submit" name="#apply" value="Apply">
+        <input type="submit" name="#default" value="Default">
+      </td>
+    </tr>
+  </table>
+</form>
