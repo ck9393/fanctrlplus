@@ -118,8 +118,11 @@ $(function() {
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
     <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>" class="cfg-file">
     <fieldset style="margin:10px; padding:10px; border:1px solid #ccc; position:relative;">
+      <legend style="font-weight:bold; margin:0 100px 0 10px; padding:4px 0; display:inline-block; width:auto;">
+        <?=basename($cfg['controller']??'未知')?>
+      </legend>
       <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
-      <div style="font-weight:bold; padding-bottom:8px;">PWM: <?=basename($cfg['controller']??'未知')?></div>
+
       <table style="width:100%;">
         <tr>
           <td style="width:140px;">Fan Control:</td>
