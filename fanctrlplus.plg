@@ -4,21 +4,51 @@
   <!ENTITY version "2025.06.05">
   <!ENTITY author "ck9393">
   <!ENTITY launch "FanCtrl Plus">
+  <!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus/raw/main">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.9.0">
-  <!-- 插件只执行安装目录确认，无需下载 -->
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
+  <!-- 安装 fanctrlplus.page -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/fanctrlplus.page">
+    <URL>&pluginURL;/fanctrlplus.page</URL>
+  </FILE>
+
+  <!-- 安装 default.cfg -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/default.cfg">
+    <URL>&pluginURL;/default.cfg</URL>
+  </FILE>
+
+  <!-- 安装 icon 图标 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/images/fanctrlplus.png">
+    <URL>&pluginURL;/images/fanctrlplus.png</URL>
+  </FILE>
+
+  <!-- 安装 logic/php 脚本 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/include/FanctrlLogic.php">
+    <URL>&pluginURL;/include/FanctrlLogic.php</URL>
+  </FILE>
+
+  <!-- 安装后台控制脚本 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/scripts/rc.autofan">
+    <URL>&pluginURL;/scripts/rc.autofan</URL>
+  </FILE>
+
+  <!-- 安装更新处理脚本 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/include/update.fanctrlplus.php">
+    <URL>&pluginURL;/include/update.fanctrlplus.php</URL>
+  </FILE>
+
+  <!-- 安装成功后打印信息 -->
   <FILE Run="/bin/bash">
     <INLINE>
-      echo "[&name;] Plugin installed locally."
+      echo "[fanctrlplus] Plugin installed."
     </INLINE>
   </FILE>
 
-  <!-- 卸载脚本 -->
+  <!-- 卸载逻辑 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
-      rm -rf /usr/local/emhttp/plugins/&name;
-      rm -f /boot/config/plugins/&name;.plg
+      rm -rf /usr/local/emhttp/plugins/fanctrlplus
     </INLINE>
   </FILE>
 </PLUGIN>
