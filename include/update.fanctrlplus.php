@@ -1,39 +1,34 @@
 <?PHP
-$plugin  = 'fanctrlplus';
-$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+$plugin = 'fanctrlplus';
+$cfgpath = "/boot/config/plugins/$plugin";
 
-$files = $_POST['#file'] ?? [];
-$prefix = [];
-parse_str($_POST['#prefix'] ?? '', $prefix);
-
-// 遍历每组配置（支持多个）
-foreach ($files as $i => $file) {
-  $path = "/boot/config/plugins/$file";
-  $new = [];
-
-  foreach ($_POST as $key => $val) {
-    if ($key[0] == '#') continue;
-
-    // 处理数组参数：如 service[0]、controller[0]...
-    if (is_array($val) && isset($val[$i])) {
-      $v = $val[$i];
-      if (is_array($v)) {
-        $v = implode(',', $v);
-      }
-      $new[$key] = $v;
-    }
-  }
-
-  // 写入该 cfg 文件
-  file_put_contents($path, '');
-  foreach ($new as $k => $v) {
-    $v = str_replace('"', '\"', $v);
-    file_put_contents($path, "$k=\"$v\"\n", FILE_APPEND);
-  }
+if (!is_dir($cfgpath)) {
+  mkdir($cfgpath, 0777, true);
 }
 
-// 重启风扇控制脚本
-$autofan = "$docroot/plugins/$plugin/scripts/rc.autofan";
-exec("$autofan stop >/dev/null 2>&1");
-exec("nohup bash -c '$autofan start' >/dev/null 2>&1 &");
+$index = 0;
+while (isset($_POST["controller"][$index])) {
+  $cfg = [
+    'service'   => $_POST['service'][$index] ?? '0',
+    'controller'=> $_POST['controller'][$index] ?? '',
+    'pwm'       => $_POST['pwm'][$index] ?? '',
+    'low'       => $_POST['low'][$index] ?? '',
+    'high'      => $_POST['high'][$index] ?? '',
+    'interval'  => $_POST['interval'][$index] ?? '',
+    'disks'     => isset($_POST['disks'][$index]) ? implode(',', $_POST['disks'][$index]) : ''
+  ];
+
+  $filename = "$cfgpath/{$plugin}_{$index}.cfg";
+  $content = '';
+  foreach ($cfg as $k => $v) {
+    $content .= "$k=\"$v\"\n";
+  }
+
+  file_put_contents($filename, $content);
+  $index++;
+}
+
+// 停止旧进程并重新加载脚本
+exec("/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan stop");
+exec("/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start");
 ?>
