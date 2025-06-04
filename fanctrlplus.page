@@ -118,19 +118,6 @@ $(function() {
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
     <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>" class="cfg-file">
     <fieldset style="margin:10px; padding:20px 10px 10px 10px; border:1px solid #ccc; position:relative;">
-      <div style="
-        position:absolute;
-        top:-10px;
-        left:12px;
-        font-size:15px;
-        font-weight:bold;
-        padding:0 8px;
-        background:var(--background,#fff);
-        line-height:20px;
-        border-radius:4px;
-     ">
-        <?=basename($cfg['controller']??'未知')?>
-     </div>
       <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
 
       <table style="width:100%;">
