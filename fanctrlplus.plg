@@ -1,15 +1,54 @@
-<PLUGIN name="fanctrlplus" author="ck9393" version="2025.06.04">
-  <CHANGES>
-    Initial release
-  </CHANGES>
-  <!-- 安装 include 目录下的 PHP 文件 -->
-  <FILE Name="/boot/config/plugins/fanctrlplus/include/FanctrlLogic.php" Target="/usr/local/emhttp/plugins/fanctrlplus/include/FanctrlLogic.php" />
-  <FILE Name="/boot/config/plugins/fanctrlplus/include/update.fanctrlplus.php" Target="/usr/local/emhttp/plugins/fanctrlplus/include/update.fanctrlplus.php" />
-  <!-- 安装 scripts 目录下的 Shell 脚本 -->
-  <FILE Name="/boot/config/plugins/fanctrlplus/scripts/rc.autofan" Target="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan" Mode="0755" />
-  <!-- 安装主页面文件 -->
-  <FILE Name="/boot/config/plugins/fanctrlplus/fanctrlplus.page" Target="/usr/local/emhttp/plugins/fanctrlplus/fanctrlplus.page" />
-  <!-- 安装默认配置（如有需要可以取消注释） -->
-  <!-- <FILE Name="/boot/config/plugins/fanctrlplus/default.cfg" Target="/usr/local/emhttp/plugins/fanctrlplus/default.cfg" /> -->
-  <!-- 安装 icons/images 可选，建议你后续完善时再加 -->
+<?xml version="1.0"?>
+<!DOCTYPE PLUGIN [
+  <!ENTITY name "fanctrlplus">
+  <!ENTITY version "2025.06.05">
+  <!ENTITY author "ck9393">
+  <!ENTITY launch "FanCtrl Plus">
+  <!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus">
+]>
+
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
+
+  <!-- 插件主页面 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/fanctrlplus.page">
+    <URL>&pluginURL;/raw/main/fanctrlplus.page</URL>
+  </FILE>
+
+  <!-- 插件图标 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/fanctrlplus.png">
+    <URL>&pluginURL;/raw/main/icons/fanctrlplus.png</URL>
+  </FILE>
+
+  <!-- Include 脚本 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/include/FanctrlLogic.php">
+    <URL>&pluginURL;/raw/main/include/FanctrlLogic.php</URL>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/&name;/include/update.fanctrlplus.php">
+    <URL>&pluginURL;/raw/main/include/update.fanctrlplus.php</URL>
+  </FILE>
+
+  <!-- 启动脚本 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/scripts/rc.autofan" Mode="755">
+    <URL>&pluginURL;/raw/main/scripts/rc.autofan</URL>
+  </FILE>
+
+  <!-- 默认配置 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/default.cfg">
+    <URL>&pluginURL;/raw/main/default.cfg</URL>
+  </FILE>
+
+  <!-- 安装日志 -->
+  <FILE Run="/bin/bash">
+    <INLINE>
+      echo "[fanctrlplus] Installed from GitHub"
+    </INLINE>
+  </FILE>
+
+  <!-- 卸载清理 -->
+  <FILE Run="/bin/bash" Method="remove">
+    <INLINE>
+      rm -rf /usr/local/emhttp/plugins/fanctrlplus
+      rm -f /boot/config/plugins/fanctrlplus/fanctrlplus.cfg
+    </INLINE>
+  </FILE>
 </PLUGIN>
