@@ -1,33 +1,15 @@
-<?xml version="1.0"?>
-<!DOCTYPE PLUGIN [
-  <!ENTITY name "fanctrlplus">
-  <!ENTITY version "2025.06.04">
-  <!ENTITY author "ck9393">
-  <!ENTITY launch "Utilities/FanCtrl Plus">
-  <!ENTITY pluginURL "local">
-  <!ENTITY MD5 "47e1675f308786f71d8c2e510df81b0c">
-]>
-
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
-  <!-- 安装 txz 主体 -->
-  <FILE Name="/boot/config/plugins/&name;/&name;.txz" Run="installpkg">
-    <URL>file:///boot/config/plugins/&name;/&name;.txz</URL>
-    <MD5>&MD5;</MD5>
-  </FILE>
-
-  <!-- 安装成功提示 -->
-  <FILE Run="/bin/bash">
-    <INLINE>
-      echo "[&name;] plugin installed successfully"
-    </INLINE>
-  </FILE>
-
-  <!-- 卸载逻辑 -->
-  <FILE Run="/bin/bash" Method="remove">
-    <INLINE>
-      rm -rf /usr/local/emhttp/plugins/&name;
-      rm -f /boot/config/plugins/&name;/&name;.txz
-      rm -f /boot/config/plugins/&name;.plg
-    </INLINE>
-  </FILE>
+<PLUGIN name="fanctrlplus" author="ck9393" version="2025.06.04">
+  <CHANGES>
+    Initial release
+  </CHANGES>
+  <!-- 安装 include 目录下的 PHP 文件 -->
+  <FILE Name="/boot/config/plugins/fanctrlplus/include/FanctrlLogic.php" Target="/usr/local/emhttp/plugins/fanctrlplus/include/FanctrlLogic.php" />
+  <FILE Name="/boot/config/plugins/fanctrlplus/include/update.fanctrlplus.php" Target="/usr/local/emhttp/plugins/fanctrlplus/include/update.fanctrlplus.php" />
+  <!-- 安装 scripts 目录下的 Shell 脚本 -->
+  <FILE Name="/boot/config/plugins/fanctrlplus/scripts/rc.autofan" Target="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan" Mode="0755" />
+  <!-- 安装主页面文件 -->
+  <FILE Name="/boot/config/plugins/fanctrlplus/fanctrlplus.page" Target="/usr/local/emhttp/plugins/fanctrlplus/fanctrlplus.page" />
+  <!-- 安装默认配置（如有需要可以取消注释） -->
+  <!-- <FILE Name="/boot/config/plugins/fanctrlplus/default.cfg" Target="/usr/local/emhttp/plugins/fanctrlplus/default.cfg" /> -->
+  <!-- 安装 icons/images 可选，建议你后续完善时再加 -->
 </PLUGIN>
