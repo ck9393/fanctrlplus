@@ -7,7 +7,7 @@ $plugin = "fanctrlplus";
 
 function parse_all_cfg($plugin) {
   $cfg_dir = "/boot/config/plugins/$plugin";
-  $files = glob("$cfg_dir/{$plugin}_*.cfg");
+  $files = glob("$cfg_dir/{$plugin}*.cfg");
   $list = [];
   foreach ($files as $f) {
     $cfg = parse_ini_file($f);
@@ -36,6 +36,10 @@ function list_valid_disks_by_id() {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     $real = realpath($dev);
     if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
+    if (strpos($real, "/dev/sd") !== false) {
+      $mountinfo = shell_exec("lsblk -no MOUNTPOINT $real");
+      if (strpos($mountinfo, "/boot") !== false) continue;
+    }
     if (in_array($real, $seen)) continue;
     $seen[] = $real;
     $result[] = ['id' => basename($dev), 'dev' => $real];
@@ -43,19 +47,42 @@ function list_valid_disks_by_id() {
   return $result;
 }
 
+// 自动生成初始配置
+$cfg_path = "/boot/config/plugins/$plugin";
 $all_cfg = parse_all_cfg($plugin);
+if (empty($all_cfg)) {
+  $default_cfg = "$cfg_path/{$plugin}_0.cfg";
+  if (!file_exists($default_cfg)) {
+    file_put_contents($default_cfg, <<<EOF
+service="0"
+controller=""
+pwm="120"
+low="35"
+high="50"
+interval="5"
+disks=""
+EOF
+);  }
+  $all_cfg = parse_all_cfg($plugin);
+}
+
 $disks = list_valid_disks_by_id();
 $pwms = list_pwm();
 $width = 300;
 ?>
 <style>
-.fan-pair { display: flex; flex-wrap: wrap; gap: 20px; }
+.fan-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
 .fan-block {
   flex: 1 1 48%;
   border: 1px solid #ccc;
   padding: 10px;
   margin-bottom: 15px;
   position: relative;
+  background-color: #f9f9f9;
 }
 .fan-block .remove-btn {
   position: absolute;
@@ -64,6 +91,10 @@ $width = 300;
   color: red;
   cursor: pointer;
   font-weight: bold;
+  font-size: 18px;
+  background-color: #fff;
+  padding: 0 5px;
+  z-index: 999;
 }
 </style>
 
@@ -84,18 +115,24 @@ function pauseFan(pwm, btn) {
   });
 }
 
-function removeFan(btn) {
-  $(btn).closest('.fan-block').remove();
+function removeFan(el) {
+  $(el).closest('.fan-block').remove();
 }
 
 function addFan() {
-  let html = $('#fanTemplate').html();
-  let index = $('.fan-block').length;
-  html = html.replace(/__INDEX__/g, index);
-  $('#fanContainer').append(html);
+  const html = $('.fan-block').first().clone();
+  html.find('input, select').each(function() {
+    const tag = this.tagName.toLowerCase();
+    if (tag === 'select') {
+      $(this).val($(this).find('option:first').val());
+    } else {
+      $(this).val('');
+    }
+  });
+  html.find('.disk-select option').prop('selected', false);
+  $('.fan-pair').append(html);
   $('.disk-select').dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
 }
-
 $(function() {
   $('.disk-select').dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
 });
@@ -103,103 +140,60 @@ $(function() {
 
 <form method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
-
-  <div id="fanContainer" class="fan-pair">
+  <div class="fan-pair">
 <? foreach ($all_cfg as $i => $cfg): ?>
-  <div class="fan-block">
-    <span class="remove-btn" onclick="removeFan(this)">🗑</span>
-    <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>">
+    <div class="fan-block">
+      <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>">
+      <span class="remove-btn" onclick="removeFan(this)">🗑</span>
 
-    <table>
-      <tr>
-        <td>Fan Control:</td>
-        <td>
-          <select name="service[<?=$i?>]">
-            <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
-            <option value="1" <?=($cfg['service']??'')=='1'?'selected':''?>>Enabled</option>
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <td>PWM Controller:</td>
-        <td>
-          <select name="controller[<?=$i?>]">
-            <? foreach ($pwms as $pwm): ?>
-            <option value="<?=$pwm['sensor']?>" <?=($cfg['controller']??'')==$pwm['sensor']?'selected':''?>><?=$pwm['chip']?> - <?=$pwm['name']?></option>
-            <? endforeach; ?>
-          </select>
-          <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
-        </td>
-      </tr>
-      <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$i?>]" value="<?=$cfg['pwm']??''?>"></td></tr>
-      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$i?>]" value="<?=$cfg['low']??''?>"></td></tr>
-      <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$i?>]" value="<?=$cfg['high']??''?>"></td></tr>
-      <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$i?>]" value="<?=$cfg['interval']??''?>"></td></tr>
-      <tr>
-        <td>Include Disks:</td>
-        <td>
-          <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
-            <? foreach ($disks as $d):
-              $id = $d['id'];
-              $sel = in_array($id, explode(',', $cfg['disks']??'')) ? 'selected' : '';
-            ?>
-              <option value="<?=$id?>" <?=$sel?>><?=$id?> → <?=$d['dev']?></option>
-            <? endforeach; ?>
-          </select>
-        </td>
-      </tr>
-    </table>
-  </div>
+      <table>
+        <tr>
+          <td>Fan Control:</td>
+          <td>
+            <select name="service[<?=$i?>]">
+              <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
+              <option value="1" <?=($cfg['service']??'')=='1'?'selected':''?>>Enabled</option>
+            </select>
+          </td>
+        </tr>
+
+        <tr>
+          <td>PWM Controller:</td>
+          <td>
+            <select name="controller[<?=$i?>]">
+              <?foreach ($pwms as $pwm):?>
+              <option value="<?=$pwm['sensor']?>" <?=($cfg['controller']??'')==$pwm['sensor']?'selected':''?>><?=$pwm['chip']?> - <?=$pwm['name']?></option>
+              <?endforeach;?>
+            </select>
+            <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
+          </td>
+        </tr>
+
+        <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$i?>]" value="<?=$cfg['pwm']??''?>"></td></tr>
+        <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$i?>]" value="<?=$cfg['low']??''?>"></td></tr>
+        <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$i?>]" value="<?=$cfg['high']??''?>"></td></tr>
+        <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$i?>]" value="<?=$cfg['interval']??''?>"></td></tr>
+
+        <tr>
+          <td>Include Disks:</td>
+          <td>
+            <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
+              <?foreach ($disks as $d):
+                $id = $d['id'];
+                $sel = in_array($id, explode(',', $cfg['disks']??'')) ? 'selected' : '';
+              ?>
+                <option value="<?=$id?>" <?=$sel?>><?=$id?> → <?=$d['dev']?></option>
+              <?endforeach;?>
+            </select>
+          </td>
+        </tr>
+      </table>
+    </div>
 <? endforeach; ?>
   </div>
 
-  <div>
-    <button type="button" onclick="addFan()">➕ Add Fan</button>
-  </div>
-  <br>
+  <button type="button" onclick="addFan()">+ Add Fan</button>
+  <br><br>
   <input type="submit" name="#apply" value="Apply">
   <input type="submit" name="#default" value="Default">
 </form>
-
-<!-- hidden template -->
-<div id="fanTemplate" style="display:none">
-  <div class="fan-block">
-    <span class="remove-btn" onclick="removeFan(this)">🗑</span>
-    <table>
-      <tr>
-        <td>Fan Control:</td>
-        <td>
-          <select name="service[__INDEX__]">
-            <option value="0">Disabled</option>
-            <option value="1">Enabled</option>
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <td>PWM Controller:</td>
-        <td>
-          <select name="controller[__INDEX__]">
-            <? foreach ($pwms as $pwm): ?>
-            <option value="<?=$pwm['sensor']?>"><?=$pwm['chip']?> - <?=$pwm['name']?></option>
-            <? endforeach; ?>
-          </select>
-          <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
-        </td>
-      </tr>
-      <tr><td>Min PWM:</td><td><input type="text" name="pwm[__INDEX__]" value="120"></td></tr>
-      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[__INDEX__]" value="35"></td></tr>
-      <tr><td>High Temp (°C):</td><td><input type="number" name="high[__INDEX__]" value="50"></td></tr>
-      <tr><td>Interval (min):</td><td><input type="number" name="interval[__INDEX__]" value="5"></td></tr>
-      <tr>
-        <td>Include Disks:</td>
-        <td>
-          <select class="disk-select" name="disks[__INDEX__][]" multiple style="width:400px;">
-            <? foreach ($disks as $d): ?>
-              <option value="<?=$d['id']?>"><?=$d['id']?> → <?=$d['dev']?></option>
-            <? endforeach; ?>
-          </select>
-        </td>
-      </tr>
-    </table>
-  </div>
-</div>
