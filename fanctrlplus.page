@@ -117,13 +117,10 @@ $(function() {
 <? foreach ($all_cfg as $i => $cfg): ?>
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
     <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>" class="cfg-file">
-
-    <!-- PWM title -->
-    <div style="font-size:16px; font-weight:bold; margin:4px 0 2px 6px;">
-      <?=basename($cfg['controller']??'未知')?>
-    </div>
-
-    <fieldset style="margin:0 10px 10px 0; padding:10px; border:1px solid #ccc; position:relative;">
+    <fieldset style="margin:10px; padding:10px; border:1px solid #ccc; position:relative;">
+      <div style="position:absolute; top:-12px; left:10px; background:#f8f8f8; padding:0 6px; font-weight:bold; font-size:14px;">
+        <?=basename($cfg['controller']??'未知')?>
+      </div>
       <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
 
       <table style="width:100%;">
