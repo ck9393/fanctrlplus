@@ -8,6 +8,7 @@
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
+
   <!-- 安装 fanctrlplus.page -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/fanctrlplus.page">
     <URL>&pluginURL;/fanctrlplus.page</URL>
@@ -23,19 +24,24 @@
     <URL>&pluginURL;/images/fanctrlplus.png</URL>
   </FILE>
 
-  <!-- 安装 logic/php 脚本 -->
+  <!-- 安装逻辑脚本 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/include/FanctrlLogic.php">
     <URL>&pluginURL;/include/FanctrlLogic.php</URL>
   </FILE>
 
-  <!-- 安装后台控制脚本 -->
-  <FILE Name="/usr/local/emhttp/plugins/&name;/scripts/rc.autofan">
-    <URL>&pluginURL;/scripts/rc.autofan</URL>
+  <!-- 安装模板文件 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/include/template.php">
+    <URL>&pluginURL;/include/template.php</URL>
   </FILE>
 
   <!-- 安装更新处理脚本 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/include/update.fanctrlplus.php">
     <URL>&pluginURL;/include/update.fanctrlplus.php</URL>
+  </FILE>
+
+  <!-- 安装后台控制脚本 -->
+  <FILE Name="/usr/local/emhttp/plugins/&name;/scripts/rc.autofan">
+    <URL>&pluginURL;/scripts/rc.autofan</URL>
   </FILE>
 
   <!-- 安装成功后打印信息 -->
@@ -51,4 +57,5 @@
       rm -rf /usr/local/emhttp/plugins/fanctrlplus
     </INLINE>
   </FILE>
+
 </PLUGIN>
