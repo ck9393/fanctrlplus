@@ -7,7 +7,7 @@ $plugin = "fanctrlplus";
 
 function parse_all_cfg($plugin) {
   $cfg_dir = "/boot/config/plugins/$plugin";
-  $files = glob("$cfg_dir/{$plugin}*.cfg");
+  $files = glob("$cfg_dir/{$plugin}_*.cfg");
   $list = [];
   foreach ($files as $f) {
     $cfg = parse_ini_file($f);
@@ -49,11 +49,11 @@ function list_valid_disks_by_id() {
 
 $all_cfg = parse_all_cfg($plugin);
 
-// ✅ 插入：首次安装自动生成配置文件
+// ✅ 若无现成 cfg，初始化一个空的默认项
 if (empty($all_cfg)) {
-  $default_cfg = "/boot/config/plugins/$plugin/{$plugin}_0.cfg";
-  if (!file_exists($default_cfg)) {
-    file_put_contents($default_cfg, <<<EOF
+  $default = "/boot/config/plugins/$plugin/{$plugin}_pwmX.cfg";
+  if (!file_exists($default)) {
+    file_put_contents($default, <<<EOF
 service="0"
 controller=""
 fan=""
@@ -101,7 +101,7 @@ $(function() {
   <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>">
 
   <fieldset style="margin-bottom:20px; padding:10px; border:1px solid #ccc;">
-    <legend><strong><?=basename($cfg['controller']??'未知PWM')?></strong></legend>
+    <legend><strong><?=basename($cfg['controller']??'未命名PWM')?></strong></legend>
 
     <table>
       <tr>
