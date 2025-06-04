@@ -48,6 +48,26 @@ function list_valid_disks_by_id() {
 }
 
 $all_cfg = parse_all_cfg($plugin);
+
+// ✅ 插入：首次安装自动生成配置文件
+if (empty($all_cfg)) {
+  $default_cfg = "/boot/config/plugins/$plugin/{$plugin}_0.cfg";
+  if (!file_exists($default_cfg)) {
+    file_put_contents($default_cfg, <<<EOF
+service="0"
+controller=""
+fan=""
+pwm="120"
+low="35"
+high="50"
+interval="5"
+disks=""
+EOF
+);
+  }
+  $all_cfg = parse_all_cfg($plugin);
+}
+
 $disks = list_valid_disks_by_id();
 $pwms = list_pwm();
 $width = 300;
