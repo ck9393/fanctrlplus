@@ -119,7 +119,7 @@ $(function() {
     <input type="hidden" name="#file[<?=$i?>]" value="fanctrlplus/<?=$cfg['file']?>" class="cfg-file">
     <fieldset style="margin:10px; padding:10px; border:1px solid #ccc; position:relative;">
       <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
-      <legend style="font-weight:bold; padding-right:80px;">PWM: <?=basename($cfg['controller']??'未知')?></legend>
+      <div style="font-weight:bold; padding-bottom:8px;">PWM: <?=basename($cfg['controller']??'未知')?></div>
       <table style="width:100%;">
         <tr>
           <td style="width:140px;">Fan Control:</td>
