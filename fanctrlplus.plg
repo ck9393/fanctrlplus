@@ -44,12 +44,13 @@
     <URL>&pluginURL;/scripts/rc.autofan</URL>
   </FILE>
 
-  <!-- 安装后立即设置权限并启动后台风扇控制 -->
+  <!-- 安装后设置权限并启动 -->
   <FILE Run="/bin/bash">
     <INLINE>
 chmod +x /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan
 /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start
-echo "[fanctrlplus] Plugin installed and started."
+echo "[fanctrlplus] Installation completed and started."
+exit 0
     </INLINE>
   </FILE>
 
@@ -59,13 +60,5 @@ echo "[fanctrlplus] Plugin installed and started."
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
     </INLINE>
   </FILE>
-
-  <!-- 安装成功提示 -->
- <FILE Run="/bin/bash">
-   <INLINE>
-     echo "[fanctrlplus] Installation completed."
-     exit 0
-   </INLINE>
- </FILE>
 
 </PLUGIN>
