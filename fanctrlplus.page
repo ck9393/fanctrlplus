@@ -90,6 +90,11 @@ $(function() {
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
+
+  // 修复 Apply 按钮不亮起的 bug
+  $('form input, form select, form textarea').on('change keyup', function() {
+    $('form').trigger('ui:changed');
+  });
 });
 </script>
 
