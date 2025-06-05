@@ -50,17 +50,20 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
-  fanctrlplus.stop  # 安全地先停止现有实例
+  if pgrep -f fanctrlplus_loop > /dev/null; then
+    echo "fanctrlplus already running"
+    exit 0
+  fi
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
     fan=$(get_fan_path "$controller")
-    [[ -z "$fan" || ! -f "$controller" || ! -f "$fan" ]] && {
+    if [[ -z "$fan" || ! -f "$controller" || ! -f "$fan" ]]; then
       log "跳过无效设置: controller=$controller fan=$fan"
       continue
-    }
+    fi
 
     tag="FanCtrl_${controller##*/} → ${fan##*/}"
     log "[$tag] 启动 PWM 控制"
@@ -70,6 +73,7 @@ fanctrlplus.start() {
       while true; do
         IFS=',' read -ra disks_list <<< "$disks"
         max_temp=0
+
         for disk in "${disks_list[@]}"; do
           temp=$(read_temp "$disk")
           [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
@@ -87,7 +91,7 @@ fanctrlplus.start() {
 
         sleep "$((interval * 60))"
       done
-    ) &
+    ) & disown
   done
 }
 
