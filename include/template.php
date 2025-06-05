@@ -1,12 +1,34 @@
 <?PHP
 $index = intval($_GET['index'] ?? 0);
+
+// 获取所有 pwm 控制器
+$pwms = [];
+exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
+foreach ($chips as $chip) {
+  $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
+  foreach (glob("$chip/pwm[0-9]") as $pwm) {
+    $pwms[] = ['sensor'=>$pwm, 'label'=>trim($name).' - '.basename($pwm)];
+  }
+}
+
+// 获取所有有效的 by-id 磁盘
+$disks = [];
+$seen = [];
+foreach (glob("/dev/disk/by-id/*") as $dev) {
+  if (!is_link($dev) || strpos($dev, "part") !== false) continue;
+  $real = realpath($dev);
+  if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
+  if (in_array($real, $seen)) continue;
+  $seen[] = $real;
+  $disks[] = ['id'=>basename($dev), 'dev'=>$real];
+}
 ?>
 
 <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
   <input type="hidden" name="#file[<?=$index?>]" value="">
-  <fieldset style="margin:10px; padding:10px; border:1px solid #ccc; position:relative;">
-    <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">🗑</button>
-    <legend><strong>Fan Settings</strong></legend>
+  <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
+    <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
+
     <table style="width:100%;">
       <tr>
         <td style="width:140px;">Fan Control:</td>
@@ -21,15 +43,9 @@ $index = intval($_GET['index'] ?? 0);
         <td>PWM Controller:</td>
         <td>
           <select name="controller[<?=$index?>]">
-            <?php
-            exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
-            foreach ($chips as $chip) {
-              $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
-              foreach (glob("$chip/pwm[0-9]") as $pwm) {
-                echo "<option value=\"$pwm\">$name - ".basename($pwm)."</option>";
-              }
-            }
-            ?>
+            <?php foreach ($pwms as $p): ?>
+              <option value="<?=htmlspecialchars($p['sensor'])?>"><?=htmlspecialchars($p['label'])?></option>
+            <?php endforeach; ?>
           </select>
           <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
         </td>
@@ -42,15 +58,9 @@ $index = intval($_GET['index'] ?? 0);
         <td>Include Disks:</td>
         <td>
           <select class="disk-select" name="disks[<?=$index?>][]" multiple style="width:400px;">
-            <?php
-            foreach (glob("/dev/disk/by-id/*") as $dev) {
-              if (!is_link($dev) || strpos($dev, "part") !== false) continue;
-              $real = realpath($dev);
-              if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
-              $id = basename($dev);
-              echo "<option value=\"$id\">$id → $real</option>";
-            }
-            ?>
+            <?php foreach ($disks as $d): ?>
+              <option value="<?=htmlspecialchars($d['id'])?>"><?=htmlspecialchars($d['id'])?> → <?=htmlspecialchars($d['dev'])?></option>
+            <?php endforeach; ?>
           </select>
         </td>
       </tr>
