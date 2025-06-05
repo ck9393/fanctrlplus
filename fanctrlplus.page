@@ -93,6 +93,7 @@ function removeFan(btn) {
   const block = $(btn).closest('.fan-block');
   block.find('input.cfg-file').remove();
   block.remove();
+  $('form').trigger('ui:changed');
 }
 
 function addFan() {
@@ -100,6 +101,7 @@ function addFan() {
   $.get("/plugins/fanctrlplus/include/template.php?index=" + index, function(html) {
     $("#fan-area").append(html);
     $(".disk-select").dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
+    $('form').trigger('ui:changed');  // 修复 Apply 灰色问题
   });
 }
 
