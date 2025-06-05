@@ -46,8 +46,12 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   }
 }
 
-// 重启 fanctrlplus 脚本
+// 重启 fanctrlplus 脚本（以非阻塞方式执行）
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan";
-exec("bash $script stop");
+exec("bash $script stop > /dev/null 2>&1 &");
 sleep(1);
-exec("bash $script start");
+exec("bash $script start > /dev/null 2>&1 &");
+
+// 返回给 UI 的响应，避免卡住
+echo json_encode(['status' => 'ok']);
+exit;
