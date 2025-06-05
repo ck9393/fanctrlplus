@@ -6,12 +6,11 @@ Icon="fanctrlplus.png"
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
 
-// 创建配置目录
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
 }
 
-// 检查是否已有配置文件
+// 加载现有配置
 $all_cfg = [];
 foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
   $cfg = parse_ini_file($file);
@@ -19,7 +18,6 @@ foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
   $all_cfg[] = $cfg;
 }
 
-// 若无 cfg，则生成 temp_0.cfg
 if (empty($all_cfg)) {
   $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
   if (!file_exists($temp_file)) {
@@ -88,7 +86,7 @@ function removeFan(btn) {
 
 function addFan() {
   const index = $('.fan-block').length;
-  $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(res) {
+  $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function() {
     location.reload();
   });
 }
@@ -102,18 +100,17 @@ $(function() {
     $('form').trigger('ui:changed');
   });
 
-  // ⚠️ 在 Apply 时拦截 Custom Name 留空
-  $('form').on('submit', function(e) {
+  // ✅ Apply 时必须所有 Custom Name 非空
+  $('form').on('submit', function() {
     let valid = true;
     $('input[name^="custom"]').each(function() {
       if ($(this).val().trim() === '') {
-        alert("Custom Name cannot be empty. Please fill in a name like 'HDDBay'.");
-        $(this).focus();
+        alert("Custom Name 不能为空！");
         valid = false;
         return false;
       }
     });
-    if (!valid) return false;
+    return valid;
   });
 });
 </script>
@@ -128,7 +125,7 @@ $(function() {
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
           <tr><td style="width:140px;">Custom Name:</td>
-              <td><input type="text" name="custom[<?=$i?>]" placeholder="e.g. HDDBay" value="<?=htmlspecialchars($cfg['custom']??'')?>"></td></tr>
+              <td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="e.g. HDDBay"></td></tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
               <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
