@@ -16,15 +16,39 @@ if (!isset($_POST['#file']) || !is_array($_POST['#file'])) {
 }
 
 foreach ($_POST['#file'] as $i => $file) {
-  $filename = basename($file);
-  if (!strlen($filename)) continue;
+  $old_file = basename($file);
+  $controller = $_POST['controller'][$i] ?? '';
+  $custom = $_POST['custom'][$i] ?? '';
 
-  $filepath = "$cfgpath/$filename";
+  // ⚠️ 若是临时文件名，则重命名为 pwm 或 pwm_custom 格式
+  if (strpos($old_file, 'temp') !== false && !empty($controller)) {
+    $base = str_replace('/', '_', basename($controller)); // e.g., pwm6
+    $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
+    $new_file = $plugin . '_' . $base;
+    if (!empty($safe_custom)) {
+      $new_file .= "_$safe_custom";
+    }
+    $new_file .= '.cfg';
+
+    // 若新文件名已存在，不重复添加
+    if (in_array($new_file, $used_files)) {
+      $suffix = 1;
+      while (in_array("{$plugin}_{$base}_{$safe_custom}_$suffix.cfg", $used_files)) {
+        $suffix++;
+      }
+      $new_file = "{$plugin}_{$base}_{$safe_custom}_$suffix.cfg";
+    }
+  } else {
+    $new_file = $old_file;
+  }
+
+  $used_files[] = $new_file;
+  $filepath = "$cfgpath/$new_file";
 
   $cfg = [
-    'custom'    => $_POST['custom'][$i] ?? '',
+    'custom'    => $custom,
     'service'   => $_POST['service'][$i] ?? '0',
-    'controller'=> $_POST['controller'][$i] ?? '',
+    'controller'=> $controller,
     'pwm'       => $_POST['pwm'][$i] ?? '',
     'low'       => $_POST['low'][$i] ?? '',
     'high'      => $_POST['high'][$i] ?? '',
@@ -32,15 +56,18 @@ foreach ($_POST['#file'] as $i => $file) {
     'disks'     => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : ''
   ];
 
-  $used_files[] = $filename;
-
   $content = '';
   foreach ($cfg as $k => $v) {
-    $v = str_replace('"', '', $v); // 去除用户可能输的双引号
+    $v = str_replace('"', '', $v);
     $content .= "$k=\"$v\"\n";
   }
 
   file_put_contents($filepath, $content);
+
+  // 如果旧文件不同，删除旧文件（避免残留 temp0.cfg）
+  if ($old_file !== $new_file && is_file("$cfgpath/$old_file")) {
+    unlink("$cfgpath/$old_file");
+  }
 }
 
 // 删除未使用的旧配置文件
