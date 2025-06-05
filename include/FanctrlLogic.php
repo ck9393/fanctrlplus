@@ -1,7 +1,6 @@
 <?php
 $plugin = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
-$cfgdir = "/boot/config/plugins/$plugin";
 
 function scan_dir($dir) {
   $out = [];
@@ -28,7 +27,7 @@ function list_fan() {
   return $out;
 }
 
-switch ($_GET['op'] ?? '') {
+switch ($_GET['op'] ?? $_POST['op'] ?? '') {
   case 'detect':
     $pwm = $_GET['pwm'] ?? '';
     if (is_file($pwm)) {
@@ -105,7 +104,6 @@ switch ($_GET['op'] ?? '') {
       @file_put_contents($pwm_enable, "1");
       @file_put_contents($pwm, "0");
 
-      // 后台恢复原状态
       $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
       exec("nohup bash -c \"$restore_cmd\" >/dev/null 2>&1 &");
@@ -117,36 +115,25 @@ switch ($_GET['op'] ?? '') {
     break;
 
   case 'newtemp':
-    // 创建唯一 temp cfg
-    $index = 0;
-    while (file_exists("$cfgdir/fanctrlplus_temp{$index}.cfg")) $index++;
-    $tempfile = "$cfgdir/fanctrlplus_temp{$index}.cfg";
-    $template = <<<EOT
-custom=""
-service="1"
-controller=""
-pwm="100"
-low="40"
-high="60"
-interval="2"
-disks=""
-EOT;
-    file_put_contents($tempfile, $template);
-    echo "fanctrlplus_temp{$index}.cfg";
+    $index = intval($_POST['index'] ?? 0);
+    $cfgpath = "/boot/config/plugins/$plugin";
+    $filename = "$plugin" . "_temp_$index.cfg";
+    $fullpath = "$cfgpath/$filename";
+    if (!file_exists($fullpath)) {
+      file_put_contents($fullpath, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    }
+    echo "created";
     break;
 
   case 'delete':
-    $file = $_GET['file'] ?? '';
-    if ($file && preg_match('/^fanctrlplus_.*\.cfg$/', $file)) {
-      $path = "$cfgdir/$file";
-      if (file_exists($path)) {
-        unlink($path);
-        echo "Deleted $file";
-      } else {
-        echo "Not found";
-      }
+    $file = basename($_POST['file'] ?? '');
+    $cfgpath = "/boot/config/plugins/$plugin/$file";
+    if (is_file($cfgpath)) {
+      unlink($cfgpath);
+      echo "deleted";
     } else {
-      echo "Invalid filename";
+      echo "not found";
     }
     break;
 }
+?>
