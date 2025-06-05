@@ -6,29 +6,33 @@ if (!is_dir($cfgpath)) {
   mkdir($cfgpath, 0777, true);
 }
 
-$files = $_POST['#file'] ?? [];
-foreach ($files as $index => $file) {
-  $path = "/boot/config/plugins/$plugin/" . basename($file);
+// 清除旧的 .cfg 文件（不含 default.cfg）
+foreach (glob("$cfgpath/{$plugin}_*.cfg") as $file) {
+  if (basename($file) != "default.cfg") unlink($file);
+}
+
+// 遍历提交的配置项
+foreach ($_POST['controller'] ?? [] as $i => $controller) {
+  if (empty($controller)) continue;
 
   $cfg = [
-    'service'   => $_POST['service'][$index] ?? '0',
-    'controller'=> $_POST['controller'][$index] ?? '',
-    'pwm'       => $_POST['pwm'][$index] ?? '',
-    'low'       => $_POST['low'][$index] ?? '',
-    'high'      => $_POST['high'][$index] ?? '',
-    'interval'  => $_POST['interval'][$index] ?? '',
-    'disks'     => isset($_POST['disks'][$index]) ? implode(',', $_POST['disks'][$index]) : ''
+    'service'   => $_POST['service'][$i] ?? '0',
+    'controller'=> $controller,
+    'pwm'       => $_POST['pwm'][$i] ?? '',
+    'low'       => $_POST['low'][$i] ?? '',
+    'high'      => $_POST['high'][$i] ?? '',
+    'interval'  => $_POST['interval'][$i] ?? '',
+    'disks'     => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : ''
   ];
 
+  $filename = "$cfgpath/{$plugin}_" . basename($controller) . ".cfg";
   $content = '';
   foreach ($cfg as $k => $v) {
     $content .= "$k=\"$v\"\n";
   }
-
-  file_put_contents($path, $content);
+  file_put_contents($filename, $content);
 }
 
-// 重新启动脚本
+// 重启脚本
 exec("/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan stop");
 exec("/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start");
-?>
