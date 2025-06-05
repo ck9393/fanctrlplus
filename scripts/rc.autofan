@@ -1,14 +1,13 @@
 #!/bin/bash
-#=======================================================================================
-#  FanCtrlPlus 控制脚本：自动侦测 fan、以 disks include 模式控制 PWM 风扇
-#=======================================================================================
+# FanCtrlPlus: 自动控制 PWM 风扇脚本
+
 plugin=fanctrlplus
 cfg_path="/boot/config/plugins/$plugin"
 script_name="$(basename "$0")"
-running_tag="fanctrlplus_loop"
+log_tag="fanctrlplus"
 
 log() {
-  logger -t fanctrlplus "$1"
+  logger -t "$log_tag" "$1"
 }
 
 get_fan_path() {
@@ -26,11 +25,10 @@ get_fan_path() {
 read_temp() {
   local disk="$1"
   local dev="/dev/disk/by-id/$disk"
-  local path=$(realpath "$dev")
+  local path
+  path=$(realpath "$dev" 2>/dev/null) || return
   [[ ! -b "$path" ]] && return
-  if smartctl -n standby -A "$path" 2>&1 | grep -q "Device is in STANDBY"; then
-    return
-  fi
+  smartctl -n standby -A "$path" 2>&1 | grep -q "Device is in STANDBY" && return
   if [[ "$path" == /dev/nvme* ]]; then
     smartctl -A "$path" | awk '/Temperature:/ {print $2; exit}'
   else
@@ -52,29 +50,26 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
-  fanctrlplus.stop  # 停止旧任务
+  fanctrlplus.stop  # 安全地先停止现有实例
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
-    fan=""
-    if [[ -z "$fan" && -n "$controller" ]]; then
-      fan=$(get_fan_path "$controller")
-    fi
-    [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
+    fan=$(get_fan_path "$controller")
+    [[ -z "$fan" || ! -f "$controller" || ! -f "$fan" ]] && {
+      log "跳过无效设置: controller=$controller fan=$fan"
+      continue
+    }
 
-    tag_name="${name:-${controller##*/}}"
-    fan_tag="FanCtrl_${tag_name} → ${fan##*/}"
-    prev_pwm=-1
-
-    log "[$fan_tag] Started PWM control"
+    tag="FanCtrl_${controller##*/} → ${fan##*/}"
+    log "[$tag] 启动 PWM 控制"
 
     (
+      prev_pwm=-1
       while true; do
         IFS=',' read -ra disks_list <<< "$disks"
         max_temp=0
-
         for disk in "${disks_list[@]}"; do
           temp=$(read_temp "$disk")
           [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
@@ -86,43 +81,47 @@ fanctrlplus.start() {
           echo "$pwm_val" > "$controller"
           sleep 4
           rpm=$(cat "$fan" 2>/dev/null || echo 0)
-          log "[$fan_tag] MaxTemp=${max_temp}°C → PWM=$pwm_val → FanRPM=$rpm"
+          log "[$tag] MaxTemp=${max_temp}°C → PWM=$pwm_val → FanRPM=$rpm"
           prev_pwm="$pwm_val"
         fi
 
         sleep "$((interval * 60))"
       done
-    ) & disown
+    ) &
   done
 }
 
 fanctrlplus.stop() {
-  pkill -f "$running_tag" 2>/dev/null
+  pkill -f "/usr/local/emhttp/plugins/$plugin/scripts/$script_name"
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ -n "$controller" ]] && echo 255 > "$controller"
   done
-  echo "$script_name stopped"
+  log "已停止 fanctrlplus"
 }
 
 fanctrlplus.speed() {
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
-    [[ -f "$controller" && $(cat "$fan" 2>/dev/null) -gt 0 ]] && \
-      echo -n "$(( $(cat "$controller") * 100 / 255 )) " || echo -n "0 "
+    percent=0
+    if [[ -f "$controller" && -f "$fan" ]]; then
+      val=$(cat "$controller")
+      percent=$(( val * 100 / 255 ))
+    fi
+    echo "$controller: $percent%"
   done
 }
 
 fanctrlplus.restart() {
   fanctrlplus.stop
-  sleep 1
+  sleep 2
   fanctrlplus.start
 }
 
 case "$1" in
-  'start')   fanctrlplus.start ;;
-  'stop')    fanctrlplus.stop ;;
-  'speed')   fanctrlplus.speed ;;
-  'restart') fanctrlplus.restart ;;
-  *)         echo "Usage: $script_name start|stop|restart|speed" ;;
+  start) fanctrlplus.start ;;
+  stop) fanctrlplus.stop ;;
+  restart) fanctrlplus.restart ;;
+  speed) fanctrlplus.speed ;;
+  *) echo "Usage: $0 {start|stop|restart|speed}" ;;
 esac
