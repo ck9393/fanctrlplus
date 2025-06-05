@@ -97,11 +97,11 @@ function addFan() {
   const fileVal = "fanctrlplus_temp" + index + ".cfg";
   const html = `
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-    <input type="hidden" name="#file[${index}]" value="${fileVal}">
+    <input type="hidden" name="#file[${index}]" value="${fileVal}" class="cfg-file">
     <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
       <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
       <table style="width:100%;">
-        <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[${index}]"></td></tr>
+        <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[${index}]" required></td></tr>
         <tr><td>Fan Control:</td><td>
           <select name="service[${index}]">
             <option value="0">Disabled</option>
@@ -139,8 +139,24 @@ $(function() {
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
+
+  // 表单字段有变化则触发 apply 可用
   $('form input, form select, form textarea').on('change keyup', function() {
     $('form').trigger('ui:changed');
+  });
+
+  // 提交前强制检查 Custom Name
+  $('form').on('submit', function(e) {
+    let valid = true;
+    $('.fan-block').each(function() {
+      const custom = $(this).find('input[name^="custom"]').val();
+      if (!custom || !custom.trim()) {
+        alert("Custom Name cannot be empty.");
+        valid = false;
+        return false; // break
+      }
+    });
+    if (!valid) e.preventDefault();
   });
 });
 </script>
@@ -154,7 +170,7 @@ $(function() {
       <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
-          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>"></td></tr>
+          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" required></td></tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
               <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
