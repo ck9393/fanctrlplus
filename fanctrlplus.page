@@ -105,7 +105,7 @@ $(function() {
     let valid = true;
     $('input[name^="custom["]').each(function() {
       if ($(this).val().trim() === '') {
-        alert("Custom Name 不能为空！");
+        alert("Custom Name cannot be empty!");
         $(this).focus();
         valid = false;
         return false;
