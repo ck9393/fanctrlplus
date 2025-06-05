@@ -1,6 +1,7 @@
 <?php
 $plugin = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+$cfgdir = "/boot/config/plugins/$plugin";
 
 function scan_dir($dir) {
   $out = [];
@@ -114,5 +115,38 @@ switch ($_GET['op'] ?? '') {
       echo "Invalid PWM path";
     }
     break;
+
+  case 'newtemp':
+    // 创建唯一 temp cfg
+    $index = 0;
+    while (file_exists("$cfgdir/fanctrlplus_temp{$index}.cfg")) $index++;
+    $tempfile = "$cfgdir/fanctrlplus_temp{$index}.cfg";
+    $template = <<<EOT
+custom=""
+service="1"
+controller=""
+pwm="100"
+low="40"
+high="60"
+interval="2"
+disks=""
+EOT;
+    file_put_contents($tempfile, $template);
+    echo "fanctrlplus_temp{$index}.cfg";
+    break;
+
+  case 'delete':
+    $file = $_GET['file'] ?? '';
+    if ($file && preg_match('/^fanctrlplus_.*\.cfg$/', $file)) {
+      $path = "$cfgdir/$file";
+      if (file_exists($path)) {
+        unlink($path);
+        echo "Deleted $file";
+      } else {
+        echo "Not found";
+      }
+    } else {
+      echo "Invalid filename";
+    }
+    break;
 }
-?>
