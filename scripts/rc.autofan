@@ -65,12 +65,8 @@ fanctrlplus.start() {
       continue
     fi
 
-    # 标题标签（优先用 custom）
-    if [[ -n "$custom" ]]; then
-      tag="$custom"
-    else
-      tag="FanCtrl_${controller##*/} → ${fan##*/}"
-    fi
+    # 标签（用于日志）
+    tag="${custom:-FanCtrl_${controller##*/}}"
 
     log "[$tag] 启动 PWM 控制"
 
