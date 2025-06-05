@@ -60,4 +60,12 @@ rm -rf /usr/local/emhttp/plugins/fanctrlplus
     </INLINE>
   </FILE>
 
+  <!-- 安装成功提示 -->
+ <FILE Run="/bin/bash">
+   <INLINE>
+     echo "[fanctrlplus] Installation completed."
+     exit 0
+   </INLINE>
+ </FILE>
+
 </PLUGIN>
