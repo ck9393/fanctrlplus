@@ -97,8 +97,23 @@ $(function() {
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
+
   $('form input, form select, form textarea').on('change keyup', function() {
     $('form').trigger('ui:changed');
+  });
+
+  // ⚠️ 在 Apply 时拦截 Custom Name 留空
+  $('form').on('submit', function(e) {
+    let valid = true;
+    $('input[name^="custom"]').each(function() {
+      if ($(this).val().trim() === '') {
+        alert("Custom Name cannot be empty. Please fill in a name like 'HDDBay'.");
+        $(this).focus();
+        valid = false;
+        return false;
+      }
+    });
+    if (!valid) return false;
   });
 });
 </script>
@@ -112,7 +127,8 @@ $(function() {
       <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
-          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>"></td></tr>
+          <tr><td style="width:140px;">Custom Name:</td>
+              <td><input type="text" name="custom[<?=$i?>]" placeholder="e.g. HDDBay" value="<?=htmlspecialchars($cfg['custom']??'')?>"></td></tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
               <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
