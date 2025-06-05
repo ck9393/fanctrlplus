@@ -9,42 +9,34 @@
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
 
-  <!-- 主插件页面 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/fanctrlplus.page">
     <URL>&pluginURL;/fanctrlplus.page</URL>
   </FILE>
 
-  <!-- 默认配置 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/default.cfg">
     <URL>&pluginURL;/default.cfg</URL>
   </FILE>
 
-  <!-- 图标 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/images/fanctrlplus.png">
     <URL>&pluginURL;/images/fanctrlplus.png</URL>
   </FILE>
 
-  <!-- 控制逻辑 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/include/FanctrlLogic.php">
     <URL>&pluginURL;/include/FanctrlLogic.php</URL>
   </FILE>
 
-  <!-- Fan 区块模板 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/include/template.php">
     <URL>&pluginURL;/include/template.php</URL>
   </FILE>
 
-  <!-- apply 更新逻辑 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/include/update.fanctrlplus.php">
     <URL>&pluginURL;/include/update.fanctrlplus.php</URL>
   </FILE>
 
-  <!-- 后台控制脚本 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/scripts/rc.autofan" Mode="0755">
     <URL>&pluginURL;/scripts/rc.autofan</URL>
   </FILE>
 
-  <!-- 安装后执行 -->
   <FILE Run="/bin/bash" Method="install">
     <INLINE>
 #!/bin/bash
@@ -54,13 +46,21 @@ exit 0
     </INLINE>
   </FILE>
 
-  <!-- 卸载逻辑 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
 #!/bin/bash
 /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan stop 2>/dev/null
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
+echo "[fanctrlplus] Plugin removed."
+exit 0
+    </INLINE>
+  </FILE>
+
+  <FILE Run="/bin/bash">
+    <INLINE>
+#!/bin/bash
+echo "[fanctrlplus] Plugin installation completed."
 exit 0
     </INLINE>
   </FILE>
