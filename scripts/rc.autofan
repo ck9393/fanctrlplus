@@ -3,19 +3,19 @@
 #  FanCtrlPlus 控制脚本：自动侦测 fan、以 disks include 模式控制 PWM 风扇
 #=======================================================================================
 plugin=fanctrlplus
-script=fanctrlplus
 cfg_path="/boot/config/plugins/$plugin"
+script_name="$(basename "$0")"
+running_tag="fanctrlplus_loop"
 
 log() {
-  logger -t "$plugin" "$1"
+  logger -t fanctrlplus "$1"
 }
 
 get_fan_path() {
   local pwm_path="$1"
   if [[ "$pwm_path" =~ pwm([0-9]+)$ ]]; then
     local idx="${BASH_REMATCH[1]}"
-    local base_dir
-    base_dir="$(dirname "$pwm_path")"
+    local base_dir="$(dirname "$pwm_path")"
     local fan_path="$base_dir/fan${idx}_input"
     [[ -e "$fan_path" ]] && echo "$fan_path" || echo ""
   else
@@ -26,8 +26,7 @@ get_fan_path() {
 read_temp() {
   local disk="$1"
   local dev="/dev/disk/by-id/$disk"
-  local path
-  path=$(realpath "$dev")
+  local path=$(realpath "$dev")
   [[ ! -b "$path" ]] && return
   if smartctl -n standby -A "$path" 2>&1 | grep -q "Device is in STANDBY"; then
     return
@@ -53,22 +52,22 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
-  # 清除旧实例（仅此脚本内的）
-  pkill -f "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start"
+  fanctrlplus.stop  # 停止旧任务
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
-    # 自动获取 fan 路径
+    fan=""
     if [[ -z "$fan" && -n "$controller" ]]; then
       fan=$(get_fan_path "$controller")
     fi
-
     [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
 
-    fan_tag="FanCtrl_${controller##*/} → ${fan##*/}"
+    tag_name="${name:-${controller##*/}}"
+    fan_tag="FanCtrl_${tag_name} → ${fan##*/}"
     prev_pwm=-1
+
     log "[$fan_tag] Started PWM control"
 
     (
@@ -93,17 +92,17 @@ fanctrlplus.start() {
 
         sleep "$((interval * 60))"
       done
-    ) &
+    ) & disown
   done
 }
 
 fanctrlplus.stop() {
-  pkill -f "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start"
+  pkill -f "$running_tag" 2>/dev/null
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ -n "$controller" ]] && echo 255 > "$controller"
   done
-  echo "$script stopped"
+  echo "$script_name stopped"
 }
 
 fanctrlplus.speed() {
@@ -116,7 +115,7 @@ fanctrlplus.speed() {
 
 fanctrlplus.restart() {
   fanctrlplus.stop
-  sleep 2
+  sleep 1
   fanctrlplus.start
 }
 
@@ -125,5 +124,5 @@ case "$1" in
   'stop')    fanctrlplus.stop ;;
   'speed')   fanctrlplus.speed ;;
   'restart') fanctrlplus.restart ;;
-  *)         echo "Usage: $(basename "$0") start|stop|restart|speed" ;;
+  *)         echo "Usage: $script_name start|stop|restart|speed" ;;
 esac
