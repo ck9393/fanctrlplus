@@ -4,7 +4,7 @@
 #=======================================================================================
 plugin=fanctrlplus
 script=fanctrlplus
-cfg_path="/boot/config/plugins/$plugin"
+cfg_path=/boot/config/plugins/$plugin
 
 log() {
   logger -t fanctrlplus "$1"
@@ -57,14 +57,16 @@ fanctrlplus.start() {
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
-    # 自动侦测 fan（初始化 fan 为空）
     fan=""
     [[ -z "$fan" && -n "$controller" ]] && fan=$(get_fan_path "$controller")
-    [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
+
+    if [[ ! -f "$controller" || ! -f "$fan" ]]; then
+      log "Skip: invalid controller [$controller] or fan [$fan]"
+      continue
+    fi
 
     fan_tag="FanCtrl_${controller##*/} → ${fan##*/}"
     prev_pwm=-1
-
     log "[$fan_tag] Started PWM control"
 
     (
@@ -91,6 +93,9 @@ fanctrlplus.start() {
       done
     ) &
   done
+
+  # 修正关键：等待所有后台 fan 控制线程运行，避免主脚本提前退出
+  wait
 }
 
 fanctrlplus.stop() {
