@@ -19,7 +19,7 @@
     <URL>&pluginURL;/default.cfg</URL>
   </FILE>
 
-  <!-- 安装 icon 图标 -->
+  <!-- 安装图标 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/images/fanctrlplus.png">
     <URL>&pluginURL;/images/fanctrlplus.png</URL>
   </FILE>
@@ -34,27 +34,29 @@
     <URL>&pluginURL;/include/template.php</URL>
   </FILE>
 
-  <!-- 安装更新处理脚本 -->
+  <!-- 安装更新逻辑 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/include/update.fanctrlplus.php">
     <URL>&pluginURL;/include/update.fanctrlplus.php</URL>
   </FILE>
 
-  <!-- 安装后台控制脚本 -->
+  <!-- 安装风扇控制脚本 -->
   <FILE Name="/usr/local/emhttp/plugins/&name;/scripts/rc.autofan">
     <URL>&pluginURL;/scripts/rc.autofan</URL>
   </FILE>
 
-  <!-- 安装成功后打印信息 -->
+  <!-- 安装后立即设置权限并启动后台风扇控制 -->
   <FILE Run="/bin/bash">
     <INLINE>
-      echo "[fanctrlplus] Plugin installed."
+chmod +x /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan
+/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start
+echo "[fanctrlplus] Plugin installed and started."
     </INLINE>
   </FILE>
 
   <!-- 卸载逻辑 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
-      rm -rf /usr/local/emhttp/plugins/fanctrlplus
+rm -rf /usr/local/emhttp/plugins/fanctrlplus
     </INLINE>
   </FILE>
 
