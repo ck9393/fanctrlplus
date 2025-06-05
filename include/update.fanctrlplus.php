@@ -2,6 +2,7 @@
 $plugin = 'fanctrlplus';
 $cfgpath = "/boot/config/plugins/$plugin";
 
+// 确保配置目录存在
 if (!is_dir($cfgpath)) {
   mkdir($cfgpath, 0777, true);
 }
@@ -14,17 +15,20 @@ if (!isset($_POST['#file']) || !is_array($_POST['#file'])) {
   exit;
 }
 
+$errors = [];
+
 foreach ($_POST['#file'] as $i => $file) {
   $old_file = basename($file);
   $controller = $_POST['controller'][$i] ?? '';
   $custom = trim($_POST['custom'][$i] ?? '');
 
-  // 如果 Custom Name 没填，不保存并跳过
+  // 如果 Custom Name 没填，记录错误并跳过该项
   if ($custom === '') {
+    $errors[] = "Custom Name is required for fan block #".($i+1);
     continue;
   }
 
-  // 安全 Custom Name（去除特殊字符）
+  // 安全化 Custom 名称
   $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
 
   // 生成新文件名
@@ -34,7 +38,7 @@ foreach ($_POST['#file'] as $i => $file) {
     $new_file = $old_file;
   }
 
-  // 避免文件重复
+  // 避免文件名冲突
   $basefile = pathinfo($new_file, PATHINFO_FILENAME);
   $suffix = 1;
   while (in_array($new_file, $used_files)) {
@@ -45,7 +49,7 @@ foreach ($_POST['#file'] as $i => $file) {
   $used_files[] = $new_file;
   $filepath = "$cfgpath/$new_file";
 
-  // 构造内容
+  // 构建配置内容
   $cfg = [
     'custom'    => $custom,
     'service'   => $_POST['service'][$i] ?? '0',
@@ -65,13 +69,13 @@ foreach ($_POST['#file'] as $i => $file) {
 
   file_put_contents($filepath, $content);
 
-  // 删除旧 temp 文件
+  // 删除旧的 temp 文件
   if ($old_file !== $new_file && is_file("$cfgpath/$old_file")) {
     unlink("$cfgpath/$old_file");
   }
 }
 
-// 清理未被使用的 cfg 文件（即用户在 UI 中删掉了的）
+// 清除已从界面移除的 cfg 文件
 foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   $base = basename($cfgfile);
   if (!in_array($base, $used_files)) {
@@ -79,13 +83,17 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   }
 }
 
-// 重启脚本（后台执行）
+// 重启后台脚本
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan";
 exec("bash $script stop > /dev/null 2>&1 &");
 sleep(1);
 exec("bash $script start > /dev/null 2>&1 &");
 
-// 返回成功响应
+// 返回响应
 header('Content-Type: application/json');
-echo json_encode(['status' => 'ok']);
+if (!empty($errors)) {
+  echo json_encode(['status' => 'warning', 'message' => implode('; ', $errors)]);
+} else {
+  echo json_encode(['status' => 'ok']);
+}
 exit;
