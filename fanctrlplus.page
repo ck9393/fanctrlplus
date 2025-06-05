@@ -10,7 +10,6 @@ if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
 }
 
-// 加载现有配置
 $all_cfg = [];
 foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
   $cfg = parse_ini_file($file);
@@ -100,17 +99,17 @@ $(function() {
     $('form').trigger('ui:changed');
   });
 
-  // ✅ Apply 时必须所有 Custom Name 非空
+  // ✅ 拦截 Custom Name 为空，阻止提交
   $('form').on('submit', function() {
-    let valid = true;
-    $('input[name^="custom"]').each(function() {
+    let ok = true;
+    $('.custom-name').each(function() {
       if ($(this).val().trim() === '') {
         alert("Custom Name 不能为空！");
-        valid = false;
+        ok = false;
         return false;
       }
     });
-    return valid;
+    return ok;
   });
 });
 </script>
@@ -124,8 +123,10 @@ $(function() {
       <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
-          <tr><td style="width:140px;">Custom Name:</td>
-              <td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="e.g. HDDBay"></td></tr>
+          <tr>
+            <td style="width:140px;">Custom Name:</td>
+            <td><input type="text" class="custom-name" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="e.g. HDDBay"></td>
+          </tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
               <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
