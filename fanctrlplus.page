@@ -6,6 +6,7 @@ Icon="fanctrlplus.png"
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
 
+// 初始化配置
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
 }
@@ -99,17 +100,18 @@ $(function() {
     $('form').trigger('ui:changed');
   });
 
-  // ✅ 拦截 Custom Name 为空，阻止提交
+  // ✅ Custom Name 留空时拦截 Apply
   $('form').on('submit', function() {
-    let ok = true;
-    $('.custom-name').each(function() {
+    let valid = true;
+    $('input[name^="custom["]').each(function() {
       if ($(this).val().trim() === '') {
         alert("Custom Name 不能为空！");
-        ok = false;
+        $(this).focus();
+        valid = false;
         return false;
       }
     });
-    return ok;
+    return valid;
   });
 });
 </script>
@@ -125,7 +127,7 @@ $(function() {
         <table style="width:100%;">
           <tr>
             <td style="width:140px;">Custom Name:</td>
-            <td><input type="text" class="custom-name" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="e.g. HDDBay"></td>
+            <td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="e.g. HDDBay" class="custom-name"></td>
           </tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
