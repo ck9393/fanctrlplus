@@ -82,6 +82,8 @@ fanctrlplus.start() {
         pwm_val=$(calculate_pwm "$max_temp" "$low" "$high" "$pwm")
 
         if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
+          enable_file="${controller}_enable"
+          [[ -f "$enable_file" ]] && echo 1 > "$enable_file"
           echo "$pwm_val" > "$controller"
           sleep 4
           rpm=$(cat "$fan" 2>/dev/null || echo 0)
@@ -108,7 +110,7 @@ fanctrlplus.speed() {
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     percent=0
-    if [[ -f "$controller" && -f "$fan" ]]; then
+    if [[ -f "$controller" ]]; then
       val=$(cat "$controller")
       percent=$(( val * 100 / 255 ))
     fi
