@@ -6,22 +6,26 @@ Icon="fanctrlplus.png"
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
 
-function parse_all_cfg($plugin) {
-  global $cfg_dir;
-  $files = glob("$cfg_dir/{$plugin}_*.cfg");
-  $list = [];
-  if (empty($files)) {
-    // 若无 cfg，初始化一个 temp0
-    $temp_file = "$cfg_dir/{$plugin}_temp0.cfg";
+// 创建配置目录
+if (!is_dir($cfg_dir)) {
+  mkdir($cfg_dir, 0777, true);
+}
+
+// 检查是否已有配置文件
+$all_cfg = [];
+foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
+  $cfg = parse_ini_file($file);
+  $cfg['file'] = basename($file);
+  $all_cfg[] = $cfg;
+}
+
+// 若无 cfg，则生成 temp_0.cfg
+if (empty($all_cfg)) {
+  $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
+  if (!file_exists($temp_file)) {
     file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
-    $files[] = $temp_file;
   }
-  foreach ($files as $f) {
-    $cfg = parse_ini_file($f);
-    $cfg['file'] = basename($f);
-    $list[] = $cfg;
-  }
-  return $list;
+  $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
 }
 
 function list_pwm() {
@@ -43,10 +47,6 @@ function list_valid_disks_by_id() {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     $real = realpath($dev);
     if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
-    if (strpos($real, "/dev/sd") !== false) {
-      $mountinfo = shell_exec("lsblk -no MOUNTPOINT $real");
-      if (strpos($mountinfo, "/boot") !== false) continue;
-    }
     if (in_array($real, $seen)) continue;
     $seen[] = $real;
     $result[] = ['id' => basename($dev), 'dev' => $real];
@@ -54,15 +54,12 @@ function list_valid_disks_by_id() {
   return $result;
 }
 
-$all_cfg = parse_all_cfg($plugin);
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
 <script>
-let fanIndex = <?=$all_cfg ? count($all_cfg) : 1?>;
-
 function pauseFan(pwm, btn) {
   $(btn).prop('disabled', true).text("Pausing...");
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
@@ -82,51 +79,18 @@ function pauseFan(pwm, btn) {
 function removeFan(btn) {
   if (!confirm("Are you sure you want to delete this fan configuration?")) return;
   const block = $(btn).closest('.fan-block');
-  block.remove();
-  $('form').trigger('ui:changed');
+  const file = block.find('input.cfg-file').val();
+  $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file}, function() {
+    block.remove();
+    $('form').trigger('ui:changed');
+  });
 }
 
 function addFan() {
-  const index = fanIndex++;
-  const fileVal = "fanctrlplus_temp" + index + ".cfg";
-  const html = `
-  <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-    <input type="hidden" name="#file[${index}]" value="${fileVal}">
-    <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
-      <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
-      <table style="width:100%;">
-        <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[${index}]" required></td></tr>
-        <tr><td>Fan Control:</td><td>
-          <select name="service[${index}]">
-            <option value="0">Disabled</option>
-            <option value="1" selected>Enabled</option>
-          </select>
-        </td></tr>
-        <tr><td>PWM Controller:</td><td>
-          <select name="controller[${index}]">
-            <?foreach ($pwms as $pwm):?>
-            <option value="<?=$pwm['sensor']?>"><?=$pwm['chip']?> - <?=$pwm['name']?></option>
-            <?endforeach;?>
-          </select>
-          <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
-        </td></tr>
-        <tr><td>Min PWM:</td><td><input type="text" name="pwm[${index}]" value="100"></td></tr>
-        <tr><td>Low Temp (°C):</td><td><input type="number" name="low[${index}]" value="40"></td></tr>
-        <tr><td>High Temp (°C):</td><td><input type="number" name="high[${index}]" value="60"></td></tr>
-        <tr><td>Interval (min):</td><td><input type="number" name="interval[${index}]" value="2"></td></tr>
-        <tr><td>Include Disks:</td><td>
-          <select class="disk-select" name="disks[${index}][]" multiple style="width:400px;">
-            <?foreach ($disks as $d):?>
-            <option value="<?=$d['id']?>"><?=$d['id']?> → <?=$d['dev']?></option>
-            <?endforeach;?>
-          </select>
-        </td></tr>
-      </table>
-    </fieldset>
-  </div>`;
-  $("#fan-area").append(html);
-  $(".disk-select").dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
-  $('form').trigger('ui:changed');
+  const index = $('.fan-block').length;
+  $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(res) {
+    location.reload();
+  });
 }
 
 $(function() {
@@ -148,7 +112,7 @@ $(function() {
       <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
-          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" required></td></tr>
+          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>"></td></tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
               <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
