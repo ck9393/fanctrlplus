@@ -49,12 +49,31 @@ function list_valid_disks_by_id() {
 }
 
 $all_cfg = parse_all_cfg($plugin);
+$init_empty = false;
+if (empty($all_cfg)) {
+  $init_empty = true;
+  $all_cfg[] = [
+    'file' => 'fanctrlplus_temp0.cfg',
+    'custom' => '',
+    'service' => '1',
+    'controller' => '',
+    'pwm' => '100',
+    'low' => '40',
+    'high' => '60',
+    'interval' => '2',
+    'disks' => ''
+  ];
+}
+$fanIndex = count($all_cfg);
+
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
 <script>
+let fanIndex = <?=$fanIndex?>;
+
 function pauseFan(pwm, btn) {
   $(btn).prop('disabled', true).text("Pausing...");
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
@@ -78,10 +97,8 @@ function removeFan(btn) {
   $('form').trigger('ui:changed');
 }
 
-let fanIndex = <?=$all_cfg ? count($all_cfg) : 0?>;
-
 function addFan() {
-  const fileVal = `fanctrlplus_temp${fanIndex}.cfg`;
+  const fileVal = "fanctrlplus_temp" + fanIndex + ".cfg";
   const html = `
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
     <input type="hidden" name="#file[${fanIndex}]" value="${fileVal}">
@@ -124,7 +141,9 @@ function addFan() {
 }
 
 $(function() {
-  $(".disk-select").dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
+  $('.disk-select').each(function() {
+    $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
+  });
   $('form input, form select, form textarea').on('change keyup', function() {
     $('form').trigger('ui:changed');
   });
@@ -136,7 +155,7 @@ $(function() {
   <div id="fan-area">
     <? foreach ($all_cfg as $i => $cfg): ?>
     <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-      <input type="hidden" name="#file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>">
+      <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
       <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
