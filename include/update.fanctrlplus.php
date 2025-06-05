@@ -9,11 +9,20 @@ if (!is_dir($cfgpath)) {
 
 $used_files = [];
 
+if (!isset($_POST['#file']) || !is_array($_POST['#file'])) {
+  header('Content-Type: application/json');
+  echo json_encode(['status' => 'error', 'message' => 'No fan config received']);
+  exit;
+}
+
 foreach ($_POST['#file'] as $i => $file) {
-  $filename = basename($file);  // 安全处理
+  $filename = basename($file);
+  if (!strlen($filename)) continue;
+
   $filepath = "$cfgpath/$filename";
 
   $cfg = [
+    'custom'    => $_POST['custom'][$i] ?? '',
     'service'   => $_POST['service'][$i] ?? '0',
     'controller'=> $_POST['controller'][$i] ?? '',
     'pwm'       => $_POST['pwm'][$i] ?? '',
@@ -27,6 +36,7 @@ foreach ($_POST['#file'] as $i => $file) {
 
   $content = '';
   foreach ($cfg as $k => $v) {
+    $v = str_replace('"', '', $v); // 去除用户可能输的双引号
     $content .= "$k=\"$v\"\n";
   }
 
@@ -41,7 +51,7 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   }
 }
 
-// 重启 fanctrlplus 脚本（后台运行）
+// 重启 fanctrlplus 脚本（后台执行）
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan";
 exec("bash $script stop > /dev/null 2>&1 &");
 sleep(1);
