@@ -4,17 +4,18 @@
 #=======================================================================================
 plugin=fanctrlplus
 script=fanctrlplus
-cfg_path=/boot/config/plugins/$plugin
+cfg_path="/boot/config/plugins/$plugin"
 
 log() {
-  logger -t fanctrlplus "$1"
+  logger -t "$plugin" "$1"
 }
 
 get_fan_path() {
   local pwm_path="$1"
   if [[ "$pwm_path" =~ pwm([0-9]+)$ ]]; then
     local idx="${BASH_REMATCH[1]}"
-    local base_dir="$(dirname "$pwm_path")"
+    local base_dir
+    base_dir="$(dirname "$pwm_path")"
     local fan_path="$base_dir/fan${idx}_input"
     [[ -e "$fan_path" ]] && echo "$fan_path" || echo ""
   else
@@ -25,7 +26,8 @@ get_fan_path() {
 read_temp() {
   local disk="$1"
   local dev="/dev/disk/by-id/$disk"
-  local path=$(realpath "$dev")
+  local path
+  path=$(realpath "$dev")
   [[ ! -b "$path" ]] && return
   if smartctl -n standby -A "$path" 2>&1 | grep -q "Device is in STANDBY"; then
     return
@@ -51,25 +53,29 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
-  pkill -f "MaxTemp=.* → PWM="
+  # 清除旧实例（仅此脚本内的）
+  pkill -f "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start"
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
-    fan=""
-    [[ -z "$fan" && -n "$controller" ]] && fan=$(get_fan_path "$controller")
+    # 自动获取 fan 路径
+    if [[ -z "$fan" && -n "$controller" ]]; then
+      fan=$(get_fan_path "$controller")
+    fi
+
     [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
 
     fan_tag="FanCtrl_${controller##*/} → ${fan##*/}"
     prev_pwm=-1
-
     log "[$fan_tag] Started PWM control"
 
     (
       while true; do
         IFS=',' read -ra disks_list <<< "$disks"
         max_temp=0
+
         for disk in "${disks_list[@]}"; do
           temp=$(read_temp "$disk")
           [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
@@ -87,13 +93,13 @@ fanctrlplus.start() {
 
         sleep "$((interval * 60))"
       done
-    ) & disown
+    ) &
   done
 }
 
 fanctrlplus.stop() {
-  pkill -f "$script"
-  for cfg in "$cfg_path"/${plugin}*.cfg; do
+  pkill -f "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start"
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ -n "$controller" ]] && echo 255 > "$controller"
   done
@@ -101,7 +107,7 @@ fanctrlplus.stop() {
 }
 
 fanctrlplus.speed() {
-  for cfg in "$cfg_path"/${plugin}*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ -f "$controller" && $(cat "$fan" 2>/dev/null) -gt 0 ]] && \
       echo -n "$(( $(cat "$controller") * 100 / 255 )) " || echo -n "0 "
