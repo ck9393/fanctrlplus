@@ -6,37 +6,28 @@ if (!is_dir($cfgpath)) {
   mkdir($cfgpath, 0777, true);
 }
 
-// 获取 PWM 对应 fan_input 路径
-function get_fan_path($controller) {
-  if (preg_match('/pwm(\d+)$/', $controller, $m)) {
-    $fan_path = dirname($controller) . "/fan{$m[1]}_input";
-    return file_exists($fan_path) ? $fan_path : '';
-  }
-  return '';
-}
-
-// 收集所有 PWM 设置
-$used_controllers = [];
+// 收集 PWM 配置，使用 controller 名称作为文件名
 $index = 0;
+$used_controllers = [];
+
 while (isset($_POST["controller"][$index])) {
   $controller = $_POST["controller"][$index] ?? '';
   if ($controller == '') { $index++; continue; }
 
-  $fan = get_fan_path($controller);
-  $used_controllers[] = basename($controller);
-
   $cfg = [
-    'service'    => $_POST['service'][$index] ?? '0',
-    'controller' => $controller,
-    'fan'        => $fan,
-    'pwm'        => $_POST['pwm'][$index] ?? '',
-    'low'        => $_POST['low'][$index] ?? '',
-    'high'       => $_POST['high'][$index] ?? '',
-    'interval'   => $_POST['interval'][$index] ?? '',
-    'disks'      => isset($_POST['disks'][$index]) ? implode(',', $_POST['disks'][$index]) : ''
+    'service'   => $_POST['service'][$index] ?? '0',
+    'controller'=> $controller,
+    'pwm'       => $_POST['pwm'][$index] ?? '',
+    'low'       => $_POST['low'][$index] ?? '',
+    'high'      => $_POST['high'][$index] ?? '',
+    'interval'  => $_POST['interval'][$index] ?? '',
+    'disks'     => isset($_POST['disks'][$index]) ? implode(',', $_POST['disks'][$index]) : ''
   ];
 
-  $filename = "$cfgpath/{$plugin}_" . basename($controller) . ".cfg";
+  $basename = basename($controller);
+  $used_controllers[] = $basename;
+  $filename = "$cfgpath/{$plugin}_$basename.cfg";
+
   $content = '';
   foreach ($cfg as $k => $v) {
     $content .= "$k=\"$v\"\n";
@@ -46,16 +37,17 @@ while (isset($_POST["controller"][$index])) {
   $index++;
 }
 
-// 删除已移除的旧 cfg
+// 删除未在使用中的旧配置文件
 foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
-  $basename = basename($cfgfile, '.cfg');
-  $suffix = str_replace("{$plugin}_", '', $basename);
+  $base = basename($cfgfile, '.cfg');
+  $suffix = substr($base, strlen($plugin) + 1);
   if (!in_array($suffix, $used_controllers)) {
     @unlink($cfgfile);
   }
 }
 
-// 重启控制逻辑
-exec("/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan stop");
-exec("/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan start");
-?>
+// 重启 fanctrlplus 脚本
+$script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan";
+exec("bash $script stop");
+sleep(1);
+exec("bash $script start");
