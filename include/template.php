@@ -25,7 +25,7 @@ foreach (glob("/dev/disk/by-id/*") as $dev) {
 ?>
 
 <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-  <input type="hidden" name="#file[<?=$index?>]" value="">
+  <input type="hidden" name="#file[<?=$index?>]" value="fanctrlplus_new<?=$index?>.cfg" class="cfg-file">
   <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
     <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
 
@@ -35,7 +35,7 @@ foreach (glob("/dev/disk/by-id/*") as $dev) {
         <td>
           <select name="service[<?=$index?>]">
             <option value="0">Disabled</option>
-            <option value="1">Enabled</option>
+            <option value="1" selected>Enabled</option>
           </select>
         </td>
       </tr>
@@ -51,7 +51,7 @@ foreach (glob("/dev/disk/by-id/*") as $dev) {
         </td>
       </tr>
       <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$index?>]" value="0"></td></tr>
-      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value="35"></td></tr>
+      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value="30"></td></tr>
       <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$index?>]" min="0" max="100" value="50"></td></tr>
       <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$index?>]" min="1" max="60" value="5"></td></tr>
       <tr>
