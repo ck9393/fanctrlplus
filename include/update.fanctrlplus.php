@@ -18,28 +18,30 @@ if (!isset($_POST['#file']) || !is_array($_POST['#file'])) {
 foreach ($_POST['#file'] as $i => $file) {
   $old_file = basename($file);
   $controller = $_POST['controller'][$i] ?? '';
-  $custom = $_POST['custom'][$i] ?? '';
+  $custom = trim($_POST['custom'][$i] ?? '');
 
-  // ⚠️ 若是临时文件名，则重命名为 pwm 或 pwm_custom 格式
+  // 如果是临时配置（temp），但没有填写 Custom Name，跳过
+  if (strpos($old_file, 'temp') !== false && $custom === '') {
+    continue;
+  }
+
+  // 安全处理 Custom 名字
+  $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
+
+  // 临时文件改名为带 custom 的新文件名
   if (strpos($old_file, 'temp') !== false && !empty($controller)) {
     $base = str_replace('/', '_', basename($controller)); // e.g., pwm6
-    $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
-    $new_file = $plugin . '_' . $base;
-    if (!empty($safe_custom)) {
-      $new_file .= "_$safe_custom";
-    }
-    $new_file .= '.cfg';
-
-    // 若新文件名已存在，不重复添加
-    if (in_array($new_file, $used_files)) {
-      $suffix = 1;
-      while (in_array("{$plugin}_{$base}_{$safe_custom}_$suffix.cfg", $used_files)) {
-        $suffix++;
-      }
-      $new_file = "{$plugin}_{$base}_{$safe_custom}_$suffix.cfg";
-    }
+    $new_file = $plugin . "_$safe_custom.cfg";
   } else {
     $new_file = $old_file;
+  }
+
+  // 避免冲突
+  $basefile = pathinfo($new_file, PATHINFO_FILENAME);
+  $suffix = 1;
+  while (in_array($new_file, $used_files)) {
+    $new_file = $basefile . "_$suffix.cfg";
+    $suffix++;
   }
 
   $used_files[] = $new_file;
@@ -64,7 +66,7 @@ foreach ($_POST['#file'] as $i => $file) {
 
   file_put_contents($filepath, $content);
 
-  // 如果旧文件不同，删除旧文件（避免残留 temp0.cfg）
+  // 删除旧 temp 文件
   if ($old_file !== $new_file && is_file("$cfgpath/$old_file")) {
     unlink("$cfgpath/$old_file");
   }
