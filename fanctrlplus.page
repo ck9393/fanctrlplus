@@ -48,6 +48,22 @@ function list_valid_disks_by_id() {
 }
 
 $all_cfg = parse_all_cfg($plugin);
+
+// ✅ 若没有任何 fan config，预设一条默认空配置
+if (empty($all_cfg)) {
+  $all_cfg[] = [
+    'file' => '',
+    'custom' => '',
+    'service' => '1',
+    'controller' => '',
+    'pwm' => '100',
+    'low' => '40',
+    'high' => '60',
+    'interval' => '2',
+    'disks' => ''
+  ];
+}
+
 $disks = list_valid_disks_by_id();
 $pwms = list_pwm();
 $width = 300;
@@ -91,7 +107,7 @@ $(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
 
-  // 修复 Apply 按钮不亮起的 bug
+  // ✅ 修复 Apply 按钮无法亮起
   $('form input, form select, form textarea').on('change keyup', function() {
     $('form').trigger('ui:changed');
   });
