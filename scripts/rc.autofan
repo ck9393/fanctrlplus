@@ -51,49 +51,54 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
-  for cfg in $cfg_path/${plugin}*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
-    # 自动侦测 fan
+    # 自动补充 fan 路径
     if [[ -z "$fan" && -n "$controller" ]]; then
       fan=$(get_fan_path "$controller")
     fi
 
-    [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
+    if [[ ! -f "$controller" || ! -f "$fan" ]]; then
+      log "Skip: invalid controller [$controller] or fan [$fan]"
+      continue
+    fi
 
     fan_tag="FanCtrl_${controller##*/} → ${fan##*/}"
     prev_pwm=-1
 
     log "[$fan_tag] Started PWM control"
 
-    while true; do
-      IFS=',' read -ra disks_list <<< "$disks"
-      max_temp=0
+    (
+      while true; do
+        IFS=',' read -ra disks_list <<< "$disks"
+        max_temp=0
 
-      for disk in "${disks_list[@]}"; do
-        temp=$(read_temp "$disk")
-        [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
+        for disk in "${disks_list[@]}"; do
+          temp=$(read_temp "$disk")
+          [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
+        done
+
+        pwm_val=$(calculate_pwm "$max_temp" "$low" "$high" "$pwm")
+
+        if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
+          echo "$pwm_val" > "$controller"
+          sleep 4
+          rpm=$(cat "$fan" 2>/dev/null || echo 0)
+          log "[$fan_tag] MaxTemp=${max_temp}°C → PWM=$pwm_val → FanRPM=$rpm"
+          prev_pwm="$pwm_val"
+        fi
+
+        sleep "$((interval * 60))"
       done
-
-      pwm_val=$(calculate_pwm "$max_temp" "$low" "$high" "$pwm")
-
-      if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
-        echo "$pwm_val" > "$controller"
-        sleep 4
-        rpm=$(cat "$fan" 2>/dev/null || echo 0)
-        log "[$fan_tag] MaxTemp=${max_temp}°C → PWM=$pwm_val → FanRPM=$rpm"
-        prev_pwm="$pwm_val"
-      fi
-
-      sleep "$((interval * 60))"
-    done &
+    ) &
   done
 }
 
 fanctrlplus.stop() {
   pkill -f "$script"
-  for cfg in $cfg_path/${plugin}*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ -n "$controller" ]] && echo 255 > "$controller"
   done
@@ -101,7 +106,7 @@ fanctrlplus.stop() {
 }
 
 fanctrlplus.speed() {
-  for cfg in $cfg_path/${plugin}*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ -f "$controller" && $(cat "$fan" 2>/dev/null) -gt 0 ]] && \
       echo -n "$(( $(cat "$controller") * 100 / 255 )) " || echo -n "0 "
