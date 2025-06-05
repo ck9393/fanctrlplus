@@ -1,4 +1,4 @@
-<?PHP
+<?php
 $index = intval($_GET['index'] ?? 0);
 
 // 获取所有 pwm 控制器
@@ -22,10 +22,13 @@ foreach (glob("/dev/disk/by-id/*") as $dev) {
   $seen[] = $real;
   $disks[] = ['id'=>basename($dev), 'dev'=>$real];
 }
+
+// 自动生成临时配置文件名
+$tmp_cfg = "fanctrlplus_temp{$index}.cfg";
 ?>
 
 <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-  <input type="hidden" name="#file[<?=$index?>]" value="fanctrlplus_new<?=$index?>.cfg" class="cfg-file">
+  <input type="hidden" name="#file[<?=$index?>]" value="<?=$tmp_cfg?>" class="cfg-file">
   <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
     <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
 
@@ -43,6 +46,7 @@ foreach (glob("/dev/disk/by-id/*") as $dev) {
         <td>PWM Controller:</td>
         <td>
           <select name="controller[<?=$index?>]">
+            <option disabled selected hidden>请选择</option>
             <?php foreach ($pwms as $p): ?>
               <option value="<?=htmlspecialchars($p['sensor'])?>"><?=htmlspecialchars($p['label'])?></option>
             <?php endforeach; ?>
@@ -51,7 +55,7 @@ foreach (glob("/dev/disk/by-id/*") as $dev) {
         </td>
       </tr>
       <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$index?>]" value="0"></td></tr>
-      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value="30"></td></tr>
+      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value="35"></td></tr>
       <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$index?>]" min="0" max="100" value="50"></td></tr>
       <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$index?>]" min="1" max="60" value="5"></td></tr>
       <tr>
