@@ -4,7 +4,7 @@
 #=======================================================================================
 plugin=fanctrlplus
 script=fanctrlplus
-cfg_path=/boot/config/plugins/$plugin
+cfg_path="/boot/config/plugins/$plugin"
 
 log() {
   logger -t fanctrlplus "$1"
@@ -52,20 +52,15 @@ calculate_pwm() {
 
 fanctrlplus.start() {
   pkill -f "$script"
+
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
 
-    # 自动补充 fan 路径
+    # 自动侦测 fan（初始化 fan 为空）
     fan=""
-    if [[ -z "$fan" && -n "$controller" ]]; then
-      fan=$(get_fan_path "$controller")
-    fi
-
-    if [[ ! -f "$controller" || ! -f "$fan" ]]; then
-      log "Skip: invalid controller [$controller] or fan [$fan]"
-      continue
-    fi
+    [[ -z "$fan" && -n "$controller" ]] && fan=$(get_fan_path "$controller")
+    [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
 
     fan_tag="FanCtrl_${controller##*/} → ${fan##*/}"
     prev_pwm=-1
