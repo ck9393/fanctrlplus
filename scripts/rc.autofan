@@ -59,21 +59,17 @@ fanctrlplus.start() {
 
     fan=""
     [[ -z "$fan" && -n "$controller" ]] && fan=$(get_fan_path "$controller")
-
-    if [[ ! -f "$controller" || ! -f "$fan" ]]; then
-      log "Skip: invalid controller [$controller] or fan [$fan]"
-      continue
-    fi
+    [[ ! -f "$controller" || ! -f "$fan" ]] && log "Skip: invalid controller [$controller] or fan [$fan]" && continue
 
     fan_tag="FanCtrl_${controller##*/} → ${fan##*/}"
     prev_pwm=-1
+
     log "[$fan_tag] Started PWM control"
 
     (
       while true; do
         IFS=',' read -ra disks_list <<< "$disks"
         max_temp=0
-
         for disk in "${disks_list[@]}"; do
           temp=$(read_temp "$disk")
           [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
@@ -91,16 +87,13 @@ fanctrlplus.start() {
 
         sleep "$((interval * 60))"
       done
-    ) &
+    ) & disown
   done
-
-  # 修正关键：等待所有后台 fan 控制线程运行，避免主脚本提前退出
-  wait
 }
 
 fanctrlplus.stop() {
   pkill -f "$script"
-  for cfg in "$cfg_path"/${plugin}_*.cfg; do
+  for cfg in "$cfg_path"/${plugin}*.cfg; do
     source "$cfg"
     [[ -n "$controller" ]] && echo 255 > "$controller"
   done
@@ -108,7 +101,7 @@ fanctrlplus.stop() {
 }
 
 fanctrlplus.speed() {
-  for cfg in "$cfg_path"/${plugin}_*.cfg; do
+  for cfg in "$cfg_path"/${plugin}*.cfg; do
     source "$cfg"
     [[ -f "$controller" && $(cat "$fan" 2>/dev/null) -gt 0 ]] && \
       echo -n "$(( $(cat "$controller") * 100 / 255 )) " || echo -n "0 "
