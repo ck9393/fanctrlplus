@@ -22,22 +22,21 @@ foreach ($chips as $chip) {
 ?>
 
 <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-  <input type="hidden" name="#file[<?=$index?>]" value="fanctrlplus_pwm<?=$index?>.cfg" class="cfg-file">
+  <input type="hidden" name="#file[<?=$index?>]" value="fanctrlplus_temp<?=$index?>.cfg" class="cfg-file">
   <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
     <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
     <table style="width:100%;">
+      <tr><td style="width:140px;">Custom Name:</td>
+          <td><input type="text" name="custom[<?=$index?>]" placeholder="e.g. HDDBay"></td>
+      </tr>
       <tr>
-        <td style="width:140px;">Fan Control:</td>
+        <td>Fan Control:</td>
         <td>
           <select name="service[<?=$index?>]">
             <option value="0">Disabled</option>
-            <option value="1">Enabled</option>
+            <option value="1" selected>Enabled</option>
           </select>
         </td>
-      </tr>
-      <tr>
-        <td>Custom Name:</td>
-        <td><input type="text" name="custom[<?=$index?>]" placeholder="e.g. HDDBay"></td>
       </tr>
       <tr>
         <td>PWM Controller:</td>
@@ -50,10 +49,10 @@ foreach ($chips as $chip) {
           <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
         </td>
       </tr>
-      <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$index?>]" value=""></td></tr>
-      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value=""></td></tr>
-      <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$index?>]" min="0" max="100" value=""></td></tr>
-      <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$index?>]" min="1" max="60" value=""></td></tr>
+      <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$index?>]" value="100"></td></tr>
+      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value="40"></td></tr>
+      <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$index?>]" min="0" max="100" value="60"></td></tr>
+      <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$index?>]" min="1" max="60" value="2"></td></tr>
       <tr>
         <td>Include Disks:</td>
         <td>
