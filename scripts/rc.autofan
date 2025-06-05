@@ -51,7 +51,7 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
-  pkill -f "$script"
+  pkill -f "MaxTemp=.* → PWM="
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
