@@ -65,7 +65,13 @@ fanctrlplus.start() {
       continue
     fi
 
-    tag="FanCtrl_${controller##*/} → ${fan##*/}"
+    # 标题标签（优先用 custom）
+    if [[ -n "$custom" ]]; then
+      tag="$custom"
+    else
+      tag="FanCtrl_${controller##*/} → ${fan##*/}"
+    fi
+
     log "[$tag] 启动 PWM 控制"
 
     (
@@ -87,7 +93,7 @@ fanctrlplus.start() {
           echo "$pwm_val" > "$controller"
           sleep 4
           rpm=$(cat "$fan" 2>/dev/null || echo 0)
-          log "[$tag] MaxTemp=${max_temp}°C → PWM=$pwm_val → FanRPM=$rpm"
+          log "[$tag] Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
           prev_pwm="$pwm_val"
         fi
 
