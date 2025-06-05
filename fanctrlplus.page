@@ -49,10 +49,10 @@ function list_valid_disks_by_id() {
 
 $all_cfg = parse_all_cfg($plugin);
 
-// ✅ 若没有任何 fan config，预设一条默认空配置
+// ✅ 若无任何配置，则注入一个初始默认项并设定文件名
 if (empty($all_cfg)) {
   $all_cfg[] = [
-    'file' => '',
+    'file' => 'fanctrlplus_default.cfg',
     'custom' => '',
     'service' => '1',
     'controller' => '',
@@ -107,7 +107,7 @@ $(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
 
-  // ✅ 修复 Apply 按钮无法亮起
+  // ✅ 确保 Apply 按钮可正常激活
   $('form input, form select, form textarea').on('change keyup', function() {
     $('form').trigger('ui:changed');
   });
