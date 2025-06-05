@@ -49,20 +49,6 @@ function list_valid_disks_by_id() {
 }
 
 $all_cfg = parse_all_cfg($plugin);
-if (empty($all_cfg)) {
-  $all_cfg[] = [
-    'file' => 'fanctrlplus_temp0.cfg',
-    'custom' => '',
-    'service' => '1',
-    'controller' => '',
-    'pwm' => '100',
-    'low' => '40',
-    'high' => '60',
-    'interval' => '2',
-    'disks' => ''
-  ];
-}
-
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
 $width = 300;
@@ -92,36 +78,37 @@ function removeFan(btn) {
   $('form').trigger('ui:changed');
 }
 
+let fanIndex = <?=$all_cfg ? count($all_cfg) : 0?>;
+
 function addFan() {
-  const index = $('.fan-block').length;
-  const fileVal = "fanctrlplus_temp" + index + ".cfg";
+  const fileVal = `fanctrlplus_temp${fanIndex}.cfg`;
   const html = `
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-    <input type="hidden" name="#file[${index}]" value="${fileVal}" class="cfg-file">
+    <input type="hidden" name="#file[${fanIndex}]" value="${fileVal}">
     <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
       <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
       <table style="width:100%;">
-        <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[${index}]" required></td></tr>
+        <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[${fanIndex}]"></td></tr>
         <tr><td>Fan Control:</td><td>
-          <select name="service[${index}]">
+          <select name="service[${fanIndex}]">
             <option value="0">Disabled</option>
             <option value="1" selected>Enabled</option>
           </select>
         </td></tr>
         <tr><td>PWM Controller:</td><td>
-          <select name="controller[${index}]">
+          <select name="controller[${fanIndex}]">
             <?foreach ($pwms as $pwm):?>
             <option value="<?=$pwm['sensor']?>"><?=$pwm['chip']?> - <?=$pwm['name']?></option>
             <?endforeach;?>
           </select>
           <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
         </td></tr>
-        <tr><td>Min PWM:</td><td><input type="text" name="pwm[${index}]" value="100"></td></tr>
-        <tr><td>Low Temp (°C):</td><td><input type="number" name="low[${index}]" value="40"></td></tr>
-        <tr><td>High Temp (°C):</td><td><input type="number" name="high[${index}]" value="60"></td></tr>
-        <tr><td>Interval (min):</td><td><input type="number" name="interval[${index}]" value="2"></td></tr>
+        <tr><td>Min PWM:</td><td><input type="text" name="pwm[${fanIndex}]" value="100"></td></tr>
+        <tr><td>Low Temp (°C):</td><td><input type="number" name="low[${fanIndex}]" value="40"></td></tr>
+        <tr><td>High Temp (°C):</td><td><input type="number" name="high[${fanIndex}]" value="60"></td></tr>
+        <tr><td>Interval (min):</td><td><input type="number" name="interval[${fanIndex}]" value="2"></td></tr>
         <tr><td>Include Disks:</td><td>
-          <select class="disk-select" name="disks[${index}][]" multiple style="width:400px;">
+          <select class="disk-select" name="disks[${fanIndex}][]" multiple style="width:400px;">
             <?foreach ($disks as $d):?>
             <option value="<?=$d['id']?>"><?=$d['id']?> → <?=$d['dev']?></option>
             <?endforeach;?>
@@ -133,30 +120,13 @@ function addFan() {
   $("#fan-area").append(html);
   $(".disk-select").dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   $('form').trigger('ui:changed');
+  fanIndex++;
 }
 
 $(function() {
-  $('.disk-select').each(function() {
-    $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
-  });
-
-  // 表单字段有变化则触发 apply 可用
+  $(".disk-select").dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   $('form input, form select, form textarea').on('change keyup', function() {
     $('form').trigger('ui:changed');
-  });
-
-  // 提交前强制检查 Custom Name
-  $('form').on('submit', function(e) {
-    let valid = true;
-    $('.fan-block').each(function() {
-      const custom = $(this).find('input[name^="custom"]').val();
-      if (!custom || !custom.trim()) {
-        alert("Custom Name cannot be empty.");
-        valid = false;
-        return false; // break
-      }
-    });
-    if (!valid) e.preventDefault();
   });
 });
 </script>
@@ -166,11 +136,11 @@ $(function() {
   <div id="fan-area">
     <? foreach ($all_cfg as $i => $cfg): ?>
     <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-      <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
+      <input type="hidden" name="#file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>">
       <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
-          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" required></td></tr>
+          <tr><td style="width:140px;">Custom Name:</td><td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>"></td></tr>
           <tr><td>Fan Control:</td><td>
             <select name="service[<?=$i?>]">
               <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
