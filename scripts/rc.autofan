@@ -51,6 +51,7 @@ calculate_pwm() {
 }
 
 fanctrlplus.start() {
+  pkill -f "$script"
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
