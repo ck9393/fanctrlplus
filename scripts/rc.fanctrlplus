@@ -131,5 +131,12 @@ case "$1" in
   stop) fanctrlplus.stop ;;
   restart) fanctrlplus.restart ;;
   speed) fanctrlplus.speed ;;
-  *) echo "Usage: $0 {start|stop|restart|speed}" ;;
+  status)
+    if pgrep -f fanctrlplus_loop >/dev/null; then
+      exit 0
+    else
+      exit 1
+    fi
+    ;;
+  *) echo "Usage: $0 {start|stop|restart|speed|status}" ;;
 esac
