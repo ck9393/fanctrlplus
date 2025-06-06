@@ -41,14 +41,30 @@ function list_pwm() {
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
+
+  // 获取 Unraid 启动盘对应的设备，例如 /dev/sda1 或 /dev/sdb1
+  $boot_mount = realpath("/boot");
+  $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
+  $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);  // 去除分区号，例如 /dev/sda1 → /dev/sda
+
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
+
     $real = realpath($dev);
+    if ($real === false) continue;
+
+    // 只保留 sdX 或 nvme 设备
     if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
+
+    // 跳过 Unraid 启动的设备（例如 /dev/sda）
+    if (strpos($real, $boot_dev_base) === 0) continue;
+
     if (in_array($real, $seen)) continue;
+
     $seen[] = $real;
     $result[] = ['id' => basename($dev), 'dev' => $real];
   }
+
   return $result;
 }
 
