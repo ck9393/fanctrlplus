@@ -61,14 +61,14 @@ fanctrlplus.start() {
 
     fan=$(get_fan_path "$controller")
     if [[ -z "$fan" || ! -f "$controller" || ! -f "$fan" ]]; then
-      log "跳过无效设置: controller=$controller fan=$fan"
+      log "Skipped invalid config: controller=$controller fan=$fan"
       continue
     fi
 
     # 标签（用于日志）
     tag="${custom:-FanCtrl_${controller##*/}}"
 
-    log "[$tag] 启动 PWM 控制"
+    log "[$tag] Daemon started"
 
     (
       prev_pwm=-1
@@ -105,7 +105,7 @@ fanctrlplus.stop() {
     source "$cfg"
     [[ -n "$controller" ]] && echo 255 > "$controller"
   done
-  log "已停止 fanctrlplus"
+  log "Daemon stopped"
 }
 
 fanctrlplus.speed() {
