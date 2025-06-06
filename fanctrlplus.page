@@ -1,0 +1,170 @@
+Menu="Utilities"
+Title="FanCtrl Plus"
+Icon="fanctrlplus.png"
+---
+<?PHP
+$plugin = "fanctrlplus";
+$cfg_dir = "/boot/config/plugins/$plugin";
+
+// 初始化配置
+if (!is_dir($cfg_dir)) {
+  mkdir($cfg_dir, 0777, true);
+}
+
+$all_cfg = [];
+foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
+  $cfg = parse_ini_file($file);
+  $cfg['file'] = basename($file);
+  $all_cfg[] = $cfg;
+}
+
+if (empty($all_cfg)) {
+  $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
+  if (!file_exists($temp_file)) {
+    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+  }
+  $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
+}
+
+function list_pwm() {
+  $out = [];
+  exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
+  foreach ($chips as $chip) {
+    $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
+    foreach (glob("$chip/pwm[0-9]") as $pwm) {
+      $out[] = ['chip'=>$name, 'name'=>basename($pwm), 'sensor'=>$pwm];
+    }
+  }
+  return $out;
+}
+
+function list_valid_disks_by_id() {
+  $seen = [];
+  $result = [];
+  foreach (glob("/dev/disk/by-id/*") as $dev) {
+    if (!is_link($dev) || strpos($dev, "part") !== false) continue;
+    $real = realpath($dev);
+    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
+    if (in_array($real, $seen)) continue;
+    $seen[] = $real;
+    $result[] = ['id' => basename($dev), 'dev' => $real];
+  }
+  return $result;
+}
+
+$pwms = list_pwm();
+$disks = list_valid_disks_by_id();
+$width = 300;
+?>
+
+<script>
+function pauseFan(pwm, btn) {
+  $(btn).prop('disabled', true).text("Pausing...");
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
+    let seconds = 30;
+    let interval = setInterval(function() {
+      if (seconds <= 0) {
+        clearInterval(interval);
+        $(btn).text("Pause 30s").prop('disabled', false);
+      } else {
+        $(btn).text("Paused (" + seconds + "s)");
+        seconds--;
+      }
+    }, 1000);
+  });
+}
+
+function removeFan(btn) {
+  if (!confirm("Are you sure you want to delete this fan configuration?")) return;
+  const block = $(btn).closest('.fan-block');
+  const file = block.find('input.cfg-file').val();
+  $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file}, function() {
+    block.remove();
+    $('form').trigger('ui:changed');
+  });
+}
+
+function addFan() {
+  const index = $('.fan-block').length;
+  $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function() {
+    location.reload();
+  });
+}
+
+$(function() {
+  $('.disk-select').each(function() {
+    $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
+  });
+
+  $('form input, form select, form textarea').on('change keyup', function() {
+    $('form').trigger('ui:changed');
+  });
+
+  // ✅ Custom Name 留空时拦截 Apply
+  $('form').on('submit', function() {
+    let valid = true;
+    $('input[name^="custom["]').each(function() {
+      if ($(this).val().trim() === '') {
+        alert("Custom Name cannot be empty!");
+        $(this).focus();
+        valid = false;
+        return false;
+      }
+    });
+    return valid;
+  });
+});
+</script>
+
+<form method="POST" action="/update.php" target="progressFrame">
+  <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
+  <div id="fan-area">
+    <? foreach ($all_cfg as $i => $cfg): ?>
+    <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
+      <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
+      <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
+        <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
+        <table style="width:100%;">
+          <tr>
+            <td style="width:140px;">Custom Name:</td>
+            <td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="e.g. HDDBay" class="custom-name"></td>
+          </tr>
+          <tr><td>Fan Control:</td><td>
+            <select name="service[<?=$i?>]">
+              <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
+              <option value="1" <?=($cfg['service']??'')=='1'?'selected':''?>>Enabled</option>
+            </select>
+          </td></tr>
+          <tr><td>PWM Controller:</td><td>
+            <select name="controller[<?=$i?>]">
+              <?foreach ($pwms as $pwm):?>
+              <option value="<?=$pwm['sensor']?>" <?=($cfg['controller']??'')==$pwm['sensor']?'selected':''?>><?=$pwm['chip']?> - <?=$pwm['name']?></option>
+              <?endforeach;?>
+            </select>
+            <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
+          </td></tr>
+          <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$i?>]" value="<?=$cfg['pwm']??''?>"></td></tr>
+          <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$i?>]" value="<?=$cfg['low']??''?>"></td></tr>
+          <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$i?>]" value="<?=$cfg['high']??''?>"></td></tr>
+          <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$i?>]" value="<?=$cfg['interval']??''?>"></td></tr>
+          <tr><td>Include Disks:</td><td>
+            <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
+              <?foreach ($disks as $d):
+                $id = $d['id'];
+                $sel = in_array($id, explode(',', $cfg['disks']??'')) ? 'selected' : '';
+              ?>
+              <option value="<?=$id?>" <?=$sel?>><?=$id?> → <?=$d['dev']?></option>
+              <?endforeach;?>
+            </select>
+          </td></tr>
+        </table>
+      </fieldset>
+    </div>
+    <? endforeach; ?>
+  </div>
+  <div style="clear:both; margin-top:10px;">
+    <button type="button" onclick="addFan()">➕ Add Fan</button>
+    <input type="submit" name="#apply" value="Apply">
+    <input type="submit" name="#default" value="Default">
+  </div>
+</form>
