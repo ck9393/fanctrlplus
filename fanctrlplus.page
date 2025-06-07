@@ -73,9 +73,10 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<div style="clear:both; margin-top:10px; text-align: left;">
-  <b>Status:</b> <span id="status-light">🔄 Loading...</span>
-  <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
+<div style="margin:10px 0;">
+  <b>Status:</b>
+  <span id="status-light">🔄 Loading...</span>
+  <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled style="margin-left:10px; min-width:90px;">Loading...</button>
 </div>
 
 <script>
