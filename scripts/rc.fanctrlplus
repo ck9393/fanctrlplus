@@ -1,5 +1,5 @@
 #!/bin/bash
-# FanCtrlPlus: 自动控制 PWM 风扇脚本
+# FanCtrlPlus: Minimal Stable Script
 
 plugin=fanctrlplus
 cfg_path="/boot/config/plugins/$plugin"
@@ -10,85 +10,81 @@ log() {
 }
 
 get_fan_path() {
-  local pwm="$1"
-  if [[ "$pwm" =~ pwm([0-9]+)$ ]]; then
-    local i="${BASH_REMATCH[1]}"
-    local dir="$(dirname "$pwm")"
-    echo "$dir/fan${i}_input"
-  else
-    echo ""
-  fi
+  [[ "$1" =~ pwm([0-9]+)$ ]] || return
+  echo "$(dirname "$1")/fan${BASH_REMATCH[1]}_input"
 }
 
-calculate_pwm() {
-  local temp=$1 low=$2 high=$3 min=$4
-  if (( temp <= low )); then
-    echo "$min"
-  elif (( temp >= high )); then
-    echo 255
-  else
-    local range=$((high - low))
-    local delta=$((temp - low))
-    echo $((min + delta * (255 - min) / range))
-  fi
+read_temp() {
+  local path
+  path=$(realpath "/dev/disk/by-id/$1" 2>/dev/null) || return
+  [[ ! -b "$path" ]] && return
+  smartctl -n standby -A "$path" 2>&1 | grep -q "STANDBY" && return
+  [[ "$path" == /dev/nvme* ]] && smartctl -A "$path" | awk '/Temperature:/ {print $2; exit}' ||
+    smartctl -A "$path" | awk '/^194|Temperature_Celsius/ {print $10; exit}'
+}
+
+calc_pwm() {
+  (( $1 <= $2 )) && echo "$4" && return
+  (( $1 >= $3 )) && echo 255 && return
+  echo $(( $4 + ($1 - $2) * (255 - $4) / ($3 - $2) ))
 }
 
 fanctrlplus.start() {
-  pkill -f fanctrlplus_loop.sh 2>/dev/null
+  pgrep -f fanctrlplus_loop >/dev/null && echo "Already running" && exit 0
 
-  for cfg in "$cfg_path"/fanctrlplus_*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
     fan=$(get_fan_path "$controller")
-    [[ ! -f "$controller" || ! -f "$fan" ]] && continue
-
+    [[ -z "$fan" || ! -f "$controller" || ! -f "$fan" ]] && continue
     tag="${custom:-Fan_${controller##*/}}"
     log "[$tag] Daemon started"
 
     (
-      exec -a fanctrlplus_loop.sh /bin/bash
-      while true; do
-        max_temp=0
-        IFS=',' read -ra list <<< "$disks"
-        for d in "${list[@]}"; do
-          dev="/dev/disk/by-id/$d"
-          real=$(realpath "$dev" 2>/dev/null) || continue
-          [[ ! -b "$real" ]] && continue
-          smartctl -n standby -A "$real" | grep -q "STANDBY" && continue
-
-          if [[ "$real" == /dev/nvme* ]]; then
-            t=$(smartctl -A "$real" | awk '/Temperature:/ {print $2; exit}')
-          else
-            t=$(smartctl -A "$real" | awk '/^194|Temperature_Celsius/ {print $10; exit}')
+      exec -a fanctrlplus_loop /bin/bash -c '
+        cfg='"$cfg"'
+        source "$cfg"
+        prev=-1
+        while true; do
+          max=0
+          IFS="," read -ra disks <<< "$disks"
+          for d in "${disks[@]}"; do
+            t=$(read_temp "$d")
+            [[ "$t" =~ ^[0-9]+$ ]] && (( t > max )) && max=$t
+          done
+          pwm_val=$(calc_pwm "$max" "$low" "$high" "$pwm")
+          if (( prev == -1 || pwm_val != prev )); then
+            [[ -f "${controller}_enable" ]] && echo 1 > "${controller}_enable"
+            echo "$pwm_val" > "$controller"
+            sleep 4
+            rpm=$(cat "$(get_fan_path "$controller")" 2>/dev/null || echo 0)
+            logger -t fanctrlplus "[$tag] Temp=${max}°C → PWM=$pwm_val → RPM=$rpm"
+            prev=$pwm_val
           fi
-          [[ "$t" =~ ^[0-9]+$ ]] && (( t > max_temp )) && max_temp=$t
+          sleep $((interval * 60))
         done
-
-        pwm_val=$(calculate_pwm "$max_temp" "$low" "$high" "$pwm")
-        echo 1 > "${controller}_enable" 2>/dev/null
-        echo "$pwm_val" > "$controller"
-        sleep 4
-        rpm=$(cat "$fan" 2>/dev/null || echo 0)
-        log "[$tag] Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
-        sleep $((interval * 60))
-      done
+      '
     ) &
   done
 }
 
 fanctrlplus.stop() {
-  for cfg in "$cfg_path"/fanctrlplus_*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
     tag="${custom:-Fan_${controller##*/}}"
     log "[$tag] Daemon stopped"
   done
-  pkill -f fanctrlplus_loop.sh
+  pkill -f fanctrlplus_loop
+}
+
+fanctrlplus.status() {
+  pgrep -f fanctrlplus_loop >/dev/null && echo "running" || echo "stopped"
 }
 
 case "$1" in
   start) fanctrlplus.start ;;
   stop) fanctrlplus.stop ;;
-  restart) fanctrlplus.stop; sleep 2; fanctrlplus.start ;;
-  *) echo "Usage: $0 {start|stop|restart}" ;;
+  status) fanctrlplus.status ;;
+  *) echo "Usage: $0 {start|stop|status}" ;;
 esac
