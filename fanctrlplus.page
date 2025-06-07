@@ -129,11 +129,6 @@ function addFan() {
   });
 }
 
-setInterval(function() {
-  updateStatusLightAndButton();
-  updateAllFanStatus();
-}, 30000);
-
  // 🟢 更新每个风扇状态灯
  function updateAllFanStatus() {
    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(data) {
@@ -147,6 +142,11 @@ setInterval(function() {
      });
    });
  }
+
+setInterval(function() {
+  updateStatusLightAndButton();
+  updateAllFanStatus();
+}, 30000);
 
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
