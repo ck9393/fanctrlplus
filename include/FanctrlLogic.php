@@ -56,7 +56,7 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     $pwm = $_GET['pwm'] ?? '';
     $fan = $_GET['fan'] ?? '';
     if (is_file($pwm) && is_file($fan)) {
-      $autofan = "$docroot/plugins/$plugin/scripts/rc.autofan";
+      $autofan = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
       exec("$autofan stop >/dev/null");
 
       $fan_min = explode("_", $fan)[0] . "_min";
