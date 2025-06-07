@@ -73,7 +73,7 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<p style="margin-top:-5px; margin-bottom:12px; margin-left:16px; font-size:12px;" id="status-light">🔄 Loading...</p>
+<p style="margin-top:-5px; margin-bottom:10px; margin-left:12px; font-size:13px;" id="status-light">🔄 Loading...</p>
 
 <script>
 function updateStatusLightAndButton() {
@@ -163,7 +163,7 @@ $(function() {
     <? foreach ($all_cfg as $i => $cfg): ?>
     <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
       <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
-      <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
+      <fieldset style="margin:10px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
           <tr>
@@ -204,7 +204,7 @@ $(function() {
     <? endforeach; ?>
     <div style="clear:both; margin-top:15px; text-align: left;">
       <button type="button" onclick="addFan()">➕ Add Fan</button>
-      <input type="submit" name="#apply" value="Apply">
+      <input type="submit" name="#apply" value="Apply All">
       <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
     </div>
 </form>
