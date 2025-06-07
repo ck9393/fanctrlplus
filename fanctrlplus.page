@@ -73,7 +73,29 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
+<p style="margin-top:-5px; margin-bottom:10px; font-size:14px;" id="status-light">🔄 Loading...</p>
+
 <script>
+function updateStatusLightAndButton() {
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
+    const status = JSON.parse(data).status;
+    const isRunning = status === 'running';
+    $('#status-light').text(isRunning ? '🟢 Running' : '🔴 Stopped');
+    const btn = $('#toggle-daemon');
+    btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
+    btn.prop('disabled', false);
+  });
+}
+
+function toggleDaemon() {
+  const btn = $('#toggle-daemon');
+  btn.prop('disabled', true);
+  const action = btn.text().includes('Stop') ? 'stop' : 'start';
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
+    setTimeout(updateStatusLightAndButton, 1000);
+  });
+}
+
 function pauseFan(pwm, btn) {
   $(btn).prop('disabled', true).text("Pausing...");
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
@@ -108,6 +130,9 @@ function addFan() {
 }
 
 $(function() {
+  updateStatusLightAndButton();
+  setInterval(updateStatusLightAndButton, 30000);
+
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
@@ -177,10 +202,9 @@ $(function() {
       </fieldset>
     </div>
     <? endforeach; ?>
-  </div>
-  <div style="clear:both; margin-top:10px;">
-    <button type="button" onclick="addFan()">➕ Add Fan</button>
-    <input type="submit" name="#apply" value="Apply">
-    <input type="submit" name="#default" value="Default">
-  </div>
+    <div style="clear:both; margin-top:15px; text-align: left;">
+      <button type="button" onclick="addFan()">➕ Add Fan</button>
+      <input type="submit" name="#apply" value="Apply">
+      <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
+    </div>
 </form>
