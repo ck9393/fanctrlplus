@@ -142,17 +142,17 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     break;
 
   case 'status_all':
-    $plugin = 'fanctrlplus';  // 👈 必须加
+    $plugin = 'fanctrlplus';
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
 
     foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
       $cfg = parse_ini_file($file);
-      $name = trim($cfg['custom'] ?? '');
+      $file_base = basename($file, '.cfg'); // fanctrlplus_Enclosure
+      $fallback = str_replace("{$plugin}_", '', $file_base); // Enclosure
+      $name = trim($cfg['custom'] ?? '') ?: $fallback;
       $active = trim($cfg['service'] ?? '0') === '1';
-      if ($name !== '') {
-        $result[$name] = $active ? 'running' : 'stopped';
-      }
+      $result[$name] = $active ? 'running' : 'stopped';
     }
 
     header('Content-Type: application/json');
