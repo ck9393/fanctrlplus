@@ -1,5 +1,5 @@
 #!/bin/bash
-# FanCtrlPlus: 自动控制 PWM 风扇脚本
+# FanCtrlPlus: 自动控制 PWM 风扇脚本（安全可控版）
 
 plugin=fanctrlplus
 cfg_path="/boot/config/plugins/$plugin"
@@ -22,10 +22,7 @@ get_fan_path() {
 }
 
 fanctrlplus.start() {
-  if pgrep -f fanctrlplus_loop > /dev/null; then
-    echo "fanctrlplus already running"
-    exit 0
-  fi
+  pkill -f fanctrlplus_loop.sh >/dev/null 2>&1
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
@@ -37,46 +34,59 @@ fanctrlplus.start() {
     tag="${custom:-FanCtrl_${controller##*/}}"
     log "[$tag] Daemon started"
 
-    exec -a fanctrlplus_loop /bin/bash <<EOF &
-      prev_pwm=-1
-      while true; do
-        max_temp=0
-        IFS=',' read -ra disks_list <<< "$disks"
-        for disk in "\${disks_list[@]}"; do
-          path="/dev/disk/by-id/\$disk"
-          path=\$(realpath "\$path" 2>/dev/null)
-          [[ ! -b "\$path" ]] && continue
-          smartctl -n standby -A "\$path" | grep -q "Device is in STANDBY" && continue
-          if [[ "\$path" == /dev/nvme* ]]; then
-            temp=\$(smartctl -A "\$path" | awk '/Temperature:/ {print \$2; exit}')
+    # 将配置传入 heredoc
+    low="$low" high="$high" pwm="$pwm" interval="$interval"
+
+    (
+      exec -a fanctrlplus_loop.sh /bin/bash -c "
+        cfg_file='$cfg'
+        source \"\$cfg_file\"
+        prev_pwm=-1
+
+        calculate_pwm() {
+          local temp=\$1 low=\$2 high=\$3 min_pwm=\$4
+          if (( temp <= low )); then
+            echo \"\$min_pwm\"
+          elif (( temp >= high )); then
+            echo 255
           else
-            temp=\$(smartctl -A "\$path" | awk '/^194|Temperature_Celsius/ {print \$10; exit}')
+            local range=\$((high - low))
+            local delta=\$((temp - low))
+            echo \$((min_pwm + delta * (255 - min_pwm) / range))
           fi
-          [[ "\$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=\$temp
+        }
+
+        while true; do
+          max_temp=0
+          IFS=',' read -ra disks_list <<< \"\$disks\"
+          for disk in \"\${disks_list[@]}\"; do
+            path=\"/dev/disk/by-id/\$disk\"
+            path=\$(realpath \"\$path\" 2>/dev/null)
+            [[ ! -b \"\$path\" ]] && continue
+            smartctl -n standby -A \"\$path\" | grep -q \"Device is in STANDBY\" && continue
+            if [[ \"\$path\" == /dev/nvme* ]]; then
+              temp=\$(smartctl -A \"\$path\" | awk '/Temperature:/ {print \$2; exit}')
+            else
+              temp=\$(smartctl -A \"\$path\" | awk '/^194|Temperature_Celsius/ {print \$10; exit}')
+            fi
+            [[ \"\$temp\" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=\$temp
+          done
+
+          pwm_val=\$(calculate_pwm \"\$max_temp\" \"$low\" \"$high\" \"$pwm\")
+
+          if [[ \"\$prev_pwm\" == -1 || \$(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
+            [[ -f \"$controller"_enable\" ]] && echo 1 > \"$controller"_enable
+            echo \"\$pwm_val\" > \"$controller\"
+            sleep 4
+            rpm=\$(cat \"$fan\" 2>/dev/null || echo 0)
+            logger -t fanctrlplus \"[$tag] Temp=\${max_temp}°C → PWM=\$pwm_val → RPM=\$rpm\"
+            prev_pwm=\"\$pwm_val\"
+          fi
+
+          sleep \$((interval * 60))
         done
-
-        if (( max_temp <= $low )); then
-          pwm_val=$pwm
-        elif (( max_temp >= $high )); then
-          pwm_val=255
-        else
-          delta=\$((max_temp - $low))
-          range=\$(( $high - $low ))
-          pwm_val=\$(( $pwm + delta * (255 - $pwm) / range ))
-        fi
-
-        if [[ "\$prev_pwm" == -1 || \$(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
-          [[ -f "${controller}_enable" ]] && echo 1 > "${controller}_enable"
-          echo "\$pwm_val" > "$controller"
-          sleep 4
-          rpm=\$(cat "$fan" 2>/dev/null || echo 0)
-          logger -t fanctrlplus "[$tag] Temp=\${max_temp}°C → PWM=\$pwm_val → RPM=\$rpm"
-          prev_pwm="\$pwm_val"
-        fi
-
-        sleep $((interval * 60))
-      done
-EOF
+      "
+    ) &
   done
 }
 
@@ -87,7 +97,7 @@ fanctrlplus.stop() {
     tag="${custom:-FanCtrl_${controller##*/}}"
     log "[$tag] Daemon stopped"
   done
-  pkill -f fanctrlplus_loop
+  pkill -f fanctrlplus_loop.sh
 }
 
 fanctrlplus.speed() {
