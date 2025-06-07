@@ -1,9 +1,17 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+
+header('Content-Type: application/json');
+
+function json_response($data) {
+  ob_clean();
+  echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  exit;
+}
 
 function scan_dir($dir) {
   $out = [];
@@ -147,18 +155,15 @@ switch ($op) {
     exit;
 
   case 'status':
-    header('Content-Type: application/json');
     exec("pgrep -f fanctrlplus_loop", $out);
-    echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
-    exit;
+    json_response(['status' => count($out) ? 'running' : 'stopped']);
 
   case 'status_all':
-    header('Content-Type: application/json');
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
 
     foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
-      $cfg = parse_ini_file($file);
+      $cfg = @parse_ini_file($file);
       $name = trim($cfg['custom'] ?? '');
       $active = trim($cfg['service'] ?? '0') === '1';
       if ($name !== '') {
@@ -166,8 +171,7 @@ switch ($op) {
       }
     }
 
-    echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    exit;
+    json_response($result);
 
   case 'start':
     $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
@@ -186,8 +190,6 @@ switch ($op) {
     exit;
 
   default:
-    header('Content-Type: application/json');
-    echo json_encode(["error" => "invalid op"]);
-    exit;
+    json_response(['error' => 'Invalid op']);
 }
 ?>
