@@ -1,4 +1,8 @@
 <?php
+ob_start(); // 开启缓冲，防止意外输出破坏 JSON
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
 $plugin = 'fanctrlplus';
 $cfgpath = "/boot/config/plugins/$plugin";
 
@@ -8,9 +12,11 @@ if (!is_dir($cfgpath)) {
 
 $used_files = [];
 
-// 没有 #file 字段直接返回错误
+header('Content-Type: application/json');
+
+// 校验提交数据结构
 if (!isset($_POST['#file']) || !is_array($_POST['#file'])) {
-  header('Content-Type: application/json');
+  ob_clean();
   echo json_encode(['status' => 'error', 'message' => 'No fan config received']);
   exit;
 }
@@ -20,17 +26,17 @@ foreach ($_POST['#file'] as $i => $file) {
   $controller = $_POST['controller'][$i] ?? '';
   $custom = trim($_POST['custom'][$i] ?? '');
 
-  // 如果 Custom Name 没填，返回错误
+  // Custom Name 不能为空
   if ($custom === '') {
-    header('Content-Type: application/json');
+    ob_clean();
     echo json_encode(['status' => 'error', 'message' => "Custom Name is required."]);
     exit;
   }
 
-  // 安全 Custom Name（去除特殊字符）
+  // 安全 Custom Name → 作为配置文件名的一部分
   $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
 
-  // 如果是 temp 文件，则用新名称重命名
+  // 如果是临时文件，则使用新名称
   if (strpos($old_file, 'temp') !== false && !empty($controller)) {
     $new_file = $plugin . "_$safe_custom.cfg";
   } else {
@@ -48,7 +54,7 @@ foreach ($_POST['#file'] as $i => $file) {
   $used_files[] = $new_file;
   $filepath = "$cfgpath/$new_file";
 
-  // 配置内容
+  // 配置内容拼接
   $cfg = [
     'custom'    => $custom,
     'service'   => $_POST['service'][$i] ?? '0',
@@ -62,19 +68,19 @@ foreach ($_POST['#file'] as $i => $file) {
 
   $content = '';
   foreach ($cfg as $k => $v) {
-    $v = str_replace('"', '', $v);
+    $v = str_replace('"', '', $v); // 移除双引号，避免格式问题
     $content .= "$k=\"$v\"\n";
   }
 
-  file_put_contents($filepath, $content);
+  file_put_contents($filepath, $content, LOCK_EX);
 
-  // 删除旧 temp 文件
+  // 删除旧的 temp 文件
   if ($old_file !== $new_file && is_file("$cfgpath/$old_file")) {
-    unlink("$cfgpath/$old_file");
+    @unlink("$cfgpath/$old_file");
   }
 }
 
-// 清理已被移除的 cfg
+// 删除未被使用的旧 cfg 文件
 foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   $base = basename($cfgfile);
   if (!in_array($base, $used_files)) {
@@ -82,13 +88,15 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   }
 }
 
-// 重启 fanctrlplus
+// 重启 fanctrlplus 守护脚本（阻塞执行，确保生效）
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.fanctrlplus";
-exec("bash $script stop > /dev/null 2>&1 &");
-sleep(1);
-exec("bash $script start > /dev/null 2>&1 &");
+if (is_file($script)) {
+  exec("bash $script stop > /dev/null 2>&1");
+  sleep(1);
+  exec("bash $script start > /dev/null 2>&1");
+}
 
-// 正常返回
-header('Content-Type: application/json');
+// 清空缓冲并输出 JSON 成功状态
+ob_clean();
 echo json_encode(['status' => 'ok']);
 exit;
