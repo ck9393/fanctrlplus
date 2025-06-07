@@ -1,5 +1,4 @@
 <?php
-ob_start(); // 启用缓冲，确保后续 ob_clean 有效
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -148,14 +147,12 @@ switch ($op) {
     exit;
 
   case 'status':
-    ob_clean();
     header('Content-Type: application/json');
     exec("pgrep -f fanctrlplus_loop", $out);
     echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
     exit;
 
   case 'status_all':
-    ob_clean();
     header('Content-Type: application/json');
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
@@ -189,7 +186,6 @@ switch ($op) {
     exit;
 
   default:
-    // fallback output
     header('Content-Type: application/json');
     echo json_encode(["error" => "invalid op"]);
     exit;
