@@ -89,28 +89,35 @@ $(function() {
   }
 
   function updateAllFanStatus() {
+    console.log("✅ updateAllFanStatus triggered");
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(data) {
       try {
         const statusMap = JSON.parse(data);
+        console.log("✅ statusMap:", statusMap);
+
         $('.fan-block').each(function() {
           const block = $(this);
           const name = block.find('input[name^="custom["]').val().trim();
           const indicator = block.find('.fan-status');
+
+          console.log("→ block:", name, "indicator exists:", indicator.length > 0);
+
           if (!indicator.length) return;
 
           const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
           const status = matchedKey ? statusMap[matchedKey] : 'stopped';
 
-          indicator.text(status === 'running' ? '🟢' : '🔴');
-       });
-     } catch (e) {
-        console.error("JSON parse error in updateAllFanStatus:", e, data);
-     }
-   });
-}
+          console.log("→ matchedKey:", matchedKey, "status:", status);
 
+          indicator.text(status === 'running' ? '🟢' : '🔴');
+        });
+      } catch (e) {
+        console.error("JSON parse error in updateAllFanStatus:", e, data);
+      }
+    });
+  }
   updateStatusLightAndButton();
-  updateAllFanStatus();
+  setTimeout(updateAllFanStatus, 300);
 
   setInterval(function() {
     updateStatusLightAndButton();
