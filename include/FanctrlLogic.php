@@ -159,19 +159,35 @@ switch ($op) {
     json_response(['status' => count($out) ? 'running' : 'stopped']);
 
   case 'status_all':
+    ob_clean();
+    header('Content-Type: application/json');
+
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
 
+    // 获取当前所有正在运行的 fanctrlplus_loop 对应 cfg
+    exec("pgrep -af fanctrlplus_loop", $running_processes);
+
     foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
-      $cfg = @parse_ini_file($file);
+      $cfg = parse_ini_file($file);
       $name = trim($cfg['custom'] ?? '');
-      $active = trim($cfg['service'] ?? '0') === '1';
+      $enabled = trim($cfg['service'] ?? '0') === '1';
+
+      $is_running = false;
+      foreach ($running_processes as $proc) {
+        if (strpos($proc, $file) !== false) {
+          $is_running = true;
+          break;
+        }
+      }
+
       if ($name !== '') {
-        $result[$name] = $active ? 'running' : 'stopped';
+        $result[$name] = ($enabled && $is_running) ? 'running' : 'stopped';
       }
     }
 
-    json_response($result);
+    echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
 
   case 'start':
     $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
