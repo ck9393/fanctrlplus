@@ -141,6 +141,23 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
     break;
 
+  case 'status_all':
+    $cfg_dir = "/boot/config/plugins/$plugin";
+    $result = [];
+
+    foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
+      $cfg = parse_ini_file($file);
+      $name = trim($cfg['custom'] ?? '');
+      $active = trim($cfg['service'] ?? '0') === '1';
+      if ($name !== '') {
+        $result[$name] = $active ? 'running' : 'stopped';
+      }
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($result);
+    break;
+
   case 'start':
     $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
     if (is_file($rc)) {
