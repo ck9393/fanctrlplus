@@ -77,7 +77,6 @@ $width = 300;
 
 <script>
 $(function() {
-
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
       const status = JSON.parse(data).status;
@@ -91,14 +90,18 @@ $(function() {
 
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(data) {
-      const statusMap = JSON.parse(data);
-      $('.fan-block').each(function() {
-        const block = $(this);
-        const name = block.find('input[name^="custom["]').val().trim();
-        const indicator = block.find('.fan-status');
-        if (!indicator.length) return;
-        indicator.text(statusMap[name] === 'running' ? '🟢' : '🔴');
-      });
+      try {
+        const statusMap = JSON.parse(data);
+        $('.fan-block').each(function() {
+          const block = $(this);
+          const name = block.find('input[name^="custom["]').val().trim();
+          const indicator = block.find('.fan-status');
+          if (!indicator.length) return;
+          indicator.text(statusMap[name] === 'running' ? '🟢' : '🔴');
+        });
+      } catch (e) {
+        console.error("JSON parse error in updateAllFanStatus:", e, data);
+      }
     });
   }
 
@@ -110,16 +113,16 @@ $(function() {
     updateAllFanStatus();
   }, 30000);
 
-  function toggleDaemon() {
+  window.toggleDaemon = function() {
     const btn = $('#toggle-daemon');
     btn.prop('disabled', true);
     const action = btn.text().includes('Stop') ? 'stop' : 'start';
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
       setTimeout(updateStatusLightAndButton, 1000);
     });
-  }
+  };
 
-  function pauseFan(pwm, btn) {
+  window.pauseFan = function(pwm, btn) {
     $(btn).prop('disabled', true).text("Pausing...");
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
       let seconds = 30;
@@ -133,9 +136,9 @@ $(function() {
         }
       }, 1000);
     });
-  }
+  };
 
-  function removeFan(btn) {
+  window.removeFan = function(btn) {
     if (!confirm("Are you sure you want to delete this fan configuration?")) return;
     const block = $(btn).closest('.fan-block');
     const file = block.find('input.cfg-file').val();
@@ -143,14 +146,14 @@ $(function() {
       block.remove();
       $('form').trigger('ui:changed');
     });
-  }
+  };
 
-  function addFan() {
+  window.addFan = function() {
     const index = $('.fan-block').length;
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function() {
       location.reload();
     });
-  }
+  };
 
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
@@ -172,8 +175,7 @@ $(function() {
     });
     return valid;
   });
-
-}); // 👈 别忘了这个结尾！
+});
 </script>
 
 <form method="POST" action="/update.php" target="progressFrame">
