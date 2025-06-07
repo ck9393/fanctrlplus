@@ -100,12 +100,13 @@ fanctrlplus.start() {
 }
 
 fanctrlplus.stop() {
-  pkill -f "/usr/local/emhttp/plugins/$plugin/scripts/$script_name"
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
-    [[ -n "$controller" ]] && echo 255 > "$controller"
+    [[ "$service" != "1" ]] && continue
+    tag="${custom:-FanCtrl_${controller##*/}}"
+    log "[$tag] Daemon stopped"
   done
-  log "Daemon stopped"
+  pkill -f fanctrlplus_loop
 }
 
 fanctrlplus.speed() {
