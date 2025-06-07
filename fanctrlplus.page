@@ -73,7 +73,7 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<p style="margin-top:-5px; margin-bottom:14px; margin-left:14px; font-size:15px;" id="status-light">🔄 Loading...</p>
+<p style="margin-top:-5px; margin-bottom:12px; margin-left:12px; font-size:14px;" id="status-light">🔄 Loading...</p>
 
 <script>
 function updateStatusLightAndButton() {
