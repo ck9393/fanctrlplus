@@ -204,6 +204,6 @@ $(function() {
       <button type="button" onclick="addFan()">➕ Add Fan</button>
       <input type="submit" name="#apply" value="Apply">
       <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
-      <span id="status-light" style="margin-left:10px;">🔄 Loading...</span>
+      <span id="status-light" style="margin-left:8px;">🔄 Loading...</span>
     </div>
 </form>
