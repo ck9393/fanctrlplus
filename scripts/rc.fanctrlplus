@@ -1,68 +1,43 @@
 #!/bin/bash
-# rc.fanctrlplus - Unraid FanCtrlPlus 插件后台控制脚本
+# 控制脚本：启动、停止、状态
 
-# 可选：指定配置文件路径，读取风扇设置（如温度阈值、PWM端口等）
-CONFIG_FILE="/boot/config/plugins/fanctrlplus/fanctrlplus.cfg"
-if [[ -f "$CONFIG_FILE" ]]; then
-    source "$CONFIG_FILE"
-fi
+plugin=fanctrlplus
+cfg_path="/boot/config/plugins/$plugin"
+loop_script="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_loop.sh"
 
-# 可选：指定风扇控制逻辑脚本的路径
-LOGIC_SCRIPT="/usr/local/emhttp/plugins/fanctrlplus/scripts/fanctrlplus.sh"
+fanctrlplus.start() {
+  pkill -f "$loop_script" 2>/dev/null
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
+    source "$cfg"
+    [[ "$service" != "1" ]] && continue
+    nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
+    logger -t fanctrlplus "Started config [$custom]"
+  done
+}
+
+fanctrlplus.stop() {
+  pkill -f "$loop_script"
+  logger -t fanctrlplus "All fanctrlplus stopped"
+}
+
+fanctrlplus.status() {
+  if pgrep -f "$loop_script" > /dev/null; then
+    echo "running"
+    exit 0
+  else
+    echo "stopped"
+    exit 1
+  fi
+}
 
 case "$1" in
-  start)
-    # 检查是否已在运行
-    if pgrep -f "fanctrlplus" >/dev/null 2>&1; then
-        echo "FanCtrlPlus: 风扇控制已在运行 (already running)."
-        exit 0
-    fi
-    echo "FanCtrlPlus: 正在启动风扇控制后台守护进程..."
-    # 启动风扇控制逻辑脚本为后台进程
-    if [[ -x "$LOGIC_SCRIPT" ]]; then
-        # 方法1: 使用nohup后台运行
-        nohup "$LOGIC_SCRIPT" >/dev/null 2>&1 &
-        # 方法2: 不使用nohup则采用 & 和 disown
-        # "$LOGIC_SCRIPT" </dev/null >/dev/null 2>&1 & disown
-    else
-        echo "错误: 找不到风扇控制逻辑脚本 ${LOGIC_SCRIPT}！"
-        exit 1
-    fi
-    ;;
-
-  stop)
-    echo "FanCtrlPlus: 正在停止风扇控制守护进程..."
-    # 尝试通过名称杀死所有匹配的fanctrlplus进程
-    pkill -f "fanctrlplus"
-    # 可以加入延时和二次检查
-    sleep 1
-    if pgrep -f "fanctrlplus" >/dev/null 2>&1; then
-        echo "警告: 风扇控制进程未完全停止，执行强制终止..."
-        pkill -9 -f "fanctrlplus"  # 强制杀死
-    fi
-    ;;
-
-  status)
-    if pgrep -f "fanctrlplus" >/dev/null 2>&1; then
-        echo "FanCtrlPlus 状态: **运行中**"
-        exit 0
-    else
-        echo "FanCtrlPlus 状态: **未运行**"
-        exit 1
-    fi
-    ;;
-
+  start) fanctrlplus.start ;;
+  stop) fanctrlplus.stop ;;
   restart)
-    # 重启服务：依次调用 stop 和 start
-    $0 stop
+    fanctrlplus.stop
     sleep 1
-    $0 start
+    fanctrlplus.start
     ;;
-
-  *)
-    echo "用法: $0 {start|stop|status|restart}"
-    exit 1
-    ;;
+  status) fanctrlplus.status ;;
+  *) echo "Usage: $0 {start|stop|restart|status}" ;;
 esac
-
-exit 0
