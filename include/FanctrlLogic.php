@@ -142,6 +142,7 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     break;
 
   case 'status_all':
+    $plugin = 'fanctrlplus';  // 👈 必须加
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
 
