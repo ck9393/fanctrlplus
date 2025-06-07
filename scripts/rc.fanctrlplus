@@ -48,7 +48,6 @@ calculate_pwm() {
     echo $((min_pwm + delta * (255 - min_pwm) / range))
   fi
 }
-
 fanctrlplus.start() {
   if pgrep -f fanctrlplus_loop > /dev/null; then
     echo "fanctrlplus already running"
@@ -68,40 +67,48 @@ fanctrlplus.start() {
     tag="${custom:-FanCtrl_${controller##*/}}"
     log "[$tag] Daemon started"
 
-    (
-      exec -a fanctrlplus_loop /bin/bash -c '
-        cfg_file="'"$cfg"'"
-        source "$cfg_file"
-
-        controller="'"$controller"'"
-        fan="'"$fan"'"
-        tag="'"$tag"'"
-        prev_pwm=-1
-
-        while true; do
-          IFS="," read -ra disks_list <<< "'"$disks"'"
-          max_temp=0
-          for disk in "${disks_list[@]}"; do
-            temp=$(smartctl -A "/dev/disk/by-id/$disk" | awk "/Temperature_Celsius/ {print \$10}")
-            [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
-          done
-
-          pwm_val=$(calculate_pwm "'"$max_temp"'" "'"$low"'" "'"$high"'" "'"$pwm"'")
-
-          if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
-            enable_file="${controller}_enable"
-            [[ -f "$enable_file" ]] && echo 1 > "$enable_file"
-            echo "$pwm_val" > "$controller"
-            sleep 4
-            rpm=$(cat "$fan" 2>/dev/null || echo 0)
-            echo "[$tag] Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm" >> /var/log/fanctrlplus.log
-            prev_pwm="$pwm_val"
+    # ✅ 用 here-doc 启动后台进程并命名为 fanctrlplus_loop
+    exec -a fanctrlplus_loop /bin/bash <<EOF &
+      prev_pwm=-1
+      while true; do
+        max_temp=0
+        IFS=',' read -ra disks_list <<< "$disks"
+        for disk in "\${disks_list[@]}"; do
+          path="/dev/disk/by-id/\$disk"
+          path=\$(realpath "\$path" 2>/dev/null)
+          [[ ! -b "\$path" ]] && continue
+          smartctl -n standby -A "\$path" | grep -q "Device is in STANDBY" && continue
+          if [[ "\$path" == /dev/nvme* ]]; then
+            temp=\$(smartctl -A "\$path" | awk '/Temperature:/ {print \$2; exit}')
+          else
+            temp=\$(smartctl -A "\$path" | awk '/^194|Temperature_Celsius/ {print \$10; exit}')
           fi
-
-          sleep $((interval * 60))
+          [[ "\$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=\$temp
         done
-      '
-    ) & disown
+
+        pwm_val=$(
+          if (( max_temp <= $low )); then
+            echo $pwm
+          elif (( max_temp >= $high )); then
+            echo 255
+          else
+            delta=\$((max_temp - $low))
+            range=\$(( $high - $low ))
+            echo \$(( $pwm + delta * (255 - $pwm) / range ))
+          fi
+        )
+
+        if [[ "\$prev_pwm" == -1 || \$(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
+          [[ -f "${controller}_enable" ]] && echo 1 > "${controller}_enable"
+          echo "\$pwm_val" > "$controller"
+          sleep 4
+          rpm=\$(cat "$fan" 2>/dev/null || echo 0)
+          logger -t fanctrlplus "[$tag] Temp=\${max_temp}°C → PWM=\$pwm_val → RPM=\$rpm"
+          prev_pwm="\$pwm_val"
+        fi
+        sleep $((interval * 60))
+      done
+EOF
   done
 }
 
