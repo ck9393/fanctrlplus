@@ -138,7 +138,7 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
 
   case 'status':
     $out = [];
-    exec("pgrep -f fanctrlplus", $out);
+    exec("ps -eo cmd | grep '[r]c.fanctrlplus start'", $out);
     echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
     break;
 
