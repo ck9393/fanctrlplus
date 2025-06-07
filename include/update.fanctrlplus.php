@@ -83,7 +83,7 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
 }
 
 // 重启 fanctrlplus
-$script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.autofan";
+$script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.fanctrlplus";
 exec("bash $script stop > /dev/null 2>&1 &");
 sleep(1);
 exec("bash $script start > /dev/null 2>&1 &");
