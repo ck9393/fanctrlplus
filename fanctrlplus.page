@@ -73,6 +73,8 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
+<p style="margin-top:-5px; margin-bottom:10px; font-size:14px;" id="status-light">🔄 Loading...</p>
+
 <script>
 function updateStatusLightAndButton() {
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
@@ -204,6 +206,5 @@ $(function() {
       <button type="button" onclick="addFan()">➕ Add Fan</button>
       <input type="submit" name="#apply" value="Apply">
       <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
-      <span id="status-light" style="margin-left:8px;">🔄 Loading...</span>
     </div>
 </form>
