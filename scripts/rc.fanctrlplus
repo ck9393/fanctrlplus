@@ -1,90 +1,68 @@
 #!/bin/bash
-# FanCtrlPlus: Minimal Stable Script
+# rc.fanctrlplus - Unraid FanCtrlPlus 插件后台控制脚本
 
-plugin=fanctrlplus
-cfg_path="/boot/config/plugins/$plugin"
-log_tag="fanctrlplus"
+# 可选：指定配置文件路径，读取风扇设置（如温度阈值、PWM端口等）
+CONFIG_FILE="/boot/config/plugins/fanctrlplus/fanctrlplus.cfg"
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+fi
 
-log() {
-  logger -t "$log_tag" "$1"
-}
-
-get_fan_path() {
-  [[ "$1" =~ pwm([0-9]+)$ ]] || return
-  echo "$(dirname "$1")/fan${BASH_REMATCH[1]}_input"
-}
-
-read_temp() {
-  local path
-  path=$(realpath "/dev/disk/by-id/$1" 2>/dev/null) || return
-  [[ ! -b "$path" ]] && return
-  smartctl -n standby -A "$path" 2>&1 | grep -q "STANDBY" && return
-  [[ "$path" == /dev/nvme* ]] && smartctl -A "$path" | awk '/Temperature:/ {print $2; exit}' ||
-    smartctl -A "$path" | awk '/^194|Temperature_Celsius/ {print $10; exit}'
-}
-
-calc_pwm() {
-  (( $1 <= $2 )) && echo "$4" && return
-  (( $1 >= $3 )) && echo 255 && return
-  echo $(( $4 + ($1 - $2) * (255 - $4) / ($3 - $2) ))
-}
-
-fanctrlplus.start() {
-  pgrep -f fanctrlplus_loop >/dev/null && echo "Already running" && exit 0
-
-  for cfg in "$cfg_path"/${plugin}_*.cfg; do
-    source "$cfg"
-    [[ "$service" != "1" ]] && continue
-    fan=$(get_fan_path "$controller")
-    [[ -z "$fan" || ! -f "$controller" || ! -f "$fan" ]] && continue
-    tag="${custom:-Fan_${controller##*/}}"
-    log "[$tag] Daemon started"
-
-    (
-      exec -a fanctrlplus_loop /bin/bash -c '
-        cfg='"$cfg"'
-        source "$cfg"
-        prev=-1
-        while true; do
-          max=0
-          IFS="," read -ra disks <<< "$disks"
-          for d in "${disks[@]}"; do
-            t=$(read_temp "$d")
-            [[ "$t" =~ ^[0-9]+$ ]] && (( t > max )) && max=$t
-          done
-          pwm_val=$(calc_pwm "$max" "$low" "$high" "$pwm")
-          if (( prev == -1 || pwm_val != prev )); then
-            [[ -f "${controller}_enable" ]] && echo 1 > "${controller}_enable"
-            echo "$pwm_val" > "$controller"
-            sleep 4
-            rpm=$(cat "$(get_fan_path "$controller")" 2>/dev/null || echo 0)
-            logger -t fanctrlplus "[$tag] Temp=${max}°C → PWM=$pwm_val → RPM=$rpm"
-            prev=$pwm_val
-          fi
-          sleep $((interval * 60))
-        done
-      '
-    ) &
-  done
-}
-
-fanctrlplus.stop() {
-  for cfg in "$cfg_path"/${plugin}_*.cfg; do
-    source "$cfg"
-    [[ "$service" != "1" ]] && continue
-    tag="${custom:-Fan_${controller##*/}}"
-    log "[$tag] Daemon stopped"
-  done
-  pkill -f fanctrlplus_loop
-}
-
-fanctrlplus.status() {
-  pgrep -f fanctrlplus_loop >/dev/null && echo "running" || echo "stopped"
-}
+# 可选：指定风扇控制逻辑脚本的路径
+LOGIC_SCRIPT="/usr/local/emhttp/plugins/fanctrlplus/scripts/fanctrlplus.sh"
 
 case "$1" in
-  start) fanctrlplus.start ;;
-  stop) fanctrlplus.stop ;;
-  status) fanctrlplus.status ;;
-  *) echo "Usage: $0 {start|stop|status}" ;;
+  start)
+    # 检查是否已在运行
+    if pgrep -f "fanctrlplus" >/dev/null 2>&1; then
+        echo "FanCtrlPlus: 风扇控制已在运行 (already running)."
+        exit 0
+    fi
+    echo "FanCtrlPlus: 正在启动风扇控制后台守护进程..."
+    # 启动风扇控制逻辑脚本为后台进程
+    if [[ -x "$LOGIC_SCRIPT" ]]; then
+        # 方法1: 使用nohup后台运行
+        nohup "$LOGIC_SCRIPT" >/dev/null 2>&1 &
+        # 方法2: 不使用nohup则采用 & 和 disown
+        # "$LOGIC_SCRIPT" </dev/null >/dev/null 2>&1 & disown
+    else
+        echo "错误: 找不到风扇控制逻辑脚本 ${LOGIC_SCRIPT}！"
+        exit 1
+    fi
+    ;;
+
+  stop)
+    echo "FanCtrlPlus: 正在停止风扇控制守护进程..."
+    # 尝试通过名称杀死所有匹配的fanctrlplus进程
+    pkill -f "fanctrlplus"
+    # 可以加入延时和二次检查
+    sleep 1
+    if pgrep -f "fanctrlplus" >/dev/null 2>&1; then
+        echo "警告: 风扇控制进程未完全停止，执行强制终止..."
+        pkill -9 -f "fanctrlplus"  # 强制杀死
+    fi
+    ;;
+
+  status)
+    if pgrep -f "fanctrlplus" >/dev/null 2>&1; then
+        echo "FanCtrlPlus 状态: **运行中**"
+        exit 0
+    else
+        echo "FanCtrlPlus 状态: **未运行**"
+        exit 1
+    fi
+    ;;
+
+  restart)
+    # 重启服务：依次调用 stop 和 start
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+
+  *)
+    echo "用法: $0 {start|stop|status|restart}"
+    exit 1
+    ;;
 esac
+
+exit 0
