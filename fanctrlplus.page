@@ -88,26 +88,25 @@ $(function() {
     });
   }
 
-function updateAllFanStatus() {
-  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(data) {
-    try {
-      const statusMap = JSON.parse(data);
-      $('.fan-block').each(function() {
-        const block = $(this);
-        const name = block.find('input[name^="custom["]').val().trim();
-        const indicator = block.find('.fan-status');
-        if (!indicator.length) return;
+  function updateAllFanStatus() {
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(data) {
+      try {
+        const statusMap = JSON.parse(data);
+        $('.fan-block').each(function() {
+          const block = $(this);
+          const name = block.find('input[name^="custom["]').val().trim();
+          const indicator = block.find('.fan-status');
+          if (!indicator.length) return;
 
-        // 忽略大小写匹配 key
-        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
-        const status = matchedKey ? statusMap[matchedKey] : 'stopped';
+          const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
+          const status = matchedKey ? statusMap[matchedKey] : 'stopped';
 
-        indicator.text(status === 'running' ? '🟢' : '🔴');
-      });
-    } catch (e) {
-      console.error("JSON parse error in updateAllFanStatus:", e, data);
-    }
-  });
+          indicator.text(status === 'running' ? '🟢' : '🔴');
+       });
+     } catch (e) {
+        console.error("JSON parse error in updateAllFanStatus:", e, data);
+     }
+   });
 }
 
   updateStatusLightAndButton();
