@@ -209,9 +209,4 @@ $(function() {
       </fieldset>
     </div>
     <? endforeach; ?>
-  </div>
-  <div style="clear:both; margin-top:10px; text-align: right;">
-    <button type="button" onclick="addFan()">➕ Add Fan</button>
-    <input type="submit" name="#apply" value="Apply">
-  </div>
 </form>
