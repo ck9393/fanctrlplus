@@ -1,18 +1,16 @@
 <?php
-ob_start();
+ob_start(); // 启用缓冲，确保后续 ob_clean 有效
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-header('Content-Type: application/json');
 
-$plugin = 'fanctrlplus';
+$plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
-
-echo json_encode(["ok" => true]);
-exit;
 
 function scan_dir($dir) {
   $out = [];
-  foreach (array_diff(scandir($dir), ['.','..']) as $f) $out[] = realpath($dir).'/'.$f;
+  foreach (array_diff(scandir($dir), ['.','..']) as $f) {
+    $out[] = realpath($dir) . '/' . $f;
+  }
   return $out;
 }
 
@@ -35,7 +33,9 @@ function list_fan() {
   return $out;
 }
 
-switch ($_GET['op'] ?? $_POST['op'] ?? '') {
+$op = $_GET['op'] ?? $_POST['op'] ?? '';
+
+switch ($op) {
   case 'detect':
     $pwm = $_GET['pwm'] ?? '';
     if (is_file($pwm)) {
@@ -54,11 +54,11 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       for ($i = 0; $i < count($final_fans); $i++) {
         if (($final_fans[$i]['rpm'] - $init_fans[$i]['rpm']) > 0) {
           echo $init_fans[$i]['sensor'];
-          break;
+          exit;
         }
       }
     }
-    break;
+    exit;
 
   case 'pwm':
     $pwm = $_GET['pwm'] ?? '';
@@ -71,10 +71,12 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       $default_method = @file_get_contents($pwm . "_enable");
       $default_pwm = @file_get_contents($pwm);
       $default_fan_min = @file_get_contents($fan_min);
+
       @file_put_contents($pwm . "_enable", "1");
       @file_put_contents($fan_min, "0");
       @file_put_contents($pwm, "0");
       sleep(5);
+
       $min_rpm = @file_get_contents($fan);
       for ($i = 0; $i <= 20; $i++) {
         $val = $i * 5;
@@ -95,12 +97,13 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
           }
         }
       }
+
       @file_put_contents($pwm, $default_pwm);
       @file_put_contents($fan_min, $default_fan_min);
       @file_put_contents($pwm . "_enable", $default_method);
       exec("$autofan start >/dev/null");
     }
-    break;
+    exit;
 
   case 'pause':
     $pwm = $_GET['pwm'] ?? '';
@@ -120,7 +123,7 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     } else {
       echo "Invalid PWM path";
     }
-    break;
+    exit;
 
   case 'newtemp':
     $index = intval($_POST['index'] ?? 0);
@@ -131,7 +134,7 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       file_put_contents($fullpath, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
     }
     echo "created";
-    break;
+    exit;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
@@ -142,18 +145,18 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     } else {
       echo "not found";
     }
-    break;
+    exit;
 
   case 'status':
+    ob_clean();
+    header('Content-Type: application/json');
     exec("pgrep -f fanctrlplus_loop", $out);
     echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
-    break;
+    exit;
 
   case 'status_all':
-    ob_clean(); // 清除之前缓冲区
+    ob_clean();
     header('Content-Type: application/json');
-
-    $plugin = 'fanctrlplus';
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
 
@@ -167,22 +170,28 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     }
 
     echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    exit; // ✅ 非常重要：立即终止 PHP 输出，防止后续任何意外字符
+    exit;
 
   case 'start':
-    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     if (is_file($rc)) {
-    exec("$rc start >/dev/null 2>&1 &");
-    echo "started";
-  } else {
-    echo "script not found";
-  }
-  break;
+      exec("$rc start >/dev/null 2>&1 &");
+      echo "started";
+    } else {
+      echo "script not found";
+    }
+    exit;
 
   case 'stop':
-    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     exec("$rc stop >/dev/null 2>&1 &");
     echo "stopped";
-    break;
+    exit;
+
+  default:
+    // fallback output
+    header('Content-Type: application/json');
+    echo json_encode(["error" => "invalid op"]);
+    exit;
 }
 ?>
