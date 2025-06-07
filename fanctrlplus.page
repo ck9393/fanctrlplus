@@ -73,10 +73,10 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<p style="margin-top: 0.5em;">
+<div style="clear:both; margin-top:10px; text-align: left;">
   <b>Status:</b> <span id="status-light">🔄 Loading...</span>
   <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
-</p>
+</div>
 
 <script>
 function updateStatusLightAndButton() {
