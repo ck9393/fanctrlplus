@@ -65,36 +65,42 @@ fanctrlplus.start() {
       continue
     fi
 
-    # 标签（用于日志）
     tag="${custom:-FanCtrl_${controller##*/}}"
-
     log "[$tag] Daemon started"
 
     (
-      prev_pwm=-1
-      while true; do
-        IFS=',' read -ra disks_list <<< "$disks"
-        max_temp=0
+      exec -a fanctrlplus_loop /bin/bash -c '
+        cfg_file="'"$cfg"'"
+        source "$cfg_file"
 
-        for disk in "${disks_list[@]}"; do
-          temp=$(read_temp "$disk")
-          [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
+        controller="'"$controller"'"
+        fan="'"$fan"'"
+        tag="'"$tag"'"
+        prev_pwm=-1
+
+        while true; do
+          IFS="," read -ra disks_list <<< "'"$disks"'"
+          max_temp=0
+          for disk in "${disks_list[@]}"; do
+            temp=$(smartctl -A "/dev/disk/by-id/$disk" | awk "/Temperature_Celsius/ {print \$10}")
+            [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
+          done
+
+          pwm_val=$(calculate_pwm "'"$max_temp"'" "'"$low"'" "'"$high"'" "'"$pwm"'")
+
+          if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
+            enable_file="${controller}_enable"
+            [[ -f "$enable_file" ]] && echo 1 > "$enable_file"
+            echo "$pwm_val" > "$controller"
+            sleep 4
+            rpm=$(cat "$fan" 2>/dev/null || echo 0)
+            echo "[$tag] Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm" >> /var/log/fanctrlplus.log
+            prev_pwm="$pwm_val"
+          fi
+
+          sleep $((interval * 60))
         done
-
-        pwm_val=$(calculate_pwm "$max_temp" "$low" "$high" "$pwm")
-
-        if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
-          enable_file="${controller}_enable"
-          [[ -f "$enable_file" ]] && echo 1 > "$enable_file"
-          echo "$pwm_val" > "$controller"
-          sleep 4
-          rpm=$(cat "$fan" 2>/dev/null || echo 0)
-          log "[$tag] Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
-          prev_pwm="$pwm_val"
-        fi
-
-        sleep "$((interval * 60))"
-      done
+      '
     ) & disown
   done
 }
