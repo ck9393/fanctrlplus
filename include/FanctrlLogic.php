@@ -1,4 +1,5 @@
 <?php
+ob_start(); // ✅ 建议保留，确保 ob_clean() 有效
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 $plugin = 'fanctrlplus';
@@ -144,22 +145,24 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     break;
 
   case 'status_all':
+    ob_clean(); // <<--- 加这一句，清除任何之前的输出
+    header('Content-Type: application/json');
+
     $plugin = 'fanctrlplus';
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
 
     foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
       $cfg = parse_ini_file($file);
-      $file_base = basename($file, '.cfg'); // fanctrlplus_Enclosure
-      $fallback = str_replace("{$plugin}_", '', $file_base); // Enclosure
-      $name = trim($cfg['custom'] ?? '') ?: $fallback;
+      $name = trim($cfg['custom'] ?? '');
       $active = trim($cfg['service'] ?? '0') === '1';
-      $result[$name] = $active ? 'running' : 'stopped';
+      if ($name !== '') {
+        $result[$name] = $active ? 'running' : 'stopped';
+      }
     }
 
-    header('Content-Type: application/json');
-    echo json_encode($result);
-    break;
+  echo json_encode($result);
+  break;
 
   case 'start':
     $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
