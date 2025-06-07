@@ -1,5 +1,6 @@
 <?php
 ob_start(); // ✅ 建议保留，确保 ob_clean() 有效
+header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 $plugin = 'fanctrlplus';
