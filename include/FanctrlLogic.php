@@ -137,9 +137,8 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     break;
 
   case 'status':
-    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
     $out = [];
-    exec("pgrep -f $rc", $out);
+    exec("pgrep -f fanctrlplus", $out);
     echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
     break;
 
