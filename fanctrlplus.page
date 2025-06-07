@@ -78,13 +78,15 @@ $width = 300;
 <script>
 $(function() {
   function updateStatusLightAndButton() {
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
-      const status = JSON.parse(data).status;
-      const isRunning = status === 'running';
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
+      console.log("✅ status:", statusObj);
+      const isRunning = statusObj.status === 'running';
       $('#status-light').text(isRunning ? '🟢 Running' : '🔴 Stopped');
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
       btn.prop('disabled', false);
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Failed to load status:", textStatus, errorThrown);
     });
   }
 
