@@ -163,7 +163,7 @@ $(function() {
     <? foreach ($all_cfg as $i => $cfg): ?>
     <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
       <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
-      <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
+      <fieldset style="margin:4px 10px 10px 10px; padding:20px 10px 10px 10px; border:1px solid #ccc; position:relative;">
         <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
         <table style="width:100%;">
           <tr>
