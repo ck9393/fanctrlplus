@@ -135,5 +135,28 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       echo "not found";
     }
     break;
+
+  case 'status':
+    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    $out = [];
+    exec("pgrep -f $rc", $out);
+    echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
+    break;
+
+  case 'start':
+    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    if (is_file($rc)) {
+    exec("$rc start >/dev/null 2>&1 &");
+    echo "started";
+  } else {
+    echo "script not found";
+  }
+  break;
+
+  case 'stop':
+    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    exec("$rc stop >/dev/null 2>&1 &");
+    echo "stopped";
+    break;
 }
 ?>
