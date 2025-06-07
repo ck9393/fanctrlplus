@@ -146,7 +146,7 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     break;
 
   case 'status_all':
-    ob_clean(); // <<--- 加这一句，清除任何之前的输出
+    ob_clean(); // 清除之前缓冲区
     header('Content-Type: application/json');
 
     $plugin = 'fanctrlplus';
@@ -162,8 +162,8 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       }
     }
 
-  echo json_encode($result);
-  break;
+    echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit; // ✅ 非常重要：立即终止 PHP 输出，防止后续任何意外字符
 
   case 'start':
     $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
