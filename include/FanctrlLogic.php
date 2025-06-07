@@ -1,10 +1,14 @@
 <?php
-ob_start(); // ✅ 建议保留，确保 ob_clean() 有效
-header('Content-Type: application/json');
+ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+header('Content-Type: application/json');
+
 $plugin = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+
+echo json_encode(["ok" => true]);
+exit;
 
 function scan_dir($dir) {
   $out = [];
