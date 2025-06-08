@@ -8,19 +8,11 @@ pid_dir="/var/run"
 fanctrlplus.start() {
   pkill -f "$loop_script" 2>/dev/null
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
-    source "$cfg"
+    service=$(grep -Po '^service="\K[^"]+' "$cfg")
     [[ "$service" != "1" ]] && continue
 
-    echo "=== Raw custom: [$custom]" >> /boot/log_fanctrlplus_debug.log
-    logger -t $plugin "Raw custom: [$custom]"
-
-    custom_clean=$(echo "$custom" | tr -d '"\n\r')
-    custom_trimmed=$(echo "$custom_clean" | xargs)
-    custom_safe=$(echo "$custom_trimmed" | tr -c '[:alnum:]' '_')
-
-    echo "=== Cleaned safe: [$custom_safe]" >> /boot/log_fanctrlplus_debug.log
-    logger -t $plugin "Safe custom: [$custom_safe]"
-
+    custom=$(grep -Po '^custom="\K[^"]+' "$cfg" | tr -d '\r\n')
+    custom_safe=$(echo "$custom" | tr -c '[:alnum:]' '_')
     [[ -z "$custom_safe" || "$custom_safe" == "_" ]] && continue
 
     nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
