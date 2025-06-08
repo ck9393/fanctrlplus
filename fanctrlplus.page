@@ -204,20 +204,23 @@ $(function() {
   };
 
   window.addFan = function() {
-    console.log("🟡 Add Fan clicked");  // 检查点击
+    console.log("🟡 Add Fan clicked");
     const index = $('.fan-block').length;
   
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index})
-      .done(function(html) {
-        console.log("🟢 Fan HTML received");
-        $('#fan-area').append(html);  // 或 prepend(html)，按你喜好
-        updateAllFanStatus();         // 刷新风扇状态灯
-        $('.disk-select').last().dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
-      })
-      .fail(function(jqXHR, textStatus, errorThrown) {
-        console.error("🔴 Add fan failed:", textStatus, errorThrown);
-        alert("Failed to add fan.");
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(html) {
+      console.log("🟢 Fan HTML received");
+      $('#fan-area').append(html);
+      updateAllFanStatus();
+      $('.disk-select').last().dropdownchecklist({
+        emptyText:'(None)',
+        width: <?=$width?>,
+        explicitClose:'...close'
       });
+    }, 'html')  // ✅ 指定 HTML 返回类型，避免 JSON.parse 报错
+    .fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("🔴 Add fan failed:", textStatus, errorThrown);
+      alert("Failed to add fan.");
+    });
   };
 
   $('.disk-select').each(function() {
