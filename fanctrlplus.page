@@ -73,8 +73,9 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<p style="margin: 6px 0 16px 12px; font-size:14px; font-weight:bold;">
-  Fan Control: <span id="status-value" style="color:green; font-weight:500:">Active</span>
+<p style="margin: 4px 0 12px 12px; font-size:13px; font-weight:normal;">
+  <span style="font-weight:bold;">Fan Control:</span>
+  <span id="status-value" style="color:green;">Active</span>
 </p>
 
 <script>
