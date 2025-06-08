@@ -267,10 +267,11 @@ $(function() {
           <tr>
             <td>Custom Name</td>
             <td>
-              <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required
+              <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required>
               <span class="info-icon" title="Enter a unique name for this fan. Avoid spaces or special characters.">i</span>
             </td>
           </tr>
+          <tr>
             <td>Fan Control:</td>
             <td>
               <select name="service[<?=$i?>]" title="Enable or disable this fan controller">
@@ -279,7 +280,6 @@ $(function() {
               </select>
             </td>
           </tr>
-          <tr>
             <td>PWM Controller:</td>
             <td>
               <select name="controller[<?=$i?>]" title="Select the PWM controller for this fan">
