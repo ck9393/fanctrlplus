@@ -147,6 +147,7 @@ switch ($op) {
     $disks = list_valid_disks_by_id();
   
     echo render_fan_block(basename($temp_file), $index, $pwms, $disks);
+    error_log("[fanctrlplus] newtemp block output success");
     exit;
 
   case 'delete':
@@ -203,21 +204,23 @@ switch ($op) {
     json_response($result);
     break;
 
-  case 'start':
-    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-    if (is_file($rc)) {
-      exec("$rc start >/dev/null 2>&1 &");
-      json_response(['status' => 'started']);
-    } else {
-      json_response(['error' => 'rc script not found']);
-    }
-
-  case 'stop':
-    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-    exec("$rc stop >/dev/null 2>&1 &");
-    json_response(['status' => 'stopped']);
-
-  default:
-    json_response(['error' => 'Invalid op']);
+    case 'start':
+      $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
+      if (is_file($rc)) {
+        exec("$rc start >/dev/null 2>&1 &");
+        json_response(['status' => 'started']);
+      } else {
+        json_response(['error' => 'rc script not found']);
+      }
+      break;  // ✅ 必须加上
+  
+    case 'stop':
+      $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
+      exec("$rc stop >/dev/null 2>&1 &");
+      json_response(['status' => 'stopped']);
+      break;  // ✅ 必须加上
+  
+    default:
+      json_response(['error' => 'Invalid op']);
 }
 ?>
