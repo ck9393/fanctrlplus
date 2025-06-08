@@ -85,6 +85,7 @@ $(function() {
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
       btn.prop('disabled', false);
+      btn.attr('title', isRunning ? 'Stop the fan controller daemon' : 'Start the fan controller daemon');
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status:", textStatus, errorThrown);
     });
@@ -237,7 +238,7 @@ $(function() {
       <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
       <fieldset style="margin:10px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
         <span class="fan-status" style="position:absolute; top:6px; right:8px;">🔄</span>
-        <button type="button" onclick="removeFan(this)" style="position:absolute; bottom:6px; right:8px;">DELETE</button>
+        <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:6px; right:8px;">DELETE</button>
         <table style="width:100%;">
           <tr>
             <td style="width:140px;">Custom Name:</td>
@@ -276,8 +277,8 @@ $(function() {
     </div>
     <? endforeach; ?>
     <div style="clear:both; margin-top:15px; text-align: left;">
-      <button type="button" onclick="addFan()">➕ Add Fan</button>
-      <input type="submit" name="#apply" value="Apply All">
+      <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
+      <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
       <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
     </div>
 </form>
