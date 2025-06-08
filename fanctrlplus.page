@@ -179,7 +179,9 @@ $(function() {
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file}, function() {
       block.remove();
       $('form').trigger('ui:changed');
-      updateAllFanStatus();  // ✅ 删除后刷新剩余状态灯
+      setTimeout(() => {
+        updateAllFanStatus(); // ✅ 删除后刷新剩余状态灯
+      }, 500);
     });
   };
 
