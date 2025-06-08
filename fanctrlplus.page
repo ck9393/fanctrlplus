@@ -204,17 +204,19 @@ $(function() {
   };
 
   window.addFan = function() {
-    console.log("🟡 Add Fan clicked"); // 先看是否点击触发
+    console.log("🟡 Add Fan clicked");  // 检查点击
     const index = $('.fan-block').length;
+  
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index})
-      .done(function(resp) {
-        console.log("🟢 Fan added:", resp);
+      .done(function(html) {
+        console.log("🟢 Fan HTML received");
+        $('#fan-area').append(html);  // 或 prepend(html)，按你喜好
+        updateAllFanStatus();         // 刷新风扇状态灯
+        $('.disk-select').last().dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
       })
       .fail(function(jqXHR, textStatus, errorThrown) {
         console.error("🔴 Add fan failed:", textStatus, errorThrown);
-      })
-      .always(function() {
-        location.reload();  // 保底刷新
+        alert("Failed to add fan.");
       });
   };
 
