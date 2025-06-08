@@ -1,6 +1,6 @@
 <?php
 
-function render_fan_block($cfg_file, $i) {
+function render_fan_block($cfg_file, $i, $pwms, $disks) {
   $cfg = parse_ini_file("/boot/config/plugins/fanctrlplus/$cfg_file");
   $cfg['file'] = $cfg_file;
 
