@@ -1,4 +1,11 @@
-function renderFanBlock($cfg, $i) {
+<?php
+
+function render_fan_block($cfg_file, $i) {
+  $cfg = parse_ini_file("/boot/config/plugins/fanctrlplus/$cfg_file");
+  $cfg['file'] = $cfg_file;
+
+  global $pwms, $disks;
+
   ob_start();
   ?>
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
@@ -26,7 +33,7 @@ function renderFanBlock($cfg, $i) {
           <td style="cursor: help;" title="Select the PWM controller for this fan">PWM Controller:</td>
           <td>
             <select name="controller[<?=$i?>]">
-              <?php global $pwms; foreach ($pwms as $pwm): ?>
+              <?php foreach ($pwms as $pwm): ?>
               <option value="<?=$pwm['sensor']?>" <?=($cfg['controller']??'')==$pwm['sensor']?'selected':''?>><?=$pwm['chip']?> - <?=$pwm['name']?></option>
               <?php endforeach; ?>
             </select>
@@ -61,7 +68,7 @@ function renderFanBlock($cfg, $i) {
           <td style="cursor: help;" title="Select disk(s) to monitor for temperature control.">Include Disk(s):</td>
           <td>
             <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
-              <?php global $disks; foreach ($disks as $d):
+              <?php foreach ($disks as $d):
                 $id = $d['id'];
                 $sel = in_array($id, explode(',', $cfg['disks']??'')) ? 'selected' : '';
               ?>
