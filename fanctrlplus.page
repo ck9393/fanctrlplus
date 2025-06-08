@@ -263,13 +263,11 @@ $(function() {
         <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:6px; right:8px;">DELETE</button>
         <table style="width:100%;">
           <tr>
-            <td class="field-label" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
+            <td title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
             <td>
-              <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" 
-                     placeholder="Required (e.g. HDDBay)" required>
+              <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required>
             </td>
           </tr>
-          <tr>
             <td>Fan Control:</td>
             <td>
               <select name="service[<?=$i?>]" title="Enable or disable this fan controller">
