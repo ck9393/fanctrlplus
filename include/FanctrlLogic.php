@@ -133,15 +133,19 @@ switch ($op) {
     exit;
 
   case 'newtemp':
-    $index = intval($_POST['index'] ?? 0);
-    $cfgpath = "/boot/config/plugins/$plugin";
-    $filename = "{$plugin}_temp_{$index}.cfg";
-    $fullpath = "$cfgpath/$filename";
-    if (!file_exists($fullpath)) {
-      file_put_contents($fullpath, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    $index = $_POST['index'] ?? 0;
+    $temp_file = "$cfg_path/{$plugin}_temp_$index.cfg";
+  
+    if (!file_exists($temp_file)) {
+      file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
     }
-    json_response(['status' => 'created', 'file' => $filename]);
-    break;
+  
+    // 加载模板 HTML（你要新建一个函数 renderFanBlock($cfg, $index) 来输出一段完整 HTML）
+    require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
+    $cfg = parse_ini_file($temp_file);
+    $cfg['file'] = basename($temp_file);
+    echo renderFanBlock($cfg, $index);
+    exit;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
