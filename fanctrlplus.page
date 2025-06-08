@@ -95,7 +95,7 @@ $(function() {
 
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
-      btn.attr('title', isRunning ? 'Stop the daemon.' : 'Start the daemon.');  // ✅ 补上这行
+      btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
       btn.prop('disabled', false);
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status:", textStatus, errorThrown);
