@@ -272,7 +272,7 @@ $(function() {
                 <option value="<?=$pwm['sensor']?>" <?=($cfg['controller']??'')==$pwm['sensor']?'selected':''?>><?=$pwm['chip']?> - <?=$pwm['name']?></option>
                 <?endforeach;?>
               </select>
-              <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location">Pause 30s</button>
+              <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button>
             </td>
           </tr>
           <tr>
@@ -294,13 +294,13 @@ $(function() {
             </td>
           </tr>
           <tr>
-            <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes">Interval (min):</td>
+            <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
             <td>
               <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval']??'')?>">
             </td>
           </tr>
           <tr>
-            <td style="cursor: help;" title="Select disk(s) to monitor for temperature control">Include Disk(s):</td>
+            <td style="cursor: help;" title="Select disk(s) to monitor for temperature control.">Include Disk(s):</td>
             <td>
               <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
                 <?foreach ($disks as $d):
