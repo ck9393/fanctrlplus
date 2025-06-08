@@ -11,9 +11,12 @@ fanctrlplus.start() {
     service=$(grep -Po '^service="\K[^"]+' "$cfg")
     [[ "$service" != "1" ]] && continue
 
-    custom=$(grep -Po '^custom="\K[^"]+' "$cfg" | tr -d '\r\n')
-    custom_safe=$(echo "$custom" | tr -c '[:alnum:]' '_')
-    [[ -z "$custom_safe" || "$custom_safe" == "_" ]] && continue
+    # 清洗 custom 值
+    raw_custom=$(grep -Po '^custom="\K[^"]+' "$cfg")
+    clean_custom=$(echo "$raw_custom" | tr -d '\r\n\t ')
+    custom_safe=$(echo "$clean_custom" | tr -cd '[:alnum:]')
+
+    [[ -z "$custom_safe" ]] && continue
 
     nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
     echo $! > "$pid_dir/${plugin}_${custom_safe}.pid"
@@ -41,7 +44,7 @@ fanctrlplus.status() {
 
 case "$1" in
   start) fanctrlplus.start ;;
-  stop)  fanctrlplus.stop ;;
+  stop) fanctrlplus.stop ;;
   status) fanctrlplus.status ;;
   restart)
     fanctrlplus.stop
