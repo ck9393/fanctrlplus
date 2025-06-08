@@ -155,8 +155,16 @@ switch ($op) {
     exit;
 
   case 'status':
-    exec("pgrep -f fanctrlplus_loop", $out);
-    json_response(['status' => count($out) ? 'running' : 'stopped']);
+    $running = false;
+    foreach (glob("/var/run/fanctrlplus_*.pid") as $pidfile) {
+      $pid = trim(file_get_contents($pidfile));
+      if (posix_kill((int)$pid, 0)) {
+        $running = true;
+        break;
+      }
+    }
+    echo json_encode(['status' => $running ? 'running' : 'stopped']);
+    break;
 
   case 'status_all':
     ob_clean();
