@@ -1,6 +1,5 @@
 <?php
-
-function render_fan_block($cfg_file, $i, $pwms, $disks) {
+function render_fan_block($cfg_file, $i) {
   $cfg = parse_ini_file("/boot/config/plugins/fanctrlplus/$cfg_file");
   $cfg['file'] = $cfg_file;
 
@@ -16,9 +15,7 @@ function render_fan_block($cfg_file, $i, $pwms, $disks) {
       <table style="width:100%;">
         <tr>
           <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
-          <td>
-            <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required>
-          </td>
+          <td><input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required></td>
         </tr>
         <tr>
           <td style="cursor: help;" title="Enable or disable this fan controller">Fan Control:</td>
@@ -42,27 +39,19 @@ function render_fan_block($cfg_file, $i, $pwms, $disks) {
         </tr>
         <tr>
           <td style="cursor: help;" title="Set the minimum PWM value (0–255)">Min PWM:</td>
-          <td>
-            <input type="text" name="pwm[<?=$i?>]" value="<?=htmlspecialchars($cfg['pwm']??'')?>">
-          </td>
+          <td><input type="text" name="pwm[<?=$i?>]" value="<?=htmlspecialchars($cfg['pwm']??'')?>"></td>
         </tr>
         <tr>
           <td style="cursor: help;" title="At or below this temperature, fan will run at the configured minimum PWM">Low Temp (°C):</td>
-          <td>
-            <input type="number" name="low[<?=$i?>]" value="<?=htmlspecialchars($cfg['low']??'')?>">
-          </td>
+          <td><input type="number" name="low[<?=$i?>]" value="<?=htmlspecialchars($cfg['low']??'')?>"></td>
         </tr>
         <tr>
           <td style="cursor: help;" title="At or above this temperature, fan will run at the configured maximum PWM">High Temp (°C):</td>
-          <td>
-            <input type="number" name="high[<?=$i?>]" value="<?=htmlspecialchars($cfg['high']??'')?>">
-          </td>
+          <td><input type="number" name="high[<?=$i?>]" value="<?=htmlspecialchars($cfg['high']??'')?>"></td>
         </tr>
         <tr>
           <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
-          <td>
-            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval']??'')?>">
-          </td>
+          <td><input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval']??'')?>"></td>
         </tr>
         <tr>
           <td style="cursor: help;" title="Select disk(s) to monitor for temperature control.">Include Disk(s):</td>
@@ -82,4 +71,3 @@ function render_fan_block($cfg_file, $i, $pwms, $disks) {
   </div>
   <?php
   return ob_get_clean();
-}
