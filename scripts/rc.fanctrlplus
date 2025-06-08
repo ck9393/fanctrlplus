@@ -14,7 +14,7 @@ fanctrlplus.start() {
     echo "=== Raw custom: [$custom]" >> /boot/log_fanctrlplus_debug.log
     logger -t $plugin "Raw custom: [$custom]"
 
-    custom_clean=$(echo "$custom" | tr -d '"')
+    custom_clean=$(echo "$custom" | tr -d '"\n\r')
     custom_trimmed=$(echo "$custom_clean" | xargs)
     custom_safe=$(echo "$custom_trimmed" | tr -c '[:alnum:]' '_')
 
