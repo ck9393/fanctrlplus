@@ -91,9 +91,11 @@ $(function() {
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
       const isRunning = statusObj.status === 'running';
-      updateFanControlStatus(isRunning);  // ✅ 添加这行
+      updateFanControlStatus(isRunning);
+
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
+      btn.attr('title', isRunning ? 'Stop the daemon.' : 'Start the daemon.');  // ✅ 补上这行
       btn.prop('disabled', false);
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status:", textStatus, errorThrown);
