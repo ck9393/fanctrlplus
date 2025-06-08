@@ -1,51 +1,48 @@
 #!/bin/bash
-# rc.fanctrlplus - 管理 FanCtrlPlus 插件启动、停止、状态
 
-plugin="fanctrlplus"
-cfg_dir="/boot/config/plugins/$plugin"
+plugin=fanctrlplus
+cfg_path="/boot/config/plugins/$plugin"
 loop_script="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_loop.sh"
-run_dir="/var/run"
+pid_dir="/var/run"
 
-fanctrlplus_start() {
+fanctrlplus.start() {
   pkill -f "$loop_script" 2>/dev/null
-  rm -f "$run_dir/${plugin}_*.pid"
-
-  for cfg in "$cfg_dir"/${plugin}_*.cfg; do
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
-    custom_cleaned=$(echo "$custom" | tr -c '[:alnum:]_' '_')
+    custom_safe=$(echo "${custom}" | tr -c '[:alnum:]' '_')
     nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
-    echo $! > "$run_dir/${plugin}_${custom_cleaned}.pid"
-    logger -t $plugin "Started [$custom]"
+    echo $! > "$pid_dir/${plugin}_${custom_safe}.pid"
+    logger -t $plugin "Started [$custom_safe] from $cfg"
   done
 }
 
-fanctrlplus_stop() {
+fanctrlplus.stop() {
   pkill -f "$loop_script"
-  rm -f "$run_dir/${plugin}_*.pid"
+  rm -f "$pid_dir"/${plugin}_*.pid
   logger -t $plugin "All fanctrlplus stopped"
 }
 
-fanctrlplus_status() {
-  for pidfile in "$run_dir"/${plugin}_*.pid; do
+fanctrlplus.status() {
+  for pidfile in "$pid_dir"/${plugin}_*.pid; do
     [[ -f "$pidfile" ]] || continue
     pid=$(cat "$pidfile")
     if kill -0 "$pid" 2>/dev/null; then
       echo "running"
-      exit 0
+      return
     fi
   done
   echo "stopped"
 }
 
 case "$1" in
-  start) fanctrlplus_start ;;
-  stop) fanctrlplus_stop ;;
+  start) fanctrlplus.start ;;
+  stop)  fanctrlplus.stop ;;
+  status) fanctrlplus.status ;;
   restart)
-    fanctrlplus_stop
+    fanctrlplus.stop
     sleep 1
-    fanctrlplus_start
+    fanctrlplus.start
     ;;
-  status) fanctrlplus_status ;;
   *) echo "Usage: $0 {start|stop|restart|status}" ;;
 esac
