@@ -167,30 +167,28 @@ switch ($op) {
     break;
 
   case 'status_all':
-    ob_clean();
-    header('Content-Type: application/json');
-
     $cfg_dir = "/boot/config/plugins/$plugin";
     $result = [];
-
-    // 获取当前所有正在运行的 fanctrlplus_loop 对应 cfg
-    exec("pgrep -af fanctrlplus_loop", $running_processes);
 
     foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
       $cfg = parse_ini_file($file);
       $name = trim($cfg['custom'] ?? '');
       $enabled = trim($cfg['service'] ?? '0') === '1';
 
-      $is_running = false;
-      foreach ($running_processes as $proc) {
-        if (strpos($proc, $file) !== false) {
-          $is_running = true;
-          break;
+      // 用 custom name 构造 PID 文件路径
+      $custom_safe = preg_replace('/\W+/', '_', $name);
+      $pid_file = "/var/run/{$plugin}_{$custom_safe}.pid";
+
+      $running = false;
+      if ($enabled && file_exists($pid_file)) {
+        $pid = trim(file_get_contents($pid_file));
+        if (posix_kill((int)$pid, 0)) {
+          $running = true;
         }
       }
 
       if ($name !== '') {
-        $result[$name] = ($enabled && $is_running) ? 'running' : 'stopped';
+        $result[$name] = $running ? 'running' : 'stopped';
       }
     }
 
