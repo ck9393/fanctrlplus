@@ -142,6 +142,7 @@ switch ($op) {
   
     // ✅ 加载依赖变量
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
+    require_once "$docroot/plugins/$plugin/fanctrlplus.page";
   
     // ✅ 主板 PWM 与 硬盘信息
     $pwms = list_pwm();
