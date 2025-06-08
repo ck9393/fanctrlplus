@@ -176,13 +176,19 @@ $(function() {
     if (!confirm("Are you sure you want to delete this fan configuration?")) return;
     const block = $(btn).closest('.fan-block');
     const file = block.find('input.cfg-file').val();
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file}, function() {
-      block.remove();
-      $('form').trigger('ui:changed');
-      setTimeout(() => {
-        updateAllFanStatus(); // ✅ 删除后刷新剩余状态灯
-      }, 500);
-    });
+
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
+      .done(function(result) {
+        console.log("✅ Fan deleted:", result);
+        block.remove();                  // ✅ 先从页面移除
+        setTimeout(() => {
+          updateAllFanStatus();         // ✅ 然后刷新 status 灯
+        }, 500);
+      })
+      .fail(function(jqXHR, textStatus, errorThrown) {
+        console.error("❌ Delete fan failed:", textStatus, errorThrown);
+        alert("Failed to delete fan.");
+      });
   };
 
   window.addFan = function() {
