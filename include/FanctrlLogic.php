@@ -148,11 +148,11 @@ switch ($op) {
     $cfgpath = "/boot/config/plugins/$plugin/$file";
     if (is_file($cfgpath)) {
       unlink($cfgpath);
-      echo "deleted";
+      json_response(['status' => 'deleted', 'file' => $file]);
     } else {
-      echo "not found";
+      json_response(['status' => 'not_found', 'file' => $file]);
     }
-    exit;
+    break;
 
   case 'status':
     $pid_files = glob("/var/run/fanctrlplus_*.pid");
