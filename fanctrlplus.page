@@ -74,7 +74,7 @@ $width = 300;
 ?>
 
 <p style="margin: 6px 0 16px 12px; font-size:14px; font-weight:bold;">
-  Fan Control: <span id="status-value" style="color:green;">Active</span>
+  Fan Control: <span id="status-value" style="color:green; font-weight:500:">Active</span>
 </p>
 
 <script>
