@@ -135,13 +135,13 @@ switch ($op) {
   case 'newtemp':
     $index = intval($_POST['index'] ?? 0);
     $cfgpath = "/boot/config/plugins/$plugin";
-    $filename = "$plugin" . "_temp_$index.cfg";
+    $filename = "{$plugin}_temp_{$index}.cfg";
     $fullpath = "$cfgpath/$filename";
     if (!file_exists($fullpath)) {
       file_put_contents($fullpath, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
     }
-    echo "created";
-    exit;
+    json_response(['status' => 'created', 'file' => $filename]);
+    break;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
