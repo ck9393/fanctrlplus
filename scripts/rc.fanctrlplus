@@ -10,7 +10,7 @@ fanctrlplus.start() {
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     source "$cfg"
     [[ "$service" != "1" ]] && continue
-    custom_safe=$(echo "${custom}" | tr -c '[:alnum:]' '_')
+    custom_safe=$(echo "$custom" | xargs | tr -c '[:alnum:]' '_')
     nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
     echo $! > "$pid_dir/${plugin}_${custom_safe}.pid"
     logger -t $plugin "Started [$custom_safe] from $cfg"
