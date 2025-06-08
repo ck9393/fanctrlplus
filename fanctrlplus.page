@@ -272,7 +272,7 @@ $(function() {
             <td>Custom Name</td>
             <td>
               <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required>
-              <i class="fa fa-info-circle" style="margin-left:6px; cursor:help;" title="Enter a unique name for this fan. Avoid spaces or special characters." ></i>
+              <i class="fa fa-info-circle" style="margin-left:6px; margin-bottom:-2px; font-size:14px; cursor:help;" title="Enter a unique name for this fan. Avoid spaces or special characters."></i>
             </td>
           </tr>
           <tr>
