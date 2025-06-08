@@ -183,10 +183,18 @@ $(function() {
   };
 
   window.addFan = function() {
+    console.log("🟡 Add Fan clicked"); // 先看是否点击触发
     const index = $('.fan-block').length;
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function() {
-      location.reload();
-    });
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index})
+      .done(function(resp) {
+        console.log("🟢 Fan added:", resp);
+      })
+      .fail(function(jqXHR, textStatus, errorThrown) {
+        console.error("🔴 Add fan failed:", textStatus, errorThrown);
+      })
+      .always(function() {
+        location.reload();  // 保底刷新
+      });
   };
 
   $('.disk-select').each(function() {
