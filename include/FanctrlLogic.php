@@ -140,15 +140,13 @@ switch ($op) {
       file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
     }
   
-    // ✅ 加载依赖变量
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
-    require_once "$docroot/plugins/$plugin/fanctrlplus.page";
+    require_once "$docroot/plugins/$plugin/fanctrlplus.page"; // ✅ 加这个
   
-    // ✅ 主板 PWM 与 硬盘信息
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
   
-    echo render_fan_block($temp_file, $index, $pwms, $disks);  // ✅ 传入完整数据
+    echo render_fan_block(basename($temp_file), $index, $pwms, $disks);
     exit;
 
   case 'delete':
