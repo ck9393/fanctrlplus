@@ -129,16 +129,32 @@ $(function() {
     const action = btn.text().includes('Stop') ? 'stop' : 'start';
 
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
-      setTimeout(() => {
-        updateStatusLightAndButton();
-        updateAllFanStatus();
-        btn.prop('disabled', false);  // 再启用按钮
-      }, 2000);
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
-      btn.prop('disabled', false);
-    });
-  };
+      // 每 500ms 检查一次，最多等 10 次（5 秒）
+      let tries = 0;
+      const maxTries = 10;
+
+      const check = () => {
+        $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
+          const isRunning = data.status === 'running';
+          const wantRunning = action === 'start';
+
+          if (isRunning === wantRunning || tries >= maxTries) {
+            updateStatusLightAndButton();
+            updateAllFanStatus();
+            btn.prop('disabled', false);
+          } else {
+            tries++;
+            setTimeout(check, 500);
+          }
+        });
+      };
+
+    check();
+  }).fail(function(jqXHR, textStatus, errorThrown) {
+    console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
+    btn.prop('disabled', false);
+  });
+};
 
   window.pauseFan = function(pwm, btn) {
     $(btn).prop('disabled', true).text("Pausing...");
