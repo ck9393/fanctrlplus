@@ -155,15 +155,16 @@ switch ($op) {
     exit;
 
   case 'status':
+    $pid_files = glob("/var/run/fanctrlplus_*.pid");
     $running = false;
-    foreach (glob("/var/run/fanctrlplus_*.pid") as $pidfile) {
-      $pid = trim(file_get_contents($pidfile));
-      if (posix_kill((int)$pid, 0)) {
+    foreach ($pid_files as $pidfile) {
+      $pid = trim(@file_get_contents($pidfile));
+      if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
         $running = true;
         break;
       }
     }
-    echo json_encode(['status' => $running ? 'running' : 'stopped']);
+    json_response(['status' => $running ? 'running' : 'stopped']);
     break;
 
   case 'status_all':
@@ -174,15 +175,13 @@ switch ($op) {
       $cfg = parse_ini_file($file);
       $name = trim($cfg['custom'] ?? '');
       $enabled = trim($cfg['service'] ?? '0') === '1';
-
-      // 用 custom name 构造 PID 文件路径
       $custom_safe = preg_replace('/\W+/', '_', $name);
       $pid_file = "/var/run/{$plugin}_{$custom_safe}.pid";
-
       $running = false;
+
       if ($enabled && file_exists($pid_file)) {
-        $pid = trim(file_get_contents($pid_file));
-        if (posix_kill((int)$pid, 0)) {
+        $pid = trim(@file_get_contents($pid_file));
+        if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
           $running = true;
         }
       }
@@ -192,24 +191,24 @@ switch ($op) {
       }
     }
 
-    echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    exit;
+    json_response($result);
+    break;
 
   case 'start':
     $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     if (is_file($rc)) {
       exec("$rc start >/dev/null 2>&1 &");
-      echo "started";
+      json_response(['status' => 'started']);
     } else {
-      echo "script not found";
+      json_response(['error' => 'rc script not found']);
     }
-    exit;
+    break;
 
   case 'stop':
     $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     exec("$rc stop >/dev/null 2>&1 &");
-    echo "stopped";
-    exit;
+    json_response(['status' => 'stopped']);
+    break;
 
   default:
     json_response(['error' => 'Invalid op']);
