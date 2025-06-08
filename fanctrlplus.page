@@ -255,7 +255,7 @@ $(function() {
                 type="text"
                 name="custom[<?=$i?>]"
                 value="<?=htmlspecialchars($cfg['custom']??'')?>"
-                placeholder="e.g. HDDBay"
+                placeholder="Required (e.g. HDDBay)"
                 class="custom-name"
                 required
                 pattern="\S+.*"
