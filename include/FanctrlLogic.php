@@ -175,7 +175,7 @@ switch ($op) {
       $cfg = parse_ini_file($file);
       $name = trim($cfg['custom'] ?? '');
       $enabled = trim($cfg['service'] ?? '0') === '1';
-      $custom_safe = preg_replace('/\W+/', '_', $name);
+      $custom_safe = preg_replace('/[^a-zA-Z0-9]/', '_', $name);
       $pid_file = "/var/run/{$plugin}_{$custom_safe}.pid";
       $running = false;
 
