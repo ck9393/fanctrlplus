@@ -177,7 +177,8 @@ switch ($op) {
       $enabled = trim($cfg['service'] ?? '0') === '1';
 
       // 保持和 rc.fanctrlplus 的一致性（自定义名 → pid 文件名）
-      $custom_safe = preg_replace('/\W+/', '_', $name);
+      $name_trimmed = trim($name);
+      $custom_safe = preg_replace('/\W+/', '_', $name_trimmed);
       $pid_file = "/var/run/{$plugin}_{$custom_safe}.pid";
       $running = false;
 
