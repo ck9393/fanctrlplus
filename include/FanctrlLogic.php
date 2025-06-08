@@ -175,7 +175,9 @@ switch ($op) {
       $cfg = parse_ini_file($file);
       $name = trim($cfg['custom'] ?? '');
       $enabled = trim($cfg['service'] ?? '0') === '1';
-      $custom_safe = preg_replace('/[^a-zA-Z0-9]/', '_', $name);
+
+      // 保持和 rc.fanctrlplus 的一致性（自定义名 → pid 文件名）
+      $custom_safe = preg_replace('/\W+/', '_', $name);
       $pid_file = "/var/run/{$plugin}_{$custom_safe}.pid";
       $running = false;
 
@@ -202,13 +204,11 @@ switch ($op) {
     } else {
       json_response(['error' => 'rc script not found']);
     }
-    break;
 
   case 'stop':
     $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     exec("$rc stop >/dev/null 2>&1 &");
     json_response(['status' => 'stopped']);
-    break;
 
   default:
     json_response(['error' => 'Invalid op']);
