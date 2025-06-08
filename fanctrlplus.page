@@ -73,19 +73,26 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<p style="margin-top:-5px; margin-bottom:10px; margin-left:12px; font-size:13px;" id="status-light">🔄 Loading...</p>
+<p style="margin: 6px 0 16px 12px; font-size:14px; font-weight:bold;">
+  Fan Control: <span id="status-value" style="color:green;">Active</span>
+</p>
 
 <script>
 $(function() {
+  function updateFanControlStatus(isRunning) {
+    const statusElem = document.getElementById('status-value');
+    if (!statusElem) return;
+    statusElem.textContent = isRunning ? 'Active' : 'Inactive';
+    statusElem.style.color = isRunning ? 'green' : 'red';
+  }
+
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
-      console.log("✅ status:", statusObj);
       const isRunning = statusObj.status === 'running';
-      $('#status-light').text(isRunning ? '🟢 Running' : '🔴 Stopped');
+      updateFanControlStatus(isRunning);  // ✅ 添加这行
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
       btn.prop('disabled', false);
-      btn.attr('title', isRunning ? 'Stop the fan controller daemon' : 'Start the fan controller daemon');
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status:", textStatus, errorThrown);
     });
