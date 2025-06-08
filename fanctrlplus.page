@@ -129,9 +129,14 @@ $(function() {
     const action = btn.text().includes('Stop') ? 'stop' : 'start';
 
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
-      // 直接立即刷新所有状态，不等待
-      updateStatusLightAndButton();
-      updateAllFanStatus();
+      setTimeout(() => {
+        updateStatusLightAndButton();
+        updateAllFanStatus();
+        btn.prop('disabled', false);  // 再启用按钮
+      }, 2000);
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
+      btn.prop('disabled', false);
     });
   };
 
