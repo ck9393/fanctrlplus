@@ -1,10 +1,23 @@
 <?php
-$plugin = 'fanctrlplus';
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
+$plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+
+header('Content-Type: application/json');
+
+function json_response($data) {
+  ob_clean();
+  echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  exit;
+}
 
 function scan_dir($dir) {
   $out = [];
-  foreach (array_diff(scandir($dir), ['.','..']) as $f) $out[] = realpath($dir).'/'.$f;
+  foreach (array_diff(scandir($dir), ['.','..']) as $f) {
+    $out[] = realpath($dir) . '/' . $f;
+  }
   return $out;
 }
 
@@ -27,7 +40,9 @@ function list_fan() {
   return $out;
 }
 
-switch ($_GET['op'] ?? $_POST['op'] ?? '') {
+$op = $_GET['op'] ?? $_POST['op'] ?? '';
+
+switch ($op) {
   case 'detect':
     $pwm = $_GET['pwm'] ?? '';
     if (is_file($pwm)) {
@@ -46,11 +61,11 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       for ($i = 0; $i < count($final_fans); $i++) {
         if (($final_fans[$i]['rpm'] - $init_fans[$i]['rpm']) > 0) {
           echo $init_fans[$i]['sensor'];
-          break;
+          exit;
         }
       }
     }
-    break;
+    exit;
 
   case 'pwm':
     $pwm = $_GET['pwm'] ?? '';
@@ -63,10 +78,12 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
       $default_method = @file_get_contents($pwm . "_enable");
       $default_pwm = @file_get_contents($pwm);
       $default_fan_min = @file_get_contents($fan_min);
+
       @file_put_contents($pwm . "_enable", "1");
       @file_put_contents($fan_min, "0");
       @file_put_contents($pwm, "0");
       sleep(5);
+
       $min_rpm = @file_get_contents($fan);
       for ($i = 0; $i <= 20; $i++) {
         $val = $i * 5;
@@ -87,12 +104,13 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
           }
         }
       }
+
       @file_put_contents($pwm, $default_pwm);
       @file_put_contents($fan_min, $default_fan_min);
       @file_put_contents($pwm . "_enable", $default_method);
       exec("$autofan start >/dev/null");
     }
-    break;
+    exit;
 
   case 'pause':
     $pwm = $_GET['pwm'] ?? '';
@@ -112,17 +130,17 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     } else {
       echo "Invalid PWM path";
     }
-    break;
+    exit;
 
   case 'newtemp':
     $index = intval($_POST['index'] ?? 0);
     $cfgpath = "/boot/config/plugins/$plugin";
-    $filename = "$plugin" . "_temp_$index.cfg";
+    $filename = "{$plugin}_temp_{$index}.cfg";
     $fullpath = "$cfgpath/$filename";
     if (!file_exists($fullpath)) {
       file_put_contents($fullpath, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
     }
-    echo "created";
+    json_response(['status' => 'created', 'file' => $filename]);
     break;
 
   case 'delete':
@@ -130,31 +148,70 @@ switch ($_GET['op'] ?? $_POST['op'] ?? '') {
     $cfgpath = "/boot/config/plugins/$plugin/$file";
     if (is_file($cfgpath)) {
       unlink($cfgpath);
-      echo "deleted";
+      json_response(['status' => 'deleted', 'file' => $file]);
     } else {
-      echo "not found";
+      json_response(['status' => 'not_found', 'file' => $file]);
     }
     break;
 
   case 'status':
-    exec("pgrep -f fanctrlplus_loop", $out);
-    echo json_encode(['status' => count($out) ? 'running' : 'stopped']);
+    $pid_files = glob("/var/run/fanctrlplus_*.pid");
+    $running = false;
+    foreach ($pid_files as $pidfile) {
+      $pid = trim(@file_get_contents($pidfile));
+      if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
+        $running = true;
+        break;
+      }
+    }
+    json_response(['status' => $running ? 'running' : 'stopped']);
+    break;
+
+  case 'status_all':
+    $cfg_dir = "/boot/config/plugins/$plugin";
+    $result = [];
+
+    foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
+      $cfg = parse_ini_file($file);
+      $name = trim($cfg['custom'] ?? '');
+      $enabled = trim($cfg['service'] ?? '0') === '1';
+
+      // 保持和 rc.fanctrlplus 的一致性（自定义名 → pid 文件名）
+      $name_trimmed = trim($name);
+      $custom_safe = preg_replace('/\W+/', '_', $name_trimmed);
+      $pid_file = "/var/run/{$plugin}_{$custom_safe}.pid";
+      $running = false;
+
+      if ($enabled && file_exists($pid_file)) {
+        $pid = trim(@file_get_contents($pid_file));
+        if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
+          $running = true;
+        }
+      }
+
+      if ($name !== '') {
+        $result[$name] = $running ? 'running' : 'stopped';
+      }
+    }
+
+    json_response($result);
     break;
 
   case 'start':
-    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     if (is_file($rc)) {
-    exec("$rc start >/dev/null 2>&1 &");
-    echo "started";
-  } else {
-    echo "script not found";
-  }
-  break;
+      exec("$rc start >/dev/null 2>&1 &");
+      json_response(['status' => 'started']);
+    } else {
+      json_response(['error' => 'rc script not found']);
+    }
 
   case 'stop':
-    $rc = "/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus";
+    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
     exec("$rc stop >/dev/null 2>&1 &");
-    echo "stopped";
-    break;
+    json_response(['status' => 'stopped']);
+
+  default:
+    json_response(['error' => 'Invalid op']);
 }
 ?>

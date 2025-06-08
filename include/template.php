@@ -2,6 +2,8 @@
 $plugin = 'fanctrlplus';
 
 $index = isset($_GET['index']) ? (int)$_GET['index'] : 0;
+
+// 获取有效磁盘
 $disks = glob("/dev/disk/by-id/*");
 $valid_disks = [];
 foreach ($disks as $dev) {
@@ -11,6 +13,7 @@ foreach ($disks as $dev) {
   $valid_disks[] = ['id' => basename($dev), 'dev' => $real];
 }
 
+// 获取 PWM 控制器
 exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
 $pwms = [];
 foreach ($chips as $chip) {
@@ -23,11 +26,15 @@ foreach ($chips as $chip) {
 
 <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
   <input type="hidden" name="#file[<?=$index?>]" value="fanctrlplus_temp<?=$index?>.cfg" class="cfg-file">
-  <fieldset style="margin:10px; padding:26px 10px 10px 10px; border:1px solid #ccc; position:relative;">
-    <button type="button" onclick="removeFan(this)" style="position:absolute; top:4px; right:4px;">DELETE</button>
+  <fieldset style="margin:10px; padding:26px 10px 36px 10px; border:1px solid #ccc; border-radius:6px; position:relative;">
+    <span class="fan-status" style="position:absolute; top:6px; right:8px;">🔄</span>
+    <button type="button" onclick="removeFan(this)" style="position:absolute; bottom:6px; right:8px;">DELETE</button>
     <table style="width:100%;">
-      <tr><td style="width:140px;">Custom Name:</td>
-          <td><input type="text" name="custom[<?=$index?>]" placeholder="e.g. HDDBay"></td>
+      <tr>
+        <td style="width:140px;">Custom Name:</td>
+        <td>
+          <input type="text" name="custom[<?=$index?>]" class="custom-name" placeholder="e.g. HDDBay" style="width:100%;">
+        </td>
       </tr>
       <tr>
         <td>Fan Control:</td>

@@ -1,43 +1,55 @@
 #!/bin/bash
-# 控制脚本：启动、停止、状态
 
 plugin=fanctrlplus
 cfg_path="/boot/config/plugins/$plugin"
 loop_script="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_loop.sh"
+pid_dir="/var/run"
 
 fanctrlplus.start() {
   pkill -f "$loop_script" 2>/dev/null
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
-    source "$cfg"
+    service=$(grep -Po '^service="\K[^"]+' "$cfg")
     [[ "$service" != "1" ]] && continue
+
+    # 清洗 custom 值
+    raw_custom=$(grep -Po '^custom="\K[^"]+' "$cfg")
+    clean_custom=$(echo "$raw_custom" | tr -d '\r\n\t ')
+    custom_safe=$(echo "$clean_custom" | tr -cd '[:alnum:]')
+
+    [[ -z "$custom_safe" ]] && continue
+
     nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
-    logger -t fanctrlplus "Started config [$custom]"
+    echo $! > "$pid_dir/${plugin}_${custom_safe}.pid"
+    logger -t $plugin "Started [$custom_safe] from $cfg"
   done
 }
 
 fanctrlplus.stop() {
   pkill -f "$loop_script"
-  logger -t fanctrlplus "All fanctrlplus stopped"
+  rm -f "$pid_dir"/${plugin}_*.pid
+  logger -t $plugin "All fanctrlplus stopped"
 }
 
 fanctrlplus.status() {
-  if pgrep -f "$loop_script" > /dev/null; then
-    echo "running"
-    exit 0
-  else
-    echo "stopped"
-    exit 1
-  fi
+  for pidfile in "$pid_dir"/${plugin}_*.pid; do
+    [[ -f "$pidfile" ]] || continue
+    pid=$(cat "$pidfile")
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "running"
+      return
+    fi
+  done
+  echo "stopped"
 }
 
 case "$1" in
   start) fanctrlplus.start ;;
   stop) fanctrlplus.stop ;;
+  status) fanctrlplus.status ;;
   restart)
     fanctrlplus.stop
     sleep 1
     fanctrlplus.start
     ;;
-  status) fanctrlplus.status ;;
   *) echo "Usage: $0 {start|stop|restart|status}" ;;
 esac
