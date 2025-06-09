@@ -16,8 +16,6 @@ function list_pwm() {
   });
 
   return $out;
-}
-
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
@@ -26,9 +24,19 @@ function list_valid_disks_by_id() {
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
+  // 建立 /dev/sdX → diskX 的映射（只包含 array 中的 disk1、disk2、...）
+  $sd_to_disk = [];
+  foreach (glob("/mnt/disk*") as $disk_path) {
+    $real = realpath($disk_path);
+    if (strpos($real, "/dev/") === 0) {
+      $sd_to_disk[$real] = basename($disk_path);
+    }
+  }
+
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
-    if (strpos(basename($dev), 'usb-') === 0) continue; // 排除 USB 启动盘
+    if (strpos(basename($dev), 'usb-') === 0) continue;
+
     $real = realpath($dev);
     if ($real === false) continue;
     if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
@@ -36,8 +44,22 @@ function list_valid_disks_by_id() {
     if (in_array($real, $seen)) continue;
 
     $seen[] = $real;
-    $result[] = ['id' => basename($dev), 'dev' => $real];
+
+    $id = basename($dev);
+    $label = $id;
+
+    // 若该设备在 /mnt/diskX 中被挂载，追加 diskX 标签
+    if (isset($sd_to_disk[$real])) {
+      $label .= " → " . $sd_to_disk[$real];
+    }
+
+    $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
+
+  // 排序（根据 id 自然排序）
+  usort($result, function($a, $b) {
+    return strnatcasecmp($a['id'], $b['id']);
+  });
 
   return $result;
 }
