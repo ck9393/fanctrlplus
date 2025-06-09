@@ -120,6 +120,7 @@ switch ($op) {
 
   case 'newtemp':
     $index = $_REQUEST['index'] ?? 0;
+    $cfg_dir = "/boot/config/plugins/$plugin";
     $temp_file = "$cfg_dir/{$plugin}_temp_$index.cfg";
   
     if (!file_exists($temp_file)) {
@@ -128,10 +129,12 @@ switch ($op) {
   
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
   
+    $cfg = parse_ini_file($temp_file);             // ✅ 加载 temp 配置
+    $cfg['file'] = basename($temp_file);           // ✅ 加入 file 字段
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
   
-    echo render_fan_block(basename($temp_file), $index, $pwms, $disks);
+    echo render_fan_block($cfg, $index, $pwms, $disks);  // ✅ 改为传完整 $cfg
     error_log("[fanctrlplus] newtemp block output success");
     exit;
 
