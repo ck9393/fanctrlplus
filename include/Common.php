@@ -19,20 +19,30 @@ function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
 
+  // 建立 /dev/sdX 或 /dev/nvmeXn1 → diskX 的反向映射
+  $dev_to_disk = [];
+
+  // 使用 lsblk 分析 /mnt/diskX 实际来源设备
+  foreach (glob("/mnt/disk*") as $mnt) {
+    $mountpoint = escapeshellarg($mnt);
+    $output = shell_exec("lsblk -no NAME,MOUNTPOINT /dev/md* 2>/dev/null");
+    // 手动逐行找出 mdXp1 -> diskX
+    exec("findmnt -n -o SOURCE --target $mountpoint", $out);
+    if (!empty($out[0])) {
+      $src = trim($out[0]); // /dev/mdXp1
+      $parents = shell_exec("lsblk -no PKNAME $src 2>/dev/null");  // 可能返回 sdd
+      $parent = trim($parents);
+      if ($parent && strpos($parent, 'loop') === false) {
+        $base = "/dev/" . $parent;
+        $dev_to_disk[$base] = basename($mnt); // disk1, disk2...
+        error_log("[fanctrlplus] map $base ← " . basename($mnt));
+      }
+    }
+  }
+
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
-
-  // 建立 diskX 映射（/mnt/diskX -> /dev/sdX）
-  $dev_to_disk = [];
-  foreach (glob("/mnt/disk*") as $mnt) {
-    $real = realpath($mnt);  // 如 /dev/mdXp1
-    if ($real && preg_match('#/dev/(sd[a-z]+)[0-9]*$#', $real, $m)) {
-      $base = "/dev/" . $m[1];  // /dev/sdX
-      $dev_to_disk[$base] = basename($mnt);  // disk1, disk2...
-      error_log("[fanctrlplus] map $base ← " . basename($mnt));
-    }
-  }
 
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
@@ -48,28 +58,24 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 追加 diskX 标签（通过 dev_base 匹配）
-    if (preg_match('#/dev/(sd[a-z]+)#', $real, $m)) {
-      $dev_base = "/dev/" . $m[1];
-      if (isset($dev_to_disk[$dev_base])) {
-        $label .= " → " . $dev_to_disk[$dev_base];
-        error_log("[fanctrlplus] matched $dev_base → {$dev_to_disk[$dev_base]} for id=$id");
+    // 从 /dev/sdX1 或 /dev/nvmeXn1p1 → /dev/sdX
+    if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
+      $base = "/dev/" . $m[1];
+      if (isset($dev_to_disk[$base])) {
+        $label .= " → " . $dev_to_disk[$base];
+        error_log("[fanctrlplus] matched $base → {$dev_to_disk[$base]} for id=$id");
       } else {
-        error_log("[fanctrlplus] no match for $dev_base (id=$id)");
+        error_log("[fanctrlplus] no match for $base (id=$id)");
       }
     } else {
-      error_log("[fanctrlplus] no sdX match for real=$real");
+      error_log("[fanctrlplus] no match regex for real=$real");
     }
 
     error_log("[fanctrlplus] disk id=$id real=$real label=$label");
-
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
-  usort($result, function($a, $b) {
-    return strnatcasecmp($a['id'], $b['id']);
-  });
-
+  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
   error_log("[fanctrlplus] final disk list count: " . count($result));
   return $result;
 }
