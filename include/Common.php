@@ -17,44 +17,36 @@ function list_pwm() {
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
-  $dev_to_disk = [];
+  $dev_to_diskx = [];
 
-  // 解析 lsblk 的 JSON，映射 dev → diskX
-  $lsblk_json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
-  $blk = json_decode($lsblk_json, true);
-
-  if (!empty($blk['blockdevices'])) {
-    foreach ($blk['blockdevices'] as $dev) {
-      $mountpoint = $dev['mountpoint'] ?? '';
-      $kname = $dev['kname'] ?? '';
-
-      if ($mountpoint && strpos($mountpoint, '/mnt/disk') === 0 && $kname) {
-        $label = basename($mountpoint); // disk1 ~ diskX
-
-        // 尝试反查 mdXp1 的物理父设备
-        $parent = shell_exec("lsblk -no PKNAME $kname 2>/dev/null");
-        $parent = trim($parent);
-        if ($parent) {
-          $base = "/dev/$parent";
-          $dev_to_disk[$base] = $label;
-          error_log("[fanctrlplus] map $base ← $label");
-        }
+  // 建立 /dev/sdX → diskX/parity 映射
+  $lines = shell_exec("/usr/local/sbin/mdcmd status | grep rdevName");
+  foreach (explode("\n", $lines) as $line) {
+    if (preg_match('/rdevName\.(\d+)=(\w+)/', $line, $m)) {
+      $slot = intval($m[1]);
+      $dev  = "/dev/" . trim($m[2]);
+      if ($slot == 0) {
+        $dev_to_diskx[$dev] = "Parity";
+      } elseif ($slot == 29) {
+        $dev_to_diskx[$dev] = "Parity 2";
+      } else {
+        $dev_to_diskx[$dev] = "disk" . $slot;
       }
     }
   }
 
-  // 查找启动设备，排除 /boot 所在设备
+  // 获取 /boot 的设备（跳过）
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
+  // 遍历所有 by-id
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
 
     $real = realpath($dev);
     if ($real === false) continue;
-    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
     if (in_array($real, $seen)) continue;
 
@@ -62,12 +54,12 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 从 /dev/sdX1 或 /dev/nvmeXn1p1 → /dev/sdX
+    // 判断是否为 sdX/nvme 设备
     if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
       $base = "/dev/" . $m[1];
-      if (isset($dev_to_disk[$base])) {
-        $label .= " → " . $dev_to_disk[$base];
-        error_log("[fanctrlplus] matched $base → {$dev_to_disk[$base]} for id=$id");
+      if (isset($dev_to_diskx[$base])) {
+        $label .= " → " . $dev_to_diskx[$base];
+        error_log("[fanctrlplus] matched $base → {$dev_to_diskx[$base]} for id=$id");
       } else {
         error_log("[fanctrlplus] no match for $base (id=$id)");
       }
