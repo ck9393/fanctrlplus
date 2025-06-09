@@ -1,7 +1,5 @@
 <?php
 ob_start(); // 开启缓冲，防止意外输出破坏 JSON
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
 
 $plugin = 'fanctrlplus';
 $cfgpath = "/boot/config/plugins/$plugin";
@@ -33,17 +31,17 @@ foreach ($_POST['#file'] as $i => $file) {
     exit;
   }
 
-  // 安全 Custom Name → 作为配置文件名的一部分
+  // 安全 Custom Name → 用作配置文件名
   $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
 
-  // 如果是临时文件，则使用新名称
+  // 如为临时文件则重命名
   if (strpos($old_file, 'temp') !== false && !empty($controller)) {
     $new_file = $plugin . "_$safe_custom.cfg";
   } else {
     $new_file = $old_file;
   }
 
-  // 避免冲突
+  // 避免命名冲突
   $basefile = pathinfo($new_file, PATHINFO_FILENAME);
   $suffix = 1;
   while (in_array($new_file, $used_files)) {
@@ -54,33 +52,33 @@ foreach ($_POST['#file'] as $i => $file) {
   $used_files[] = $new_file;
   $filepath = "$cfgpath/$new_file";
 
-  // 配置内容拼接
+  // 拼接配置内容
   $cfg = [
-    'custom'    => $custom,
-    'service'   => $_POST['service'][$i] ?? '0',
-    'controller'=> $controller,
-    'pwm'       => $_POST['pwm'][$i] ?? '',
-    'low'       => $_POST['low'][$i] ?? '',
-    'high'      => $_POST['high'][$i] ?? '',
-    'interval'  => $_POST['interval'][$i] ?? '',
-    'disks'     => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : ''
+    'custom'     => $custom,
+    'service'    => $_POST['service'][$i] ?? '0',
+    'controller' => $controller,
+    'pwm'        => $_POST['pwm'][$i] ?? '',
+    'low'        => $_POST['low'][$i] ?? '',
+    'high'       => $_POST['high'][$i] ?? '',
+    'interval'   => $_POST['interval'][$i] ?? '',
+    'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : ''
   ];
 
   $content = '';
   foreach ($cfg as $k => $v) {
-    $v = str_replace('"', '', $v); // 移除双引号，避免格式问题
+    $v = str_replace('"', '', $v); // 移除双引号
     $content .= "$k=\"$v\"\n";
   }
 
   file_put_contents($filepath, $content, LOCK_EX);
 
-  // 删除旧的 temp 文件
+  // 删除旧临时文件
   if ($old_file !== $new_file && is_file("$cfgpath/$old_file")) {
     @unlink("$cfgpath/$old_file");
   }
 }
 
-// 删除未被使用的旧 cfg 文件
+// 删除未使用的旧 cfg 文件
 foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   $base = basename($cfgfile);
   if (!in_array($base, $used_files)) {
@@ -88,7 +86,7 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   }
 }
 
-// 重启 fanctrlplus 守护脚本（阻塞执行，确保生效）
+// 重启 fanctrlplus 守护进程
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.fanctrlplus";
 if (is_file($script)) {
   exec("bash $script stop > /dev/null 2>&1");
@@ -96,7 +94,6 @@ if (is_file($script)) {
   exec("bash $script start > /dev/null 2>&1");
 }
 
-// 清空缓冲并输出 JSON 成功状态
 ob_clean();
 echo json_encode(['status' => 'ok']);
 exit;
