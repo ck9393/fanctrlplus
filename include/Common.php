@@ -19,32 +19,32 @@ function list_valid_disks_by_id() {
   $result = [];
   $dev_to_disk = [];
 
-  // 解析 lsblk -pJ 获取挂载点和物理设备映射
-  $lsblk_json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
-  $blk = json_decode($lsblk_json, true);
+  // 从 lsblk 获取 JSON，解析出 diskX ← /dev/sdX 或 /dev/nvmeXn1
+  $json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
+  $blk = json_decode($json, true);
 
   if (!empty($blk['blockdevices'])) {
     foreach ($blk['blockdevices'] as $dev) {
-      if (!empty($dev['mountpoint']) && strpos($dev['mountpoint'], '/mnt/disk') === 0) {
-        $diskX = basename($dev['mountpoint']);     // e.g., disk6
-        $md_dev = $dev['kname'];                   // e.g., /dev/md6p1
+      $mountpoint = $dev['mountpoint'] ?? '';
+      $kname = $dev['kname'] ?? '';
+      $name = $dev['name'] ?? '';
 
-        // 找出父设备（e.g., sdh）
-        $parent = trim(shell_exec("lsblk -no PKNAME $md_dev 2>/dev/null"));
+      if ($mountpoint && strpos($mountpoint, '/mnt/disk') === 0 && $kname) {
+        $label = basename($mountpoint); // disk1
+        $parent = trim(shell_exec("lsblk -no PKNAME $kname 2>/dev/null"));
         if ($parent) {
-          $dev_to_disk["/dev/$parent"] = $diskX;   // /dev/sdh → disk6
-          error_log("[fanctrlplus] map /dev/$parent ← $diskX");
+          $dev_to_disk["/dev/$parent"] = $label;
+          error_log("[fanctrlplus] map /dev/$parent ← $label");
         }
       }
     }
   }
 
-  // 获取 /boot 所在设备，用于排除启动盘
+  // 获取启动设备（跳过 /boot）
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 遍历 by-id 符号链接
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
@@ -59,8 +59,8 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 提取设备 base 名称（/dev/sdX 或 /dev/nvmeXn1）
-    if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
+    // 取底层设备名作为映射键
+    if (preg_match('#/dev/([a-zA-Z0-9]+)[p]?[0-9]*$#', $real, $m)) {
       $base = "/dev/" . $m[1];
       if (isset($dev_to_disk[$base])) {
         $label .= " → " . $dev_to_disk[$base];
