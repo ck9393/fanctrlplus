@@ -51,11 +51,11 @@ function list_valid_disks_by_id() {
     $md_base = exec("findmnt -n -o SOURCE --target $real 2>/dev/null");
     $md_base = preg_replace('#p?[0-9]+$#', '', $md_base);
     if (isset($md_to_disk[$md_base])) {
-      $label .= " → " . $md_to_disk[$md_base];  // 显示 disk1、disk2 标签
+      $label .= isset($sd_to_disk[$real]) ? " → " . $sd_to_disk[$real] : ' [NO MATCH]';
+      error_log("[fanctrlplus] match $real → " . $sd_to_disk[$real]);
     }
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
-    error_log("[fanctrlplus] match $real → "
   }
 
   usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
