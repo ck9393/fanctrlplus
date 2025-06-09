@@ -1,12 +1,12 @@
-<?xml version="1.0"?>
+<?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
-  <!ENTITY name "fanctrlplus">
-  <!ENTITY version "1.2.0">
-  <!ENTITY author "ck9393">
-  <!ENTITY launch "Settings/fanctrlplus">
+  <!ENTITY name      "fanctrlplus">
+  <!ENTITY version   "1.2.0">
+  <!ENTITY author    "ck9393">
+  <!ENTITY launch    "Settings/fanctrlplus">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/fanctrlplus.plg">
-  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-1.2.0.txz">
-  <!ENTITY url "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
+  <!ENTITY txz       "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
+  <!ENTITY url       "https://github.com/ck9393/fanctrlplus/releases/download/v&version;/fanctrlplus-&version;.txz">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://github.com/ck9393/fanctrlplus/issues">
@@ -19,27 +19,20 @@ FanCtrl Plus: Automatically control fan speed based on HDD, NVMe, and unassigned
 /usr/local/emhttp/plugins/fanctrlplus/images/fanctrlplus.png
   </ICON>
 
-  <!-- 清理旧版本的 txz 和 plg（避免缓存和冲突） -->
+  <!-- 清理旧版本的 txz 文件缓存 -->
   <FILE Run="/bin/bash">
     <INLINE>
-#!/bin/bash 
-# 清除旧版本 txz 安装包
+#!/bin/bash
 rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
-
-# 清除旧版本 plg 文件，保留当前 &version;
-for f in /boot/config/plugins/fanctrlplus/fanctrlplus-*.plg; do
-  [[ "$f" == *"fanctrlplus-&version;.plg" ]] && continue
-  rm -f "$f"
-done
     </INLINE>
   </FILE>
 
-  <!-- 下载并安装新的 .txz -->
+  <!-- 下载并安装 Release 中的 .txz -->
   <FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
     <URL>&url;</URL>
   </FILE>
 
-  <!-- 延迟启动 fanctrlplus 脚本，避免卡 WebUI -->
+  <!-- 启动插件（延迟） -->
   <FILE Name="/tmp/start_fanctrlplus" Mode="0770">
     <INLINE>
 #!/bin/bash
@@ -56,16 +49,14 @@ rm -f /tmp/start_fanctrlplus
 echo ""
 echo "-----------------------------------------------------------"
 echo " Plugin fanctrlplus is installed."
-echo " This plugin requires Dynamix webGui to operate"
 echo " Author: ck9393"
-echo " Version: 1.2.0"
+echo " Version: &version;"
 echo "-----------------------------------------------------------"
-echo ""
 exit 0
     </INLINE>
   </FILE>
 
-  <!-- 卸载逻辑 -->
+  <!-- 卸载时执行 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
 #!/bin/bash
@@ -82,12 +73,16 @@ exit 0
 fanctrlplus v1.2.0 - Grouped Disk Selection & UI Optimization
 
 What's New:
-- Grouped Disk Selector by Array, Pools, Others
-- Parity disks listed first, disks sorted numerically
-- Dynamic disk list rendering with FanBlockRender.php
-- Dropped template.php, now deprecated
-- Removed debug logs, unified label formatting
+- Grouped Disk Selector:
+  • Array (Parity, Disk 1~N)
+  • ZFS cache pools (Cache, Seedcache, Torrentcache)
+  • Others for unrecognized devices
+- Improved sorting and labeling format
+- Dynamic UI rendering via FanBlockRender.php
+- Removed unused template.php
+- Removed debug logs
 
+This version enhances clarity and flexibility when selecting monitored disks.
   </CHANGES>
 
 </PLUGIN>
