@@ -6,7 +6,7 @@
   <!ENTITY launch    "Settings/fanctrlplus">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/fanctrlplus.plg">
   <!ENTITY txz       "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
-  <!ENTITY url       "https://github.com/ck9393/fanctrlplus/releases/download/v&version;/fanctrlplus-&version;.txz">
+  <!ENTITY url       "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://github.com/ck9393/fanctrlplus/issues">
