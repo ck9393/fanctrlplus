@@ -1,5 +1,6 @@
 <?php
 function render_fan_block($cfg, $i, $pwms, $disks) {
+  error_log("[fanctrlplus] render_fan_block called with cfg: " . json_encode($cfg));
   ob_start();
   ?>
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
