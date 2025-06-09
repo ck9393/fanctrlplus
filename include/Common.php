@@ -16,67 +16,98 @@ function list_pwm() {
 
 function list_valid_disks_by_id() {
   $seen = [];
-  $result = [];
-  $dev_to_diskx = [];
+  $groups = [];
 
-  // 1. 建立 /dev/sdX → diskX/parity 映射
+  // 获取 Array 设备映射（/dev/sdX -> Parity/diskX）
+  $dev_to_label = [];
+  $array_order = [];
   $lines = shell_exec("/usr/local/sbin/mdcmd status | grep rdevName");
   foreach (explode("\n", $lines) as $line) {
     if (preg_match('/rdevName\.(\d+)=(\w+)/', $line, $m)) {
       $slot = intval($m[1]);
       $dev  = "/dev/" . trim($m[2]);
       if ($slot == 0) {
-        $dev_to_diskx[$dev] = "Parity";
+        $label = "Parity";
       } elseif ($slot == 29) {
-        $dev_to_diskx[$dev] = "Parity 2";
+        $label = "Parity 2";
       } else {
-        $dev_to_diskx[$dev] = "Disk " . $slot;
+        $label = "Disk " . $slot;
+      }
+      $dev_to_label[$dev] = $label;
+      $array_order[$label] = $slot;  // 用于排序
+    }
+  }
+
+  // 获取每个设备 -> pool 名的映射
+  $pool_map = [];
+  foreach (glob("/etc/libvirt/lxc/*/config") as $file) {
+    $pool = basename(dirname($file));
+    $content = file_get_contents($file);
+    if (preg_match_all('/by-id\/(\S+)/', $content, $matches)) {
+      foreach ($matches[1] as $id) {
+        $pool_map["/dev/disk/by-id/$id"] = $pool;
       }
     }
   }
 
-  // 2. 获取 /boot 的设备（跳过它）
+  // 获取 /boot 的设备（排除）
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 3. 遍历所有 by-id
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
 
     $real = realpath($dev);
-    if ($real === false || in_array($real, $seen)) continue;
+    if ($real === false) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
-
+    if (in_array($real, $seen)) continue;
     $seen[] = $real;
+
     $id = basename($dev);
-    $clean_id = preg_replace('/^(ata|nvme)-/', '', $id); // 去前缀
+    $id_clean = preg_replace('/^(ata|nvme)-/', '', $id);
+    $short = $id_clean;
 
-    // 判断是否为 sdX/nvmeXn1，并匹配 dev_to_diskx
-    $label = $clean_id;
-    $sort_key = "Z-" . $clean_id; // 默认排最后（未识别的 NVMe）
-
-    if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
-      $base = "/dev/" . $m[1];
-      if (isset($dev_to_diskx[$base])) {
-        $diskx = $dev_to_diskx[$base];
-        $label = "$diskx - $clean_id";
-        $sort_key = str_pad($diskx === 'Parity' ? 0 : ($diskx === 'Parity 2' ? 1 : intval(preg_replace('/\D/', '', $diskx)) + 10), 3, '0', STR_PAD_LEFT);
-      } else {
-        // 未映射（通常是 NVMe）
-        $shortname = basename($real);
-        $label = "$clean_id ($shortname)";
-      }
+    // 获取 nvmeXn1 或 sdX
+    if (preg_match('#/dev/(nvme\d+n\d+|sd[a-z])#', $real, $m)) {
+      $dev_short = $m[1];
+    } else {
+      $dev_short = basename($real);
     }
 
-    error_log("[fanctrlplus] disk id=$id real=$real label=$label sort=$sort_key");
-    $result[] = ['id' => $id, 'dev' => $real, 'label' => $label, 'sort' => $sort_key];
+    // 判断属于哪个组
+    $group = "Others";
+    $label = $short;
+
+    if (isset($dev_to_label[$real])) {
+      $group = "Array";
+      $label = $dev_to_label[$real] . " - $short";
+    } elseif (isset($pool_map[$dev])) {
+      $group = $pool_map[$dev];
+      $label = "$short ($dev_short)";
+    } else {
+      $label = "$short ($dev_short)";
+    }
+
+    $groups[$group][] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
-  // 4. 排序
-  usort($result, fn($a, $b) => strnatcasecmp($a['sort'], $b['sort']));
-  foreach ($result as &$r) unset($r['sort']); // 清理临时排序键
-  error_log("[fanctrlplus] final sorted disk list count: " . count($result));
-  return $result;
+  // 排序
+  uksort($groups, function($a, $b) {
+    if ($a == "Array") return -1;
+    if ($b == "Array") return 1;
+    return strnatcasecmp($a, $b);
+  });
+
+  // 排序 Array 内部顺序
+  if (isset($groups["Array"])) {
+    usort($groups["Array"], function($a, $b) use ($array_order) {
+      $al = explode(" -", $a['label'])[0];
+      $bl = explode(" -", $b['label'])[0];
+      return ($array_order[$al] ?? 99) <=> ($array_order[$bl] ?? 99);
+    });
+  }
+
+  return $groups;  // 每组对应 optgroup -> list of [id, dev, label]
 }
