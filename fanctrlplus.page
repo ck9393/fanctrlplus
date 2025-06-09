@@ -27,10 +27,6 @@ if (empty($all_cfg)) {
   $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
 }
 
-echo "<pre>=== DEBUG: \$all_cfg ===\n";
-var_dump($all_cfg);
-echo "</pre>";
-
 function list_pwm() {
   $out = [];
   exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
@@ -255,7 +251,9 @@ $(function() {
   <div id="fan-area">
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
-    echo render_fan_block($all_cfg[0], 0, $pwms, $disks);
+    foreach ($all_cfg as $i => $cfg) {
+      echo render_fan_block($cfg, $i, $pwms, $disks);
+    }
     ?>
   </div>
     <div style="clear:both; margin-top:15px; text-align: left;">
