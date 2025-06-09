@@ -5,6 +5,8 @@ ini_set('display_errors', 1);
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 
+require_once "$docroot/plugins/$plugin/include/Common.php";
+
 header('Content-Type: application/json');
 
 function json_response($data) {
@@ -20,25 +22,6 @@ function scan_dir($dir) {
   $out = [];
   foreach (array_diff(scandir($dir), ['.','..']) as $f) {
     $out[] = realpath($dir) . '/' . $f;
-  }
-  return $out;
-}
-
-function list_fan() {
-  $out = [];
-  exec("find /sys/devices -type f -iname 'fan[0-9]_input' -exec dirname \"{}\" + | uniq", $chips);
-  foreach ($chips as $chip) {
-    $name = is_file("$chip/name") ? @file_get_contents("$chip/name") : false;
-    if ($name) {
-      foreach (preg_grep("/fan\d+_input/", scan_dir($chip)) as $fan) {
-        $out[] = [
-          'chip'   => $name,
-          'name'   => basename($fan),
-          'sensor' => $fan,
-          'rpm'    => @file_get_contents($fan)
-        ];
-      }
-    }
   }
   return $out;
 }
