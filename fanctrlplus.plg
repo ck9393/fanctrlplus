@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
   <!ENTITY name "fanctrlplus">
-  <!ENTITY version "1.0.0">
+  <!ENTITY version "1.2.0">
   <!ENTITY author "ck9393">
-  <!ENTITY launch "SettingsFanCtrl Plus">
-  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-1.0.0.txz">
+  <!ENTITY launch "Settings/fanctrlplus">
+  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-1.2.0.txz">
   <!ENTITY url "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
 ]>
 
@@ -50,7 +50,7 @@ echo "-----------------------------------------------------------"
 echo " Plugin fanctrlplus is installed."
 echo " This plugin requires Dynamix webGui to operate"
 echo " Author: ck9393"
-echo " Version: 1.0.0"
+echo " Version: 1.2.0"
 echo "-----------------------------------------------------------"
 echo ""
 exit 0
@@ -71,13 +71,28 @@ exit 0
   </FILE>
 
   <CHANGES>
-FanCtrl Plus v1.0.0 - Initial Release
+Release Notes – v1.1.1
 
-• Control multiple PWM fans independently
-• Monitor array, NVMe, and unassigned drives
-• Set per-fan temperature thresholds and intervals
-• Web UI with pause and disk selection
-• Safe config naming and cleanup
+1. Improved disk selection UI
+	•	The Include Disks dropdown now shows full device labels:
+	•	Array devices (Parity, Disk 1~N)
+	•	NVMe and SATA drives in each pool
+	•	Devices are grouped by Array and individual Pools
+	•	Labels follow Unraid’s Main tab format (e.g. “Disk 3 - ST4000VN008”)
+
+2. Dynamic disk list rendering
+	•	All disk options are rendered using JavaScript for better performance
+	•	Hover tooltips show full device paths and IDs
+	•	Unraid flash drive is excluded from selection
+	•	Uses /dev/disk/by-id to ensure stable device mapping
+
+3. Other changes
+	•	Faster page loading and smoother UI interactions
+	•	Updated plugin structure and cleaner installation method
+
+⸻
+
+This release focuses on better clarity and flexibility for fan-to-disk control.
   </CHANGES>
 
 </PLUGIN>
