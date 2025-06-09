@@ -31,6 +31,7 @@ if (empty($all_cfg)) {
 
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
+echo "<pre>" . json_encode($disks, JSON_PRETTY_PRINT) . "</pre>";
 $width = 300;
 ?>
 
