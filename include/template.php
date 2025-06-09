@@ -1,27 +1,20 @@
 <?php
 $plugin = 'fanctrlplus';
-
 $index = isset($_GET['index']) ? (int)$_GET['index'] : 0;
-
-// 获取有效磁盘
-$disks = glob("/dev/disk/by-id/*");
-$valid_disks = [];
-foreach ($disks as $dev) {
-  if (!is_link($dev) || strpos($dev, "part") !== false) continue;
-  $real = realpath($dev);
-  if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
-  $valid_disks[] = ['id' => basename($dev), 'dev' => $real];
-}
 
 // 获取 PWM 控制器
 exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
 $pwms = [];
 foreach ($chips as $chip) {
-  $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
+  $name = is_file("$chip/name") ? trim(file_get_contents("$chip/name")) : '';
   foreach (glob("$chip/pwm[0-9]") as $pwm) {
-    $pwms[] = ['chip'=>$name, 'name'=>basename($pwm), 'sensor'=>$pwm];
+    $pwms[] = ['chip' => $name, 'name' => basename($pwm), 'sensor' => $pwm];
   }
 }
+
+// 引入磁盘列表函数
+require_once("/usr/local/emhttp/plugins/$plugin/include/FanctrlUtil.php");
+$disk_groups = list_valid_disks_by_id();
 ?>
 
 <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
@@ -49,24 +42,30 @@ foreach ($chips as $chip) {
         <td>PWM Controller:</td>
         <td>
           <select name="controller[<?=$index?>]">
-            <? foreach ($pwms as $pwm): ?>
+            <?php foreach ($pwms as $pwm): ?>
               <option value="<?=$pwm['sensor']?>"><?=$pwm['chip']?> - <?=$pwm['name']?></option>
-            <? endforeach; ?>
+            <?php endforeach; ?>
           </select>
           <button type="button" onclick="pauseFan($(this).prev().val(), this)">Pause 30s</button>
         </td>
       </tr>
-      <tr><td>Min PWM:</td><td><input type="text" name="pwm[<?=$index?>]" value="100"></td></tr>
-      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" min="0" max="100" value="40"></td></tr>
-      <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$index?>]" min="0" max="100" value="60"></td></tr>
-      <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$index?>]" min="1" max="60" value="2"></td></tr>
+      <tr><td>Min PWM:</td><td><input type="number" name="pwm[<?=$index?>]" value="100" min="0" max="255"></td></tr>
+      <tr><td>Low Temp (°C):</td><td><input type="number" name="low[<?=$index?>]" value="40" min="0" max="100"></td></tr>
+      <tr><td>High Temp (°C):</td><td><input type="number" name="high[<?=$index?>]" value="60" min="0" max="100"></td></tr>
+      <tr><td>Interval (min):</td><td><input type="number" name="interval[<?=$index?>]" value="2" min="1" max="60"></td></tr>
       <tr>
         <td>Include Disks:</td>
         <td>
           <select class="disk-select" name="disks[<?=$index?>][]" multiple style="width:400px;">
-            <? foreach ($valid_disks as $d): ?>
-              <option value="<?=$d['id']?>"><?=$d['id']?> → <?=$d['dev']?></option>
-            <? endforeach; ?>
+            <?php foreach ($disk_groups as $group => $entries): ?>
+              <optgroup label="<?=htmlspecialchars($group)?>">
+                <?php foreach ($entries as $disk): ?>
+                  <option value="<?=$disk['id']?>" title="<?=$disk['id']?>&#10;<?=$disk['dev']?>">
+                    <?=htmlspecialchars($disk['label'])?>
+                  </option>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endforeach; ?>
           </select>
         </td>
       </tr>

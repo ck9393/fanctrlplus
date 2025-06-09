@@ -1,14 +1,19 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 
+require_once "$docroot/plugins/$plugin/include/Common.php";
+
 header('Content-Type: application/json');
 
 function json_response($data) {
-  ob_clean();
+  while (ob_get_level()) {
+    ob_end_clean(); // 安全清除所有输出缓冲区，避免 notice 错误
+  }
+  header('Content-Type: application/json');
   echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   exit;
 }
@@ -17,25 +22,6 @@ function scan_dir($dir) {
   $out = [];
   foreach (array_diff(scandir($dir), ['.','..']) as $f) {
     $out[] = realpath($dir) . '/' . $f;
-  }
-  return $out;
-}
-
-function list_fan() {
-  $out = [];
-  exec("find /sys/devices -type f -iname 'fan[0-9]_input' -exec dirname \"{}\" + | uniq", $chips);
-  foreach ($chips as $chip) {
-    $name = is_file("$chip/name") ? @file_get_contents("$chip/name") : false;
-    if ($name) {
-      foreach (preg_grep("/fan\d+_input/", scan_dir($chip)) as $fan) {
-        $out[] = [
-          'chip'   => $name,
-          'name'   => basename($fan),
-          'sensor' => $fan,
-          'rpm'    => @file_get_contents($fan)
-        ];
-      }
-    }
   }
   return $out;
 }
@@ -133,15 +119,23 @@ switch ($op) {
     exit;
 
   case 'newtemp':
-    $index = intval($_POST['index'] ?? 0);
-    $cfgpath = "/boot/config/plugins/$plugin";
-    $filename = "{$plugin}_temp_{$index}.cfg";
-    $fullpath = "$cfgpath/$filename";
-    if (!file_exists($fullpath)) {
-      file_put_contents($fullpath, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    $index = $_REQUEST['index'] ?? 0;
+    $cfg_dir = "/boot/config/plugins/$plugin";
+    $temp_file = "$cfg_dir/{$plugin}_temp_$index.cfg";
+  
+    if (!file_exists($temp_file)) {
+      file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
     }
-    json_response(['status' => 'created', 'file' => $filename]);
-    break;
+  
+    require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
+  
+    $cfg = parse_ini_file($temp_file);             // ✅ 加载 temp 配置
+    $cfg['file'] = basename($temp_file);           // ✅ 加入 file 字段
+    $pwms = list_pwm();
+    $disks = list_valid_disks_by_id();
+  
+    echo render_fan_block($cfg, $index, $pwms, $disks);  // ✅ 改为传完整 $cfg
+    exit;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
@@ -164,6 +158,7 @@ switch ($op) {
         break;
       }
     }
+  
     json_response(['status' => $running ? 'running' : 'stopped']);
     break;
 
@@ -193,25 +188,27 @@ switch ($op) {
         $result[$name] = $running ? 'running' : 'stopped';
       }
     }
-
+  
     json_response($result);
     break;
 
-  case 'start':
-    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-    if (is_file($rc)) {
-      exec("$rc start >/dev/null 2>&1 &");
-      json_response(['status' => 'started']);
-    } else {
-      json_response(['error' => 'rc script not found']);
-    }
-
-  case 'stop':
-    $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-    exec("$rc stop >/dev/null 2>&1 &");
-    json_response(['status' => 'stopped']);
-
-  default:
-    json_response(['error' => 'Invalid op']);
+    case 'start':
+      $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
+      if (is_file($rc)) {
+        exec("$rc start >/dev/null 2>&1 &");
+        json_response(['status' => 'started']);
+      } else {
+        json_response(['error' => 'rc script not found']);
+      }
+      break;  // ✅ 必须加上
+  
+    case 'stop':
+      $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
+      exec("$rc stop >/dev/null 2>&1 &");
+      json_response(['status' => 'stopped']);
+      break;  // ✅ 必须加上
+  
+    default:
+      json_response(['error' => 'Invalid op']);
 }
 ?>

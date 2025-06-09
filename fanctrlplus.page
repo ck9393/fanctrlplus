@@ -7,6 +7,8 @@ Icon="fanctrlplus.png"
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
 
+require_once "$docroot/plugins/$plugin/include/Common.php";
+
 // 初始化配置
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
@@ -25,48 +27,6 @@ if (empty($all_cfg)) {
     file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
   }
   $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
-}
-
-function list_pwm() {
-  $out = [];
-  exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
-  foreach ($chips as $chip) {
-    $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
-    foreach (glob("$chip/pwm[0-9]") as $pwm) {
-      $out[] = ['chip'=>$name, 'name'=>basename($pwm), 'sensor'=>$pwm];
-    }
-  }
-  return $out;
-}
-
-function list_valid_disks_by_id() {
-  $seen = [];
-  $result = [];
-
-  // 获取 Unraid 启动盘对应的设备，例如 /dev/sda1 或 /dev/sdb1
-  $boot_mount = realpath("/boot");
-  $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
-  $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);  // 去除分区号，例如 /dev/sda1 → /dev/sda
-
-  foreach (glob("/dev/disk/by-id/*") as $dev) {
-    if (!is_link($dev) || strpos($dev, "part") !== false) continue;
-
-    $real = realpath($dev);
-    if ($real === false) continue;
-
-    // 只保留 sdX 或 nvme 设备
-    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
-
-    // 跳过 Unraid 启动的设备（例如 /dev/sda）
-    if (strpos($real, $boot_dev_base) === 0) continue;
-
-    if (in_array($real, $seen)) continue;
-
-    $seen[] = $real;
-    $result[] = ['id' => basename($dev), 'dev' => $real];
-  }
-
-  return $result;
 }
 
 $pwms = list_pwm();
@@ -91,9 +51,11 @@ $(function() {
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
       const isRunning = statusObj.status === 'running';
-      updateFanControlStatus(isRunning);  // ✅ 添加这行
+      updateFanControlStatus(isRunning);
+
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
+      btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
       btn.prop('disabled', false);
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status:", textStatus, errorThrown);
@@ -101,30 +63,23 @@ $(function() {
   }
 
   function updateAllFanStatus() {
-    console.log("✅ updateAllFanStatus triggered");
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
-      console.log("✅ statusMap:", statusMap);
-
       $('.fan-block').each(function() {
         const block = $(this);
-        const name = block.find('input[name^="custom["]').val().trim();
+        const input = block.find('input[name^="custom["]');
+        if (!input.length) return;
+        const name = input.val().trim();
         const indicator = block.find('.fan-status');
-
-        console.log("→ block:", name, "indicator exists:", indicator.length > 0);
-
         if (!indicator.length) return;
-
         const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
         const status = matchedKey ? statusMap[matchedKey] : 'stopped';
-
-        console.log("→ matchedKey:", matchedKey, "status:", status);
-
         indicator.text(status === 'running' ? '🟢' : '🔴');
       });
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status_all:", textStatus, errorThrown);
     });
   }
+
   updateStatusLightAndButton();
   updateAllFanStatus();
 
@@ -139,15 +94,11 @@ $(function() {
     const action = btn.text().includes('Stop') ? 'stop' : 'start';
 
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
-      // 每 500ms 检查一次，最多等 10 次（5 秒）
-      let tries = 0;
-      const maxTries = 10;
-
+      let tries = 0, maxTries = 10;
       const check = () => {
         $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
           const isRunning = data.status === 'running';
           const wantRunning = action === 'start';
-
           if (isRunning === wantRunning || tries >= maxTries) {
             updateStatusLightAndButton();
             updateAllFanStatus();
@@ -158,13 +109,12 @@ $(function() {
           }
         });
       };
-
-    check();
-  }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
-    btn.prop('disabled', false);
-  });
-};
+      check();
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
+      btn.prop('disabled', false);
+    });
+  };
 
   window.pauseFan = function(pwm, btn) {
     $(btn).prop('disabled', true).text("Pausing...");
@@ -186,42 +136,45 @@ $(function() {
     if (!confirm("Are you sure you want to delete this fan configuration?")) return;
     const block = $(btn).closest('.fan-block');
     const file = block.find('input.cfg-file').val();
-
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
       .done(function(result) {
-        console.log("✅ Fan deleted:", result);
-        block.remove();                  // ✅ 先从页面移除
-        setTimeout(() => {
-          updateAllFanStatus();         // ✅ 然后刷新 status 灯
-        }, 500);
+        block.remove();
+        setTimeout(() => updateAllFanStatus(), 500);
       })
       .fail(function(jqXHR, textStatus, errorThrown) {
-        console.error("❌ Delete fan failed:", textStatus, errorThrown);
         alert("Failed to delete fan.");
       });
   };
 
   window.addFan = function() {
-    console.log("🟡 Add Fan clicked"); // 先看是否点击触发
     const index = $('.fan-block').length;
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index})
-      .done(function(resp) {
-        console.log("🟢 Fan added:", resp);
-      })
-      .fail(function(jqXHR, textStatus, errorThrown) {
-        console.error("🔴 Add fan failed:", textStatus, errorThrown);
-      })
-      .always(function() {
-        location.reload();  // 保底刷新
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(html) {
+      $('#fan-area').append(html);
+      updateAllFanStatus();
+      $('.disk-select').last().dropdownchecklist({
+        emptyText:'(None)',
+        width: <?=$width?>,
+        explicitClose:'...close'
       });
+    }, 'html').fail(function(jqXHR, textStatus, errorThrown) {
+      alert("Failed to add fan.");
+    });
   };
 
   $('.disk-select').each(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
 
-  $('form input, form select, form textarea').on('change keyup', function() {
+  $('form').on('change keyup', 'input, select, textarea', function() {
     $('form').trigger('ui:changed');
+  });
+
+  $('form').on('ui:changed', function() {
+    $('input[name="#apply"]').prop('disabled', false);
+  });
+
+  $(document).ready(function() {
+    $('input[name="#apply"]').prop('disabled', true);
   });
 
   $('form').on('submit', function() {
@@ -242,83 +195,16 @@ $(function() {
 <form method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
   <div id="fan-area">
-    <? foreach ($all_cfg as $i => $cfg): ?>
-    <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-      <input type="hidden" name="#file[<?=$i?>]" value="<?=$cfg['file']?>" class="cfg-file">
-      <fieldset style="margin:10px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
-        <span class="fan-status" style="position:absolute; top:6px; right:8px;">🔄</span>
-        <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:6px; right:8px;">DELETE</button>
-        <table style="width:100%;">
-          <tr>
-            <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
-            <td>
-              <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom']??'')?>" placeholder="Required (e.g. HDDBay)" required>
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="Enable or disable this fan controller">Fan Control:</td>
-            <td>
-              <select name="service[<?=$i?>]">
-                <option value="0" <?=($cfg['service']??'')=='0'?'selected':''?>>Disabled</option>
-                <option value="1" <?=($cfg['service']??'')=='1'?'selected':''?>>Enabled</option>
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="Select the PWM controller for this fan">PWM Controller:</td>
-            <td>
-              <select name="controller[<?=$i?>]">
-                <?foreach ($pwms as $pwm):?>
-                <option value="<?=$pwm['sensor']?>" <?=($cfg['controller']??'')==$pwm['sensor']?'selected':''?>><?=$pwm['chip']?> - <?=$pwm['name']?></option>
-                <?endforeach;?>
-              </select>
-              <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button>
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="Set the minimum PWM value (0–255)">Min PWM:</td>
-            <td>
-              <input type="text" name="pwm[<?=$i?>]" value="<?=htmlspecialchars($cfg['pwm']??'')?>">
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="At or below this temperature, fan will run at the configured minimum PWM">Low Temp (°C):</td>
-            <td>
-              <input type="number" name="low[<?=$i?>]" value="<?=htmlspecialchars($cfg['low']??'')?>">
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="At or above this temperature, fan will run at the configured maximum PWM">High Temp (°C):</td>
-            <td>
-              <input type="number" name="high[<?=$i?>]" value="<?=htmlspecialchars($cfg['high']??'')?>">
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
-            <td>
-              <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval']??'')?>">
-            </td>
-          </tr>
-          <tr>
-            <td style="cursor: help;" title="Select disk(s) to monitor for temperature control.">Include Disk(s):</td>
-            <td>
-              <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
-                <?foreach ($disks as $d):
-                  $id = $d['id'];
-                  $sel = in_array($id, explode(',', $cfg['disks']??'')) ? 'selected' : '';
-                ?>
-                <option value="<?=$id?>" <?=$sel?>><?=$id?> → <?=$d['dev']?></option>
-                <?endforeach;?>
-              </select>
-            </td>
-          </tr>
-        </table>
-      </fieldset>
-    </div>
-    <? endforeach; ?>
-    <div style="clear:both; margin-top:15px; text-align: left;">
-      <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
-      <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
-      <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
-    </div>
+    <?php
+    require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
+    foreach ($all_cfg as $i => $cfg) {
+      echo render_fan_block($cfg, $i, $pwms, $disks);
+    }
+    ?>
+  </div>
+  <div style="clear:both; margin-top:15px; text-align: left;">
+    <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
+    <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
+    <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
+  </div>
 </form>

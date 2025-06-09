@@ -1,33 +1,36 @@
 #!/bin/bash
 
-plugin=fanctrlplus
+plugin="fanctrlplus"
 cfg_path="/boot/config/plugins/$plugin"
 loop_script="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_loop.sh"
 pid_dir="/var/run"
 
 fanctrlplus.start() {
   pkill -f "$loop_script" 2>/dev/null
+
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
+    [[ -f "$cfg" ]] || continue
+
     service=$(grep -Po '^service="\K[^"]+' "$cfg")
     [[ "$service" != "1" ]] && continue
 
-    # 清洗 custom 值
+    # 取出并清洗 custom 名称（作为 pid 文件名一部分）
     raw_custom=$(grep -Po '^custom="\K[^"]+' "$cfg")
     clean_custom=$(echo "$raw_custom" | tr -d '\r\n\t ')
-    custom_safe=$(echo "$clean_custom" | tr -cd '[:alnum:]')
+    custom_safe=$(echo "$clean_custom" | tr -cd '[:alnum:]_-')
 
     [[ -z "$custom_safe" ]] && continue
 
     nohup "$loop_script" "$cfg" > /dev/null 2>&1 &
     echo $! > "$pid_dir/${plugin}_${custom_safe}.pid"
-    logger -t $plugin "Started [$custom_safe] from $cfg"
+    logger -t "$plugin" "Started [$custom_safe] from $cfg"
   done
 }
 
 fanctrlplus.stop() {
   pkill -f "$loop_script"
   rm -f "$pid_dir"/${plugin}_*.pid
-  logger -t $plugin "All fanctrlplus stopped"
+  logger -t "$plugin" "All fanctrlplus stopped"
 }
 
 fanctrlplus.status() {
@@ -45,11 +48,11 @@ fanctrlplus.status() {
 case "$1" in
   start) fanctrlplus.start ;;
   stop) fanctrlplus.stop ;;
-  status) fanctrlplus.status ;;
   restart)
     fanctrlplus.stop
     sleep 1
     fanctrlplus.start
     ;;
+  status) fanctrlplus.status ;;
   *) echo "Usage: $0 {start|stop|restart|status}" ;;
 esac
