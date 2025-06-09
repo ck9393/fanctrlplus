@@ -41,7 +41,7 @@ function list_valid_disks_by_id() {
     if (preg_match('/^(\S+)\s+\d/', $line, $m)) {
       $current_pool = $m[1];
     } elseif (preg_match('/^\s+(nvme\S+)/', $line, $m)) {
-      $dev = '/dev/' . preg_replace('/p\d+$/', '', $m[1]); // 去除 p1
+      $dev = '/dev/' . preg_replace('/p\d+$/', '', $m[1]);
       $dev_to_pool[$dev] = ucfirst($current_pool);
     }
   }
@@ -95,12 +95,16 @@ function list_valid_disks_by_id() {
     return strnatcasecmp($a, $b);
   });
 
-  // Array 内部排序
+  // Array 内部排序（Parity → Parity 2 → Disk X）
   if (isset($groups['Array'])) {
     usort($groups['Array'], function($a, $b) {
-      preg_match('/Disk (\d+)/', $a['label'], $ma);
-      preg_match('/Disk (\d+)/', $b['label'], $mb);
-      return ($ma[1] ?? 99) <=> ($mb[1] ?? 99);
+      $order = function($label) {
+        if (str_starts_with($label, 'Parity 2')) return -2;
+        if (str_starts_with($label, 'Parity'))   return -1;
+        if (preg_match('/Disk (\d+)/', $label, $m)) return intval($m[1]);
+        return 999;
+      };
+      return $order($a['label']) <=> $order($b['label']);
     });
   }
 
