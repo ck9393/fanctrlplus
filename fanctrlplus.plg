@@ -71,7 +71,7 @@ exit 0
   </FILE>
 
   <CHANGES>
-Release Notes – v1.1.1
+Release Notes – v1.2.0
 
 1. Improved disk selection UI
 	•	The Include Disks dropdown now shows full device labels:
