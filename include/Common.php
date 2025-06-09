@@ -10,7 +10,6 @@ function list_pwm() {
     }
   }
 
-  // 按 pwm 名称排序（例如 pwm1, pwm2...）
   usort($out, fn($a, $b) => strcmp($a['name'], $b['name']));
   return $out;
 }
@@ -22,14 +21,18 @@ function list_valid_disks_by_id() {
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
+  error_log("[fanctrlplus] Boot device base: $boot_dev_base");
 
-  // 建立 diskX 映射（从 /mnt/diskX → /dev/sdX）
+  // 建立 diskX 映射：/mnt/disk1 → /dev/md1p1 → /dev/md1
   $dev_to_disk = [];
   foreach (glob("/mnt/disk*") as $mnt) {
-    $real = realpath($mnt);  // 会返回 /dev/mdX 或 /dev/sdX1
-    if ($real && preg_match('#/dev/(sd[a-z]+|md[0-9]+)[p0-9]*$#', $real, $m)) {
-      $dev_base = "/dev/" . $m[1];  // 支持 sdX 或 mdX
-      $dev_to_disk[$dev_base] = basename($mnt);  // /dev/md1 → disk1
+    $real = realpath($mnt);  // 例如 /dev/md1p1、/dev/sdX1
+    error_log("[fanctrlplus] MNT=$mnt → REAL=$real");
+    if ($real && preg_match('#^/dev/(md[0-9]+|sd[a-z]+)[p0-9]*$#', $real, $m)) {
+      $dev_base = "/dev/" . $m[1]; // 提取 /dev/sdX 或 /dev/mdX
+      $disk_name = basename($mnt);
+      $dev_to_disk[$dev_base] = $disk_name;
+      error_log("[fanctrlplus] Map $dev_base → $disk_name");
     }
   }
 
@@ -47,13 +50,20 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 追加 diskX 标签（通过 dev_base 匹配）
-    if (preg_match('#/dev/(sd[a-z]+|md[0-9]+)#', $real, $m)) {
-      $dev_base = "/dev/" . $m[1];
-      if (isset($dev_to_disk[$dev_base])) {
-        $label .= " → " . $dev_to_disk[$dev_base];
+    $matched = false;
+    foreach ($dev_to_disk as $dev_base => $disk_name) {
+      if (strpos($real, $dev_base) === 0) {
+        $label .= " → $disk_name";
+        error_log("[fanctrlplus] Matched $real → $disk_name");
+        $matched = true;
+        break;
       }
     }
+
+    if (!$matched) {
+      error_log("[fanctrlplus] No match for $real");
+    }
+
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
