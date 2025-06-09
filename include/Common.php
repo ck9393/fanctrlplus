@@ -15,6 +15,23 @@ function list_pwm() {
   return $out;
 }
 
+<?php
+
+function list_pwm() {
+  $out = [];
+  exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
+  foreach ($chips as $chip) {
+    $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
+    foreach (glob("$chip/pwm[0-9]") as $pwm) {
+      $out[] = ['chip' => $name, 'name' => basename($pwm), 'sensor' => $pwm];
+    }
+  }
+
+  // 按 pwm 名称排序（例如 pwm1, pwm2...）
+  usort($out, fn($a, $b) => strcmp($a['name'], $b['name']));
+  return $out;
+}
+
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
