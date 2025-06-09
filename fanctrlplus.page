@@ -7,6 +7,8 @@ Icon="fanctrlplus.png"
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
 
+require_once "$docroot/plugins/$plugin/include/Common.php";
+
 // 初始化配置
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
@@ -25,48 +27,6 @@ if (empty($all_cfg)) {
     file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
   }
   $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
-}
-
-function list_pwm() {
-  $out = [];
-  exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
-  foreach ($chips as $chip) {
-    $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
-    foreach (glob("$chip/pwm[0-9]") as $pwm) {
-      $out[] = ['chip'=>$name, 'name'=>basename($pwm), 'sensor'=>$pwm];
-    }
-  }
-  return $out;
-}
-
-function list_valid_disks_by_id() {
-  $seen = [];
-  $result = [];
-
-  // 获取 Unraid 启动盘对应的设备，例如 /dev/sda1 或 /dev/sdb1
-  $boot_mount = realpath("/boot");
-  $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
-  $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);  // 去除分区号，例如 /dev/sda1 → /dev/sda
-
-  foreach (glob("/dev/disk/by-id/*") as $dev) {
-    if (!is_link($dev) || strpos($dev, "part") !== false) continue;
-
-    $real = realpath($dev);
-    if ($real === false) continue;
-
-    // 只保留 sdX 或 nvme 设备
-    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
-
-    // 跳过 Unraid 启动的设备（例如 /dev/sda）
-    if (strpos($real, $boot_dev_base) === 0) continue;
-
-    if (in_array($real, $seen)) continue;
-
-    $seen[] = $real;
-    $result[] = ['id' => basename($dev), 'dev' => $real];
-  }
-
-  return $result;
 }
 
 $pwms = list_pwm();
