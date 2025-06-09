@@ -19,26 +19,20 @@ function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
 
+  // 取得启动盘设备（用于排除）
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
-  error_log("[fanctrlplus] boot_dev_base = $boot_dev_base");
 
-  // 使用 lsblk 获取 md 设备底层的 sdX
+  // 解析 /mnt/diskX 对应的底层设备（用 lsblk 追踪）
   $dev_to_disk = [];
-  foreach (glob("/mnt/disk*") as $mnt) {
-    $mount_dev = exec("findmnt -n -o SOURCE --target " . escapeshellarg($mnt));  // /dev/md1p1
-    $dev_name = basename($mount_dev);  // md1p1
-
-    if ($dev_name) {
-      $output = [];
-      exec("lsblk -no PKNAME /dev/$dev_name 2>/dev/null", $output);  // 获取物理设备名，如 sdd
-      if (!empty($output)) {
-        $sd = trim($output[0]);
-        $dev_base = "/dev/$sd";
-        $dev_to_disk[$dev_base] = basename($mnt);  // /dev/sdd → disk1
-        error_log("[fanctrlplus] map $dev_base → " . basename($mnt));
-      }
+  $lsblk = shell_exec("lsblk -P -o NAME,MOUNTPOINT");
+  foreach (explode("\n", trim($lsblk)) as $line) {
+    if (preg_match('/NAME="([^"]+)" MOUNTPOINT="\/mnt\/disk([0-9]+)"/', $line, $m)) {
+      $disk = "disk" . $m[2];
+      $dev = "/dev/" . $m[1];
+      $dev_to_disk[$dev] = $disk;
+      error_log("[fanctrlplus] map $dev → $disk");
     }
   }
 
@@ -56,21 +50,18 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    $base = preg_replace('#[0-9]+$#', '', $real);  // 去掉 /dev/sdX1 → /dev/sdX
-    if (isset($dev_to_disk[$base])) {
-      $label .= " → " . $dev_to_disk[$base];
-      error_log("[fanctrlplus] matched $base → " . $dev_to_disk[$base] . " for id=$id");
+    // 若真实设备在 array 中，加上 diskX 标注
+    if (isset($dev_to_disk[$real])) {
+      $label .= " → " . $dev_to_disk[$real];
+      error_log("[fanctrlplus] matched $real → " . $dev_to_disk[$real] . " for id=$id");
     } else {
-      error_log("[fanctrlplus] no match for $base (id=$id)");
+      error_log("[fanctrlplus] no match for $real (id=$id)");
     }
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
-  usort($result, function($a, $b) {
-    return strnatcasecmp($a['id'], $b['id']);
-  });
-
   error_log("[fanctrlplus] final disk list count: " . count($result));
+  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
   return $result;
 }
