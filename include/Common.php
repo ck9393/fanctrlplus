@@ -17,17 +17,21 @@ function list_pwm() {
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
+
   $dev_to_disk = [];
 
-  // 用 lsblk 找出 /mnt/diskX 的底层设备
-  exec("lsblk -P -o NAME,KNAME,MOUNTPOINT", $lines);
-  foreach ($lines as $line) {
-    if (preg_match('/KNAME="([^"]+)" MOUNTPOINT="\/mnt\/(disk[0-9]+)"/', $line, $m)) {
-      $dev = "/dev/" . $m[1];
-      $disk = $m[2];
-      $dev_to_disk[$dev] = $disk;
-      error_log("[fanctrlplus] map $dev ← $disk");
-    }
+  // ✅ 用 findmnt + lsblk 正确建立 /dev/sdX → diskX 的映射
+  foreach (glob("/mnt/disk*") as $mnt) {
+    $src = trim(shell_exec("findmnt -n -o SOURCE --target " . escapeshellarg($mnt)));
+    if (!$src) continue;
+
+    $parent = trim(shell_exec("lsblk -no PKNAME $src 2>/dev/null")); // 例如 sdd
+    if (!$parent) continue;
+
+    $base = "/dev/" . $parent;
+    $dev_to_disk[$base] = basename($mnt);
+
+    error_log("[fanctrlplus] dev_to_disk: $base => " . basename($mnt));
   }
 
   $boot_mount = realpath("/boot");
@@ -39,8 +43,7 @@ function list_valid_disks_by_id() {
     if (strpos(basename($dev), 'usb-') === 0) continue;
 
     $real = realpath($dev);
-    if ($real === false) continue;
-    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
+    if (!$real || (!str_starts_with($real, "/dev/sd") && !str_starts_with($real, "/dev/nvme"))) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
     if (in_array($real, $seen)) continue;
 
@@ -48,13 +51,14 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
+    // ✅ 提取出 /dev/sdX 或 /dev/nvmeXn1
+    if (preg_match('#/dev/([a-z0-9]+)#', $real, $m)) {
       $base = "/dev/" . $m[1];
       if (isset($dev_to_disk[$base])) {
         $label .= " → " . $dev_to_disk[$base];
-        error_log("[fanctrlplus] matched $base → {$dev_to_disk[$base]} for id=$id");
+        error_log("[fanctrlplus] matched $base => {$dev_to_disk[$base]}");
       } else {
-        error_log("[fanctrlplus] no match for $base (id=$id)");
+        error_log("[fanctrlplus] no match for $base");
       }
     }
 
@@ -62,6 +66,6 @@ function list_valid_disks_by_id() {
   }
 
   usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
-  error_log("[fanctrlplus] final disk list count: " . count($result));
+  error_log("[fanctrlplus] final list count: " . count($result));
   return $result;
 }
