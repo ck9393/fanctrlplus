@@ -10,9 +10,11 @@ function list_pwm() {
     }
   }
 
+  // 按 pwm 名称排序（例如 pwm1, pwm2...）
   usort($out, fn($a, $b) => strcmp($a['name'], $b['name']));
   return $out;
 }
+
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
@@ -20,16 +22,19 @@ function list_valid_disks_by_id() {
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
-  error_log("[fanctrlplus] Boot device base: $boot_dev_base");
+  error_log("[fanctrlplus] boot_dev_base = $boot_dev_base");
 
-  // 建立 diskX 映射：/mnt/disk1 → /dev/mdX 或 /dev/sdX
+  // 建立 diskX 映射（从 /mnt/diskX → /dev/sdX）
   $dev_to_disk = [];
   foreach (glob("/mnt/disk*") as $mnt) {
-    $src = exec("findmnt -n -o SOURCE --target " . escapeshellarg($mnt));
-    if ($src && preg_match('#^/dev/([a-z]+[0-9]*)$#', $src, $m)) {
-      $dev_base = "/dev/" . preg_replace('#p?[0-9]+$#', '', $m[1]); // 去除分区号
-      $dev_to_disk[$dev_base] = basename($mnt); // 如 /dev/md1 → disk1
-      error_log("[fanctrlplus] Map $dev_base → {$dev_to_disk[$dev_base]}");
+    $real = realpath($mnt);  // 可能是 /dev/mdXp1
+    error_log("[fanctrlplus] mnt: $mnt real: $real");
+
+    if ($real && preg_match('#/dev/(sd[a-z]+)[0-9]*$#', $real, $m)) {
+      $dev_base = "/dev/" . $m[1];
+      $diskX = basename($mnt);
+      $dev_to_disk[$dev_base] = $diskX;
+      error_log("[fanctrlplus] map $dev_base → $diskX");
     }
   }
 
@@ -39,7 +44,7 @@ function list_valid_disks_by_id() {
 
     $real = realpath($dev);
     if ($real === false) continue;
-    if (!preg_match('#^/dev/(sd|nvme|md)#', $real)) continue;
+    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
     if (in_array($real, $seen)) continue;
 
@@ -47,12 +52,15 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 匹配设备路径映射（允许 /dev/mdX /dev/sdX）
-    foreach ($dev_to_disk as $base => $diskname) {
-      if (strpos($real, $base) === 0) {
-        $label .= " → $diskname";
-        error_log("[fanctrlplus] Matched $real → $diskname");
-        break;
+    // 尝试通过 dev_base 追加 diskX 显示标签
+    if (preg_match('#/dev/(sd[a-z]+)#', $real, $m)) {
+      $dev_base = "/dev/" . $m[1];
+      if (isset($dev_to_disk[$dev_base])) {
+        $diskX = $dev_to_disk[$dev_base];
+        $label .= " → $diskX";
+        error_log("[fanctrlplus] matched $real → $diskX for id=$id");
+      } else {
+        error_log("[fanctrlplus] no match for $real (id=$id)");
       }
     }
 
@@ -63,5 +71,6 @@ function list_valid_disks_by_id() {
     return strnatcasecmp($a['id'], $b['id']);
   });
 
+  error_log("[fanctrlplus] final disk list count: " . count($result));
   return $result;
 }
