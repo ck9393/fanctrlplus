@@ -17,21 +17,31 @@ function list_pwm() {
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
-
   $dev_to_disk = [];
 
-  // ✅ 用 findmnt + lsblk 正确建立 /dev/sdX → diskX 的映射
-  foreach (glob("/mnt/disk*") as $mnt) {
-    $src = trim(shell_exec("findmnt -n -o SOURCE --target " . escapeshellarg($mnt)));
-    if (!$src) continue;
+  // 使用 lsblk JSON 输出建立 dev → diskX 映射
+  $json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
+  $blk = json_decode($json, true);
 
-    $parent = trim(shell_exec("lsblk -no PKNAME $src 2>/dev/null")); // 例如 sdd
-    if (!$parent) continue;
-
-    $base = "/dev/" . $parent;
-    $dev_to_disk[$base] = basename($mnt);
-
-    error_log("[fanctrlplus] dev_to_disk: $base => " . basename($mnt));
+  if (!empty($blk['blockdevices'])) {
+    foreach ($blk['blockdevices'] as $dev) {
+      if (!empty($dev['mountpoint']) && preg_match('@/mnt/disk[0-9]+@', $dev['mountpoint'])) {
+        // 情况: mdXp1 直接挂载
+        $disk = basename($dev['mountpoint']);
+        $kname = $dev['kname'] ?? $dev['name'];
+        error_log("[fanctrlplus] map (direct) $kname → $disk");
+        $dev_to_disk[$kname] = $disk;
+      } elseif (!empty($dev['children'])) {
+        foreach ($dev['children'] as $child) {
+          if (!empty($child['mountpoint']) && preg_match('@/mnt/disk[0-9]+@', $child['mountpoint'])) {
+            $disk = basename($child['mountpoint']);
+            $kname = $dev['kname'] ?? $dev['name'];
+            error_log("[fanctrlplus] map (child) $kname → $disk");
+            $dev_to_disk[$kname] = $disk;
+          }
+        }
+      }
+    }
   }
 
   $boot_mount = realpath("/boot");
@@ -43,7 +53,8 @@ function list_valid_disks_by_id() {
     if (strpos(basename($dev), 'usb-') === 0) continue;
 
     $real = realpath($dev);
-    if (!$real || (!str_starts_with($real, "/dev/sd") && !str_starts_with($real, "/dev/nvme"))) continue;
+    if ($real === false) continue;
+    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
     if (in_array($real, $seen)) continue;
 
@@ -51,21 +62,24 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // ✅ 提取出 /dev/sdX 或 /dev/nvmeXn1
-    if (preg_match('#/dev/([a-z0-9]+)#', $real, $m)) {
-      $base = "/dev/" . $m[1];
+    // 提取基础 dev 名称用于匹配映射（如 /dev/sdX、/dev/nvmeXn1）
+    if (preg_match('#^(/dev/(?:sd[a-z]+|nvme\d+n\d+))#', $real, $m)) {
+      $base = $m[1];
       if (isset($dev_to_disk[$base])) {
         $label .= " → " . $dev_to_disk[$base];
-        error_log("[fanctrlplus] matched $base => {$dev_to_disk[$base]}");
+        error_log("[fanctrlplus] matched $base → {$dev_to_disk[$base]} for id=$id");
       } else {
-        error_log("[fanctrlplus] no match for $base");
+        error_log("[fanctrlplus] no match for $base (id=$id)");
       }
+    } else {
+      error_log("[fanctrlplus] no match regex for real=$real");
     }
 
+    error_log("[fanctrlplus] disk id=$id real=$real label=$label");
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
   usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
-  error_log("[fanctrlplus] final list count: " . count($result));
+  error_log("[fanctrlplus] final disk list count: " . count($result));
   return $result;
 }
