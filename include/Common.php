@@ -26,12 +26,13 @@ function list_valid_disks_by_id() {
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 建立 /dev/sdX → diskX 的映射
+  // 改用 findmnt 获取 /mnt/diskX 实际设备
   $sd_to_disk = [];
   foreach (glob("/mnt/disk*") as $disk_path) {
-    $real = realpath($disk_path);
-    if (strpos($real, "/dev/") === 0) {
-      $sd_to_disk[$real] = basename($disk_path);
+    $dev = exec("findmnt -n -o SOURCE --target " . escapeshellarg($disk_path));
+    $dev_base = preg_replace('#[0-9]+$#', '', $dev);  // 去掉 /dev/sdX1 的分区号
+    if ($dev_base && strpos($dev_base, '/dev/') === 0) {
+      $sd_to_disk[$dev_base] = basename($disk_path);  // e.g. /dev/sdd → disk1
     }
   }
 
@@ -46,17 +47,23 @@ function list_valid_disks_by_id() {
     if (in_array($real, $seen)) continue;
 
     $seen[] = $real;
-
     $id = basename($dev);
-    $dev_short = basename($real);
     $label = $id;
 
+    // 匹配真实设备路径是否存在于 diskX 映射表中
     if (isset($sd_to_disk[$real])) {
-      $label .= " → " . $sd_to_disk[$real];
+      $label .= " → " . $sd_to_disk[$real];  // ✅ 追加 disk1、disk2 标签
     }
 
-    $result[] = ['id' => $id, 'dev' => $dev_short, 'label' => $label];
+    $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
+
+  usort($result, function($a, $b) {
+    return strnatcasecmp($a['id'], $b['id']);
+  });
+
+  return $result;
+}
 
   usort($result, function($a, $b) {
     return strnatcasecmp($a['id'], $b['id']);
