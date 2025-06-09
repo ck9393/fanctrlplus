@@ -82,7 +82,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
                 $dev = $d['dev'];
                 $sel = in_array($id, $selected) ? 'selected' : '';
               ?>
-                <option value="<?=$id?>" <?=$sel?> title="<?=$id?>\n<?=$dev?>"><?=$id?> → <?=$dev?></option>
+                <option value="<?=$id?>" <?=$sel?> title="<?=$id?>&#10;<?=$dev?>"><?=$d['label']?></option>
               <?php endforeach; ?>
             </select>
           </td>
