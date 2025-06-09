@@ -199,6 +199,36 @@ $(function() {
     $('form').trigger('ui:changed');
   });
 
+    // 👉 用户修改任何字段后激活 Apply 按钮
+  $('form input, form select, form textarea').on('change keyup', function() {
+    $('form').trigger('ui:changed');
+  });
+
+  // 👉 触发 ui:changed 时启用按钮
+  $('form').on('ui:changed', function() {
+    $('input[name="#apply"]').prop('disabled', false);
+  });
+
+  // 👉 页面初始时禁用按钮
+  $(document).ready(function() {
+    $('input[name="#apply"]').prop('disabled', true);
+  });
+
+  // 👉 用户点击 Apply 后再次禁用按钮（可选）
+  $('form').on('submit', function() {
+    $('input[name="#apply"]').prop('disabled', true);
+    let valid = true;
+    $('input[name^="custom["]').each(function() {
+      if ($(this).val().trim() === '') {
+        alert("Custom Name cannot be empty!");
+        $(this).focus();
+        valid = false;
+        return false;
+      }
+    });
+    return valid;
+  });
+
   $('form').on('submit', function() {
     let valid = true;
     $('input[name^="custom["]').each(function() {
