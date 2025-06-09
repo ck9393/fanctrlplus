@@ -10,11 +10,7 @@ function list_pwm() {
     }
   }
 
-  // 按 pwm 名称排序（例如 pwm1, pwm2...）
-  usort($out, function ($a, $b) {
-    return strcmp($a['name'], $b['name']);
-  });
-
+  usort($out, fn($a, $b) => strcmp($a['name'], $b['name']));
   return $out;
 }
 
@@ -26,16 +22,17 @@ function list_valid_disks_by_id() {
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 映射 /dev/sdX → diskX（只针对 array 成员）
-  $sd_to_disk = [];
+  // 获取 /mnt/diskX → /dev/mdX 映射
+  $md_to_disk = [];
   foreach (glob("/mnt/disk*") as $disk_path) {
-    $dev = exec("findmnt -n -o SOURCE --target " . escapeshellarg($disk_path));
-    $dev_base = preg_replace('#p?[0-9]+$#', '', $dev);
-    if ($dev_base && strpos($dev_base, '/dev/') === 0) {
-      $sd_to_disk[$dev_base] = basename($disk_path);  // /dev/sdd → disk1
+    $src = exec("findmnt -n -o SOURCE --target " . escapeshellarg($disk_path));
+    $md_base = preg_replace('#p?[0-9]+$#', '', $src);
+    if (strpos($md_base, "/dev/md") === 0) {
+      $md_to_disk[$md_base] = basename($disk_path);  // /dev/md1 → disk1
     }
   }
 
+  // 获取 /dev/disk/by-id/* → /dev/mdX 的反向映射
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
@@ -50,17 +47,16 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 若设备是 diskX，则追加 disk 名标签
-    if (isset($sd_to_disk[$real])) {
-      $label .= " → " . $sd_to_disk[$real];
+    // 匹配：该 by-id 所属物理盘是否属于 array 的 /dev/mdX
+    $md_base = exec("findmnt -n -o SOURCE --target $real 2>/dev/null");
+    $md_base = preg_replace('#p?[0-9]+$#', '', $md_base);
+    if (isset($md_to_disk[$md_base])) {
+      $label .= " → " . $md_to_disk[$md_base];  // 显示 disk1、disk2 标签
     }
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
-  usort($result, function($a, $b) {
-    return strnatcasecmp($a['id'], $b['id']);
-  });
-
+  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
   return $result;
 }
