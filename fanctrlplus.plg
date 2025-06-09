@@ -1,15 +1,14 @@
-<?xml version='1.0' standalone='yes'?>
+<?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
-  <!ENTITY name      "fanctrlplus">
-  <!ENTITY version   "1.2.0">
-  <!ENTITY author    "ck9393">
-  <!ENTITY launch    "Settings/fanctrlplus">
-  <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/fanctrlplus.plg">
-  <!ENTITY txz       "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
-  <!ENTITY url       "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
+  <!ENTITY name "fanctrlplus">
+  <!ENTITY version "1.0.0">
+  <!ENTITY author "ck9393">
+  <!ENTITY launch "SettingsFanCtrl Plus">
+  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-1.0.0.txz">
+  <!ENTITY url "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://github.com/ck9393/fanctrlplus/issues">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.9.0">
 
   <DESCRIPTION>
 FanCtrl Plus: Automatically control fan speed based on HDD, NVMe, and unassigned device temperatures.
@@ -19,7 +18,7 @@ FanCtrl Plus: Automatically control fan speed based on HDD, NVMe, and unassigned
 /usr/local/emhttp/plugins/fanctrlplus/images/fanctrlplus.png
   </ICON>
 
-  <!-- 清理旧版本的 txz 文件缓存 -->
+  <!-- 清理旧版本的 txz（避免版本号相同但内容不同的缓存） -->
   <FILE Run="/bin/bash">
     <INLINE>
 #!/bin/bash
@@ -27,16 +26,16 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
     </INLINE>
   </FILE>
 
-  <!-- 下载并安装 Release 中的 .txz -->
+  <!-- 下载并安装新的 .txz -->
   <FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
     <URL>&url;</URL>
   </FILE>
 
-  <!-- 启动插件（延迟） -->
+  <!-- 延迟启动 fanctrlplus 脚本，避免卡 WebUI -->
   <FILE Name="/tmp/start_fanctrlplus" Mode="0770">
     <INLINE>
 #!/bin/bash
-/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus start 2>/dev/null
+/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start 2>/dev/null
     </INLINE>
   </FILE>
 
@@ -49,18 +48,20 @@ rm -f /tmp/start_fanctrlplus
 echo ""
 echo "-----------------------------------------------------------"
 echo " Plugin fanctrlplus is installed."
+echo " This plugin requires Dynamix webGui to operate"
 echo " Author: ck9393"
-echo " Version: &version;"
+echo " Version: 1.0.0"
 echo "-----------------------------------------------------------"
+echo ""
 exit 0
     </INLINE>
   </FILE>
 
-  <!-- 卸载时执行 -->
+  <!-- 卸载逻辑 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
 #!/bin/bash
-/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
+/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan stop 2>/dev/null
 removepkg fanctrlplus
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
@@ -70,19 +71,13 @@ exit 0
   </FILE>
 
   <CHANGES>
-fanctrlplus v1.2.0 - Grouped Disk Selection & UI Optimization
+FanCtrl Plus v1.0.0 - Initial Release
 
-What's New:
-- Grouped Disk Selector:
-  • Array (Parity, Disk 1~N)
-  • ZFS cache pools (Cache, Seedcache, Torrentcache)
-  • Others for unrecognized devices
-- Improved sorting and labeling format
-- Dynamic UI rendering via FanBlockRender.php
-- Removed unused template.php
-- Removed debug logs
-
-This version enhances clarity and flexibility when selecting monitored disks.
+• Control multiple PWM fans independently
+• Monitor array, NVMe, and unassigned drives
+• Set per-fan temperature thresholds and intervals
+• Web UI with pause and disk selection
+• Safe config naming and cleanup
   </CHANGES>
 
 </PLUGIN>
