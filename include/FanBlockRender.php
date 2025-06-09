@@ -1,8 +1,5 @@
 <?php
-function render_fan_block($cfg_file, $i, $pwms, $disks) {
-  $cfg = parse_ini_file("/boot/config/plugins/fanctrlplus/$cfg_file");
-  $cfg['file'] = $cfg_file;
-
+function render_fan_block($cfg, $i, $pwms, $disks) {
   ob_start();
   ?>
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
