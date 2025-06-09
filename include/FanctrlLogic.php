@@ -171,6 +171,8 @@ switch ($op) {
         break;
       }
     }
+  
+    error_log("[fanctrlplus] status result: " . ($running ? 'running' : 'stopped'));
     json_response(['status' => $running ? 'running' : 'stopped']);
     break;
 
@@ -200,7 +202,8 @@ switch ($op) {
         $result[$name] = $running ? 'running' : 'stopped';
       }
     }
-
+  
+    error_log("[fanctrlplus] status_all result: " . json_encode($result));
     json_response($result);
     break;
 
