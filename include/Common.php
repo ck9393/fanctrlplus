@@ -19,28 +19,31 @@ function list_valid_disks_by_id() {
   $result = [];
   $dev_to_disk = [];
 
-  // 从 lsblk 获取 JSON，解析出 diskX ← /dev/sdX 或 /dev/nvmeXn1
-  $json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
-  $blk = json_decode($json, true);
+  // 解析 lsblk 的 JSON，映射 dev → diskX
+  $lsblk_json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
+  $blk = json_decode($lsblk_json, true);
 
   if (!empty($blk['blockdevices'])) {
     foreach ($blk['blockdevices'] as $dev) {
       $mountpoint = $dev['mountpoint'] ?? '';
       $kname = $dev['kname'] ?? '';
-      $name = $dev['name'] ?? '';
 
       if ($mountpoint && strpos($mountpoint, '/mnt/disk') === 0 && $kname) {
-        $label = basename($mountpoint); // disk1
-        $parent = trim(shell_exec("lsblk -no PKNAME $kname 2>/dev/null"));
+        $label = basename($mountpoint); // disk1 ~ diskX
+
+        // 尝试反查 mdXp1 的物理父设备
+        $parent = shell_exec("lsblk -no PKNAME $kname 2>/dev/null");
+        $parent = trim($parent);
         if ($parent) {
-          $dev_to_disk["/dev/$parent"] = $label;
-          error_log("[fanctrlplus] map /dev/$parent ← $label");
+          $base = "/dev/$parent";
+          $dev_to_disk[$base] = $label;
+          error_log("[fanctrlplus] map $base ← $label");
         }
       }
     }
   }
 
-  // 获取启动设备（跳过 /boot）
+  // 查找启动设备，排除 /boot 所在设备
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
@@ -59,8 +62,8 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 取底层设备名作为映射键
-    if (preg_match('#/dev/([a-zA-Z0-9]+)[p]?[0-9]*$#', $real, $m)) {
+    // 从 /dev/sdX1 或 /dev/nvmeXn1p1 → /dev/sdX
+    if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
       $base = "/dev/" . $m[1];
       if (isset($dev_to_disk[$base])) {
         $label .= " → " . $dev_to_disk[$base];
