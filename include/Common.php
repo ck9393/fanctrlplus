@@ -16,6 +16,8 @@ function list_pwm() {
   });
 
   return $out;
+}
+
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
@@ -24,7 +26,7 @@ function list_valid_disks_by_id() {
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 建立 /dev/sdX → diskX 的映射（只包含 array 中的 disk1、disk2、...）
+  // 建立 /dev/sdX → diskX 的映射
   $sd_to_disk = [];
   foreach (glob("/mnt/disk*") as $disk_path) {
     $real = realpath($disk_path);
@@ -46,17 +48,16 @@ function list_valid_disks_by_id() {
     $seen[] = $real;
 
     $id = basename($dev);
+    $dev_short = basename($real);
     $label = $id;
 
-    // 若该设备在 /mnt/diskX 中被挂载，追加 diskX 标签
     if (isset($sd_to_disk[$real])) {
       $label .= " → " . $sd_to_disk[$real];
     }
 
-    $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
+    $result[] = ['id' => $id, 'dev' => $dev_short, 'label' => $label];
   }
 
-  // 排序（根据 id 自然排序）
   usort($result, function($a, $b) {
     return strnatcasecmp($a['id'], $b['id']);
   });
