@@ -1,30 +1,45 @@
 #!/bin/bash
 # fanctrlplus_loop.sh - 实际运行的风扇控制脚本
+
 cfg_file="$1"
+[[ -f "$cfg_file" ]] || exit 1
 source "$cfg_file"
 
 controller_enable="${controller}_enable"
-fan_path="${controller/fan/pwm}"   # 推导 fan 路径
-[[ "$controller" =~ pwm([0-9]+)$ ]] && fan_path="$(dirname "$controller")/fan${BASH_REMATCH[1]}_input"
+
+# 推导 RPM 读取路径
+if [[ "$controller" =~ pwm([0-9]+)$ ]]; then
+  fan_index="${BASH_REMATCH[1]}"
+  fan_path="$(dirname "$controller")/fan${fan_index}_input"
+else
+  fan_path=""
+fi
 
 prev_pwm=-1
 
 while true; do
   max_temp=0
   IFS=',' read -ra disks_list <<< "$disks"
+
   for disk in "${disks_list[@]}"; do
-    path="/dev/disk/by-id/$disk"
-    path=$(realpath "$path" 2>/dev/null)
-    [[ ! -b "$path" ]] && continue
-    smartctl -n standby -A "$path" | grep -q "Device is in STANDBY" && continue
-    if [[ "$path" == /dev/nvme* ]]; then
-      temp=$(smartctl -A "$path" | awk '/Temperature:/ {print $2; exit}')
+    disk_path="/dev/disk/by-id/$disk"
+    real_path=$(realpath "$disk_path" 2>/dev/null)
+    [[ ! -b "$real_path" ]] && continue
+
+    # 跳过休眠中的硬盘
+    smartctl -n standby -A "$real_path" | grep -q "Device is in STANDBY" && continue
+
+    # 获取温度
+    if [[ "$real_path" == /dev/nvme* ]]; then
+      temp=$(smartctl -A "$real_path" | awk '/Temperature:/ {print $2; exit}')
     else
-      temp=$(smartctl -A "$path" | awk '/^194|Temperature_Celsius/ {print $10; exit}')
+      temp=$(smartctl -A "$real_path" | awk '/^194|Temperature_Celsius/ {print $10; exit}')
     fi
+
     [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
   done
 
+  # 计算 PWM 值
   if (( max_temp <= low )); then
     pwm_val=$pwm
   elif (( max_temp >= high )); then
@@ -35,12 +50,20 @@ while true; do
     pwm_val=$((pwm + delta * (255 - pwm) / range))
   fi
 
+  # 只有 PWM 有明显变化时才写入
   if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
     [[ -f "$controller_enable" ]] && echo 1 > "$controller_enable"
     echo "$pwm_val" > "$controller"
+
     sleep 4
-    rpm=$(cat "$fan_path" 2>/dev/null || echo 0)
-    logger -t fanctrlplus "[${custom:-FanCtrl_${controller##*/}}] Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
+    if [[ -n "$fan_path" && -f "$fan_path" ]]; then
+      rpm=$(cat "$fan_path")
+    else
+      rpm="?"
+    fi
+
+    label="[${custom}]"
+    logger -t fanctrlplus "$label Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
     prev_pwm=$pwm_val
   fi
 
