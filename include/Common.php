@@ -55,6 +55,7 @@ function list_valid_disks_by_id() {
     }
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
+    error_log("[fanctrlplus] match $real → "
   }
 
   usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
