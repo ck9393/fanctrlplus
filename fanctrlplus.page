@@ -252,7 +252,7 @@ $(function() {
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     foreach ($all_cfg as $i => $cfg) {
-      echo render_fan_block($cfg['file'], $i, $pwms, $disks);
+      echo render_fan_block($cfg, $i, $pwms, $disks);
     }
     ?>
   </div>
