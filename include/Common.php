@@ -27,7 +27,19 @@ function list_valid_disks_by_id() {
     foreach ($blk['blockdevices'] as $dev) {
       if (isset($dev['mountpoint']) && strpos($dev['mountpoint'], '/mnt/disk') === 0) {
         $diskX = basename($dev['mountpoint']);  // e.g., disk1
-        $kname = $dev['kname'];                 // e.g., /dev/md1p1
+        $kname = $dev['kname'];                 // e.g., /dev/mdXp1
+
+        // 先试试直接用该设备
+        if ($kname) {
+          $parent = shell_exec("lsblk -no PKNAME $kname 2>/dev/null");
+          $parent = trim($parent);
+          if ($parent) {
+            $dev_to_disk["/dev/$parent"] = $diskX;
+            error_log("[fanctrlplus] map /dev/$parent ← $diskX");
+          }
+        }
+
+        // 如果有 children，也尝试解析
         if (isset($dev['children']) && is_array($dev['children'])) {
           foreach ($dev['children'] as $child) {
             $kdev = $child['kname'] ?? '';
@@ -36,15 +48,9 @@ function list_valid_disks_by_id() {
               $parent = trim($parent);
               if ($parent) {
                 $dev_to_disk["/dev/$parent"] = $diskX;
-                error_log("[fanctrlplus] map /dev/$parent ← $diskX");
+                error_log("[fanctrlplus] map /dev/$parent ← $diskX (child)");
               }
             }
-        } elseif ($kname) {
-          $parent = shell_exec("lsblk -no PKNAME $kname 2>/dev/null");
-          $parent = trim($parent);
-          if ($parent) {
-            $dev_to_disk["/dev/$parent"] = $diskX;
-            error_log("[fanctrlplus] map /dev/$parent ← $diskX");
           }
         }
       }
