@@ -16,10 +16,9 @@ function list_pwm() {
 
 function list_valid_disks_by_id() {
   $seen = [];
-  $result = [];
   $groups = [];
 
-  // 获取 dev → DiskX/Parity 映射
+  // 获取 Array 中 /dev/sdX → DiskX/Parity 映射
   $dev_to_diskx = [];
   $lines = shell_exec("/usr/local/sbin/mdcmd status | grep rdevName");
   foreach (explode("\n", $lines) as $line) {
@@ -34,33 +33,32 @@ function list_valid_disks_by_id() {
     }
   }
 
-  // 获取 pool 名 → 挂载点路径
-  $mnt = array_filter(glob("/mnt/*"), 'is_dir');
+  // 查找 Pool → 挂载路径
   $pools = [];
-  foreach ($mnt as $path) {
+  foreach (glob("/mnt/*") as $path) {
     $base = basename($path);
+    if (!is_dir($path)) continue;
     if (in_array($base, ['user', 'disks', 'remotes'])) continue;
-    if (strpos($base, 'disk') === 0 || strpos($base, 'user') === 0) continue;
+    if (preg_match('/^disk[0-9]+$/', $base)) continue;
     $pools[$base] = $path;
   }
 
-  // 解析 lsblk 中 pool 对应设备
+  // 获取 /dev/xxxp1 → Pool 名称映射
   $dev_to_pool = [];
-  $lsblk = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
-  $blk = json_decode($lsblk, true);
+  $blk = json_decode(shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null"), true);
   foreach (($blk['blockdevices'] ?? []) as $dev) {
     foreach (($dev['children'] ?? []) as $child) {
-      $mp = $child['mountpoint'] ?? '';
       $kname = $child['kname'] ?? '';
-      foreach ($pools as $poolname => $poolmnt) {
-        if ($mp && strpos($mp, $poolmnt) === 0) {
-          $dev_to_pool["/dev/$kname"] = ucfirst($poolname);
+      $mount = $child['mountpoint'] ?? '';
+      foreach ($pools as $pool => $mnt) {
+        if ($mount && strpos($mount, $mnt) === 0) {
+          $dev_to_pool["/dev/$kname"] = ucfirst($pool);
         }
       }
     }
   }
 
-  // 忽略 /boot 所在设备
+  // boot device
   $boot_dev = exec("findmnt -n -o SOURCE --target /boot 2>/dev/null");
   $boot_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
@@ -71,49 +69,59 @@ function list_valid_disks_by_id() {
     $real = realpath($dev);
     if (!$real || in_array($real, $seen)) continue;
     if (strpos($real, $boot_base) === 0) continue;
-
     $seen[] = $real;
+
     $id = basename($dev);
     $label = preg_replace('/^(nvme|ata)-/', '', $id);
     $title = "$id\n$real";
 
-    // 显示格式优化
+    $group = "Others";
+
     if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
       $base = "/dev/" . $m[1];
+      $basename = basename($real);
+
       if (isset($dev_to_diskx[$base])) {
         $label = $dev_to_diskx[$base] . " - " . $label;
         $group = "Array";
-      } elseif (isset($dev_to_pool[$real])) {
-        $label .= " ($m[1])";
-        $group = $dev_to_pool[$real];
       } else {
-        $label .= " ($m[1])";
-        $group = "Others";
+        $base_real = preg_replace('#[p]?[0-9]+$#', '', $real);
+        if (isset($dev_to_pool[$base_real])) {
+          $label .= " (" . basename($base_real) . ")";
+          $group = $dev_to_pool[$base_real];
+        } else {
+          $label .= " (" . basename($real) . ")";
+        }
       }
-    } else {
-      $group = "Others";
     }
 
-    $groups[$group][] = ['id' => $id, 'dev' => $real, 'label' => $label, 'title' => $title];
+    $groups[$group][] = [
+      'id'    => $id,
+      'dev'   => $real,
+      'label' => $label,
+      'title' => $title
+    ];
   }
 
-  // 排序：Array → 其他 pool → Others
+  // 分组排序：Array → Pool（字母序）→ Others
   uksort($groups, function($a, $b) {
-    if ($a === 'Array') return -1;
-    if ($b === 'Array') return 1;
-    if ($a === 'Others') return 1;
-    if ($b === 'Others') return -1;
+    if ($a === "Array") return -1;
+    if ($b === "Array") return 1;
+    if ($a === "Others") return 1;
+    if ($b === "Others") return -1;
     return strnatcasecmp($a, $b);
   });
 
-  // 内部排序：Array 按 Disk 顺序，其他按 label
-  if (isset($groups['Array'])) {
-    usort($groups['Array'], function($a, $b) {
+  // 排序 Array 内部 Disk 顺序
+  if (isset($groups["Array"])) {
+    usort($groups["Array"], function($a, $b) {
       preg_match('/Disk (\d+)/', $a['label'], $ma);
       preg_match('/Disk (\d+)/', $b['label'], $mb);
       return ($ma[1] ?? 99) <=> ($mb[1] ?? 99);
     });
   }
+
+  // 其他组按 label 排序
   foreach ($groups as $key => &$entries) {
     if ($key !== 'Array') {
       usort($entries, fn($a, $b) => strnatcasecmp($a['label'], $b['label']));
