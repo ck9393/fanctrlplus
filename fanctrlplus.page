@@ -3,6 +3,11 @@ Title="FanCtrl Plus"
 Icon="fanctrlplus.png"
 ---
 
+<pre>
+=== DEBUG: $all_cfg ===
+<?php var_dump($all_cfg); ?>
+</pre>
+
 <?PHP
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
