@@ -6,9 +6,15 @@ function list_pwm() {
   foreach ($chips as $chip) {
     $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
     foreach (glob("$chip/pwm[0-9]") as $pwm) {
-      $out[] = ['chip'=>$name, 'name'=>basename($pwm), 'sensor'=>$pwm];
+      $out[] = ['chip' => $name, 'name' => basename($pwm), 'sensor' => $pwm];
     }
   }
+
+  // 修正：按 name 字段排序（如 pwm1, pwm2...）
+  usort($out, function ($a, $b) {
+    return strcmp($a['name'], $b['name']);
+  });
+
   return $out;
 }
 
@@ -22,6 +28,7 @@ function list_valid_disks_by_id() {
 
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
+    if (strpos(basename($dev), 'usb-') === 0) continue; // 排除 USB 启动盘
     $real = realpath($dev);
     if ($real === false) continue;
     if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
