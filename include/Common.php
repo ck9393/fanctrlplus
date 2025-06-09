@@ -17,61 +17,93 @@ function list_pwm() {
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
-  $dev_to_diskx = [];
+  $dev_to_disk = [];
 
-  // 建立 /dev/sdX → diskX/parity 映射
-  $lines = shell_exec("/usr/local/sbin/mdcmd status | grep rdevName");
-  foreach (explode("\n", $lines) as $line) {
-    if (preg_match('/rdevName\.(\d+)=(\w+)/', $line, $m)) {
-      $slot = intval($m[1]);
-      $dev  = "/dev/" . trim($m[2]);
-      if ($slot == 0) {
-        $dev_to_diskx[$dev] = "Parity";
-      } elseif ($slot == 29) {
-        $dev_to_diskx[$dev] = "Parity 2";
-      } else {
-        $dev_to_diskx[$dev] = "disk" . $slot;
+  // 构建 dev -> diskX 映射（包括 Parity）
+  $lsblk_json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
+  $blk = json_decode($lsblk_json, true);
+  if (!empty($blk['blockdevices'])) {
+    foreach ($blk['blockdevices'] as $dev) {
+      $mp = $dev['mountpoint'] ?? '';
+      $kname = $dev['kname'] ?? '';
+      if ($mp && preg_match('#^/mnt/disk[0-9]+$#', $mp)) {
+        $diskX = basename($mp);
+        $parent = trim(shell_exec("lsblk -no PKNAME $kname 2>/dev/null"));
+        if ($parent) {
+          $dev_to_disk["/dev/$parent"] = $diskX;
+        }
       }
     }
   }
 
-  // 获取 /boot 的设备（跳过）
+  // 加入 Parity/Parity2 映射
+  $mdstat = @file_get_contents("/proc/mdstat");
+  if ($mdstat !== false) {
+    foreach (explode("\n", $mdstat) as $line) {
+      if (preg_match('#^md([0-9]+) : .*#', $line, $m)) {
+        $md = "md{$m[1]}";
+        $out = shell_exec("/usr/local/sbin/mdcmd status | grep -i 'rdevName.*='");
+        foreach (explode("\n", $out) as $entry) {
+          if (preg_match('#rdevName\\.[0-9]+=([^\\s]+)#', $entry, $m2)) {
+            $dev = "/dev/" . trim($m2[1]);
+            if (!isset($dev_to_disk[$dev])) {
+              $dev_to_disk[$dev] = ($m[1] == "1") ? "Parity" : "Parity 2";
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 获取启动盘（用于排除）
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 遍历所有 by-id
+  // 遍历 by-id 设备
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
 
     $real = realpath($dev);
     if ($real === false) continue;
+    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
     if (in_array($real, $seen)) continue;
 
     $seen[] = $real;
     $id = basename($dev);
-    $label = $id;
+    $short = preg_replace('#^(ata|nvme)-#', '', $id); // 去除前缀
 
-    // 判断是否为 sdX/nvme 设备
+    $label = $short;
     if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
       $base = "/dev/" . $m[1];
-      if (isset($dev_to_diskx[$base])) {
-        $label .= " → " . $dev_to_diskx[$base];
-        error_log("[fanctrlplus] matched $base → {$dev_to_diskx[$base]} for id=$id");
-      } else {
-        error_log("[fanctrlplus] no match for $base (id=$id)");
+      if (isset($dev_to_disk[$base])) {
+        $label .= " → " . $dev_to_disk[$base];
+      } elseif (strpos($real, '/dev/nvme') === 0) {
+        $label .= " (" . basename($real) . ")";
       }
-    } else {
-      error_log("[fanctrlplus] no match regex for real=$real");
     }
 
-    error_log("[fanctrlplus] disk id=$id real=$real label=$label");
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
-  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
-  error_log("[fanctrlplus] final disk list count: " . count($result));
+  // 排序规则：先 Parity，再 Disk1~N，最后其它
+  usort($result, function($a, $b) {
+    $map = ['Parity' => 0, 'Parity 2' => 1];
+    $a_priority = 999;
+    $b_priority = 999;
+
+    foreach ($map as $key => $val) {
+      if (strpos($a['label'], $key) !== false) $a_priority = $val;
+      if (strpos($b['label'], $key) !== false) $b_priority = $val;
+    }
+
+    if (preg_match('/→ disk(\\d+)/i', $a['label'], $ma)) $a_priority = 10 + (int)$ma[1];
+    if (preg_match('/→ disk(\\d+)/i', $b['label'], $mb)) $b_priority = 10 + (int)$mb[1];
+
+    return $a_priority <=> $b_priority;
+  });
+
   return $result;
 }
