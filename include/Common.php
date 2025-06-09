@@ -10,9 +10,11 @@ function list_pwm() {
     }
   }
 
+  // 按 pwm 名称排序（例如 pwm1, pwm2...）
   usort($out, fn($a, $b) => strcmp($a['name'], $b['name']));
   return $out;
 }
+
 function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
@@ -51,34 +53,6 @@ function list_valid_disks_by_id() {
       if (isset($dev_to_disk[$dev_base])) {
         $label .= " → " . $dev_to_disk[$dev_base];
       }
-    }
-
-    $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
-  }
-
-  usort($result, function($a, $b) {
-    return strnatcasecmp($a['id'], $b['id']);
-  });
-
-  return $result;
-}
-
-  foreach (glob("/dev/disk/by-id/*") as $dev) {
-    if (!is_link($dev) || strpos($dev, "part") !== false) continue;
-    if (strpos(basename($dev), 'usb-') === 0) continue;
-
-    $real = realpath($dev);
-    if ($real === false) continue;
-    if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
-    if (strpos($real, $boot_dev_base) === 0) continue;
-    if (in_array($real, $seen)) continue;
-
-    $seen[] = $real;
-    $id = basename($dev);
-    $label = $id;
-
-    if (isset($sd_to_disk[$real])) {
-      $label .= " → " . $sd_to_disk[$real];  // ✅ 显示 disk1、disk2
     }
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
