@@ -19,20 +19,18 @@ function list_valid_disks_by_id() {
   $seen = [];
   $result = [];
 
-  // 取得启动盘设备（用于排除）
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
-  // 解析 /mnt/diskX 对应的底层设备（用 lsblk 追踪）
+  // 建立 diskX 映射（/mnt/diskX -> /dev/sdX）
   $dev_to_disk = [];
-  $lsblk = shell_exec("lsblk -P -o NAME,MOUNTPOINT");
-  foreach (explode("\n", trim($lsblk)) as $line) {
-    if (preg_match('/NAME="([^"]+)" MOUNTPOINT="\/mnt\/disk([0-9]+)"/', $line, $m)) {
-      $disk = "disk" . $m[2];
-      $dev = "/dev/" . $m[1];
-      $dev_to_disk[$dev] = $disk;
-      error_log("[fanctrlplus] map $dev → $disk");
+  foreach (glob("/mnt/disk*") as $mnt) {
+    $real = realpath($mnt);  // 如 /dev/mdXp1
+    if ($real && preg_match('#/dev/(sd[a-z]+)[0-9]*$#', $real, $m)) {
+      $base = "/dev/" . $m[1];  // /dev/sdX
+      $dev_to_disk[$base] = basename($mnt);  // disk1, disk2...
+      error_log("[fanctrlplus] map $base ← " . basename($mnt));
     }
   }
 
@@ -50,18 +48,28 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 若真实设备在 array 中，加上 diskX 标注
-    if (isset($dev_to_disk[$real])) {
-      $label .= " → " . $dev_to_disk[$real];
-      error_log("[fanctrlplus] matched $real → " . $dev_to_disk[$real] . " for id=$id");
+    // 追加 diskX 标签（通过 dev_base 匹配）
+    if (preg_match('#/dev/(sd[a-z]+)#', $real, $m)) {
+      $dev_base = "/dev/" . $m[1];
+      if (isset($dev_to_disk[$dev_base])) {
+        $label .= " → " . $dev_to_disk[$dev_base];
+        error_log("[fanctrlplus] matched $dev_base → {$dev_to_disk[$dev_base]} for id=$id");
+      } else {
+        error_log("[fanctrlplus] no match for $dev_base (id=$id)");
+      }
     } else {
-      error_log("[fanctrlplus] no match for $real (id=$id)");
+      error_log("[fanctrlplus] no sdX match for real=$real");
     }
+
+    error_log("[fanctrlplus] disk id=$id real=$real label=$label");
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
+  usort($result, function($a, $b) {
+    return strnatcasecmp($a['id'], $b['id']);
+  });
+
   error_log("[fanctrlplus] final disk list count: " . count($result));
-  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
   return $result;
 }
