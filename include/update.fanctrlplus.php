@@ -55,6 +55,7 @@ foreach ($_POST['#file'] as $i => $file) {
   // 拼接配置内容
   $cfg = [
     'custom'     => $custom,
+    'label'      => $custom,
     'service'    => $_POST['service'][$i] ?? '0',
     'controller' => $controller,
     'pwm'        => $_POST['pwm'][$i] ?? '',
