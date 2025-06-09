@@ -19,25 +19,32 @@ function list_valid_disks_by_id() {
   $result = [];
   $dev_to_disk = [];
 
-  // 使用 lsblk JSON 输出建立 dev → diskX 映射
-  $json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
-  $blk = json_decode($json, true);
+  // 构建 dev -> diskX 的映射，解析 lsblk JSON
+  $lsblk_json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
+  $blk = json_decode($lsblk_json, true);
 
   if (!empty($blk['blockdevices'])) {
     foreach ($blk['blockdevices'] as $dev) {
-      if (!empty($dev['mountpoint']) && preg_match('@/mnt/disk[0-9]+@', $dev['mountpoint'])) {
-        // 情况: mdXp1 直接挂载
-        $disk = basename($dev['mountpoint']);
-        $kname = $dev['kname'] ?? $dev['name'];
-        error_log("[fanctrlplus] map (direct) $kname → $disk");
-        $dev_to_disk[$kname] = $disk;
-      } elseif (!empty($dev['children'])) {
-        foreach ($dev['children'] as $child) {
-          if (!empty($child['mountpoint']) && preg_match('@/mnt/disk[0-9]+@', $child['mountpoint'])) {
-            $disk = basename($child['mountpoint']);
-            $kname = $dev['kname'] ?? $dev['name'];
-            error_log("[fanctrlplus] map (child) $kname → $disk");
-            $dev_to_disk[$kname] = $disk;
+      if (isset($dev['mountpoint']) && strpos($dev['mountpoint'], '/mnt/disk') === 0) {
+        $diskX = basename($dev['mountpoint']);  // e.g., disk1
+        $kname = $dev['kname'];                 // e.g., /dev/md1p1
+        if (isset($dev['children']) && is_array($dev['children'])) {
+          foreach ($dev['children'] as $child) {
+            $kdev = $child['kname'] ?? '';
+            if ($kdev) {
+              $parent = shell_exec("lsblk -no PKNAME $kdev 2>/dev/null");
+              $parent = trim($parent);
+              if ($parent) {
+                $dev_to_disk["/dev/$parent"] = $diskX;
+                error_log("[fanctrlplus] map /dev/$parent ← $diskX");
+              }
+            }
+        } elseif ($kname) {
+          $parent = shell_exec("lsblk -no PKNAME $kname 2>/dev/null");
+          $parent = trim($parent);
+          if ($parent) {
+            $dev_to_disk["/dev/$parent"] = $diskX;
+            error_log("[fanctrlplus] map /dev/$parent ← $diskX");
           }
         }
       }
@@ -62,9 +69,8 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 提取基础 dev 名称用于匹配映射（如 /dev/sdX、/dev/nvmeXn1）
-    if (preg_match('#^(/dev/(?:sd[a-z]+|nvme\d+n\d+))#', $real, $m)) {
-      $base = $m[1];
+    if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
+      $base = "/dev/" . $m[1];
       if (isset($dev_to_disk[$base])) {
         $label .= " → " . $dev_to_disk[$base];
         error_log("[fanctrlplus] matched $base → {$dev_to_disk[$base]} for id=$id");
