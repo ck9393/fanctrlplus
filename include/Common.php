@@ -19,16 +19,16 @@ function list_valid_disks_by_id() {
   $result = [];
   $dev_to_disk = [];
 
+  // 构建 /dev/sdX → diskX 映射（Unraid array）
   foreach (glob("/mnt/disk*") as $mnt) {
-    $mountpoint = escapeshellarg($mnt);
     $out = [];
-    exec("findmnt -n -o SOURCE --target $mountpoint", $out);
-    $src = trim($out[0] ?? '');
-    if ($src) {
-      $parent = trim(shell_exec("lsblk -no PKNAME $src 2>/dev/null"));
-      if ($parent && strpos($parent, 'loop') === false) {
-        $base = "/dev/" . $parent;
-        $dev_to_disk[$base] = basename($mnt);
+    exec("findmnt -n -o SOURCE --target " . escapeshellarg($mnt), $out);
+    if (!empty($out[0])) {
+      $src = trim($out[0]);  // e.g. /dev/md1p1
+      $pk = trim(shell_exec("lsblk -no PKNAME $src 2>/dev/null"));  // e.g. sdd
+      if ($pk && strpos($pk, 'loop') === false) {
+        $base = "/dev/$pk";
+        $dev_to_disk[$base] = basename($mnt);  // disk1, disk2
         error_log("[fanctrlplus] map $base ← " . basename($mnt));
       }
     }
@@ -39,11 +39,12 @@ function list_valid_disks_by_id() {
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
   foreach (glob("/dev/disk/by-id/*") as $dev) {
-    if (!is_link($dev) || strpos($dev, "part") !== false) continue;
+    if (!is_link($dev) || strpos($dev, 'part') !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
 
-    $real = realpath($dev);
+    $real = readlink($dev);
     if ($real === false) continue;
+    $real = "/dev/" . basename($real);  // e.g. /dev/sdd1
     if (strpos($real, "/dev/sd") === false && strpos($real, "/dev/nvme") === false) continue;
     if (strpos($real, $boot_dev_base) === 0) continue;
     if (in_array($real, $seen)) continue;
@@ -61,14 +62,14 @@ function list_valid_disks_by_id() {
         error_log("[fanctrlplus] no match for $base (id=$id)");
       }
     } else {
-      error_log("[fanctrlplus] no match regex for real=$real");
+      error_log("[fanctrlplus] regex fail for real=$real");
     }
 
     error_log("[fanctrlplus] disk id=$id real=$real label=$label");
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
-  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
   error_log("[fanctrlplus] final disk list count: " . count($result));
+  usort($result, fn($a, $b) => strnatcasecmp($a['id'], $b['id']));
   return $result;
 }
