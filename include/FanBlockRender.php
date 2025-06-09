@@ -1,6 +1,5 @@
 <?php
 function render_fan_block($cfg, $i, $pwms, $disks) {
-  error_log("[fanctrlplus] render_fan_block called with cfg: " . json_encode($cfg));
 
   ob_start();
   ?>
@@ -98,6 +97,5 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
   $html = ob_get_contents();
   ob_end_clean();
 
-  error_log("[fanctrlplus] rendered HTML length: " . strlen($html));
   return $html;
 }
