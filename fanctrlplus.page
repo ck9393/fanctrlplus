@@ -255,9 +255,7 @@ $(function() {
   <div id="fan-area">
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
-    foreach ($all_cfg as $i => $cfg) {
-      echo render_fan_block($cfg, $i, $pwms, $disks);
-    }
+    echo render_fan_block($all_cfg[0], 0, $pwms, $disks);
     ?>
   </div>
     <div style="clear:both; margin-top:15px; text-align: left;">
