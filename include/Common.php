@@ -24,17 +24,21 @@ function list_valid_disks_by_id() {
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
   error_log("[fanctrlplus] boot_dev_base = $boot_dev_base");
 
-  // 建立 diskX 映射（从 /mnt/diskX → /dev/sdX）
+  // 使用 lsblk 获取 md 设备底层的 sdX
   $dev_to_disk = [];
   foreach (glob("/mnt/disk*") as $mnt) {
-    $real = realpath($mnt);  // 可能是 /dev/mdXp1
-    error_log("[fanctrlplus] mnt: $mnt real: $real");
+    $mount_dev = exec("findmnt -n -o SOURCE --target " . escapeshellarg($mnt));  // /dev/md1p1
+    $dev_name = basename($mount_dev);  // md1p1
 
-    if ($real && preg_match('#/dev/(sd[a-z]+)[0-9]*$#', $real, $m)) {
-      $dev_base = "/dev/" . $m[1];
-      $diskX = basename($mnt);
-      $dev_to_disk[$dev_base] = $diskX;
-      error_log("[fanctrlplus] map $dev_base → $diskX");
+    if ($dev_name) {
+      $output = [];
+      exec("lsblk -no PKNAME /dev/$dev_name 2>/dev/null", $output);  // 获取物理设备名，如 sdd
+      if (!empty($output)) {
+        $sd = trim($output[0]);
+        $dev_base = "/dev/$sd";
+        $dev_to_disk[$dev_base] = basename($mnt);  // /dev/sdd → disk1
+        error_log("[fanctrlplus] map $dev_base → " . basename($mnt));
+      }
     }
   }
 
@@ -52,16 +56,12 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
-    // 尝试通过 dev_base 追加 diskX 显示标签
-    if (preg_match('#/dev/(sd[a-z]+)#', $real, $m)) {
-      $dev_base = "/dev/" . $m[1];
-      if (isset($dev_to_disk[$dev_base])) {
-        $diskX = $dev_to_disk[$dev_base];
-        $label .= " → $diskX";
-        error_log("[fanctrlplus] matched $real → $diskX for id=$id");
-      } else {
-        error_log("[fanctrlplus] no match for $real (id=$id)");
-      }
+    $base = preg_replace('#[0-9]+$#', '', $real);  // 去掉 /dev/sdX1 → /dev/sdX
+    if (isset($dev_to_disk[$base])) {
+      $label .= " → " . $dev_to_disk[$base];
+      error_log("[fanctrlplus] matched $base → " . $dev_to_disk[$base] . " for id=$id");
+    } else {
+      error_log("[fanctrlplus] no match for $base (id=$id)");
     }
 
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
