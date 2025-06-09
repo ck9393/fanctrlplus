@@ -8,7 +8,10 @@ $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 header('Content-Type: application/json');
 
 function json_response($data) {
-  ob_clean();
+  while (ob_get_level()) {
+    ob_end_clean(); // 安全清除所有输出缓冲区，避免 notice 错误
+  }
+  header('Content-Type: application/json');
   echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   exit;
 }
