@@ -19,48 +19,32 @@ function list_valid_disks_by_id() {
   $result = [];
   $dev_to_disk = [];
 
-  // 构建 dev -> diskX 的映射，解析 lsblk JSON
+  // 解析 lsblk -pJ 获取挂载点和物理设备映射
   $lsblk_json = shell_exec("lsblk -pJ -o NAME,KNAME,MOUNTPOINT 2>/dev/null");
   $blk = json_decode($lsblk_json, true);
 
   if (!empty($blk['blockdevices'])) {
     foreach ($blk['blockdevices'] as $dev) {
-      if (isset($dev['mountpoint']) && strpos($dev['mountpoint'], '/mnt/disk') === 0) {
-        $diskX = basename($dev['mountpoint']);  // e.g., disk1
-        $kname = $dev['kname'];                 // e.g., /dev/mdXp1
+      if (!empty($dev['mountpoint']) && strpos($dev['mountpoint'], '/mnt/disk') === 0) {
+        $diskX = basename($dev['mountpoint']);     // e.g., disk6
+        $md_dev = $dev['kname'];                   // e.g., /dev/md6p1
 
-        // 先试试直接用该设备
-        if ($kname) {
-          $parent = shell_exec("lsblk -no PKNAME $kname 2>/dev/null");
-          $parent = trim($parent);
-          if ($parent) {
-            $dev_to_disk["/dev/$parent"] = $diskX;
-            error_log("[fanctrlplus] map /dev/$parent ← $diskX");
-          }
-        }
-
-        // 如果有 children，也尝试解析
-        if (isset($dev['children']) && is_array($dev['children'])) {
-          foreach ($dev['children'] as $child) {
-            $kdev = $child['kname'] ?? '';
-            if ($kdev) {
-              $parent = shell_exec("lsblk -no PKNAME $kdev 2>/dev/null");
-              $parent = trim($parent);
-              if ($parent) {
-                $dev_to_disk["/dev/$parent"] = $diskX;
-                error_log("[fanctrlplus] map /dev/$parent ← $diskX (child)");
-              }
-            }
-          }
+        // 找出父设备（e.g., sdh）
+        $parent = trim(shell_exec("lsblk -no PKNAME $md_dev 2>/dev/null"));
+        if ($parent) {
+          $dev_to_disk["/dev/$parent"] = $diskX;   // /dev/sdh → disk6
+          error_log("[fanctrlplus] map /dev/$parent ← $diskX");
         }
       }
     }
   }
 
+  // 获取 /boot 所在设备，用于排除启动盘
   $boot_mount = realpath("/boot");
   $boot_dev = exec("findmnt -n -o SOURCE --target $boot_mount 2>/dev/null");
   $boot_dev_base = preg_replace('#[0-9]+$#', '', $boot_dev);
 
+  // 遍历 by-id 符号链接
   foreach (glob("/dev/disk/by-id/*") as $dev) {
     if (!is_link($dev) || strpos($dev, "part") !== false) continue;
     if (strpos(basename($dev), 'usb-') === 0) continue;
@@ -75,6 +59,7 @@ function list_valid_disks_by_id() {
     $id = basename($dev);
     $label = $id;
 
+    // 提取设备 base 名称（/dev/sdX 或 /dev/nvmeXn1）
     if (preg_match('#/dev/([a-z0-9]+)[p]?[0-9]*$#', $real, $m)) {
       $base = "/dev/" . $m[1];
       if (isset($dev_to_disk[$base])) {
