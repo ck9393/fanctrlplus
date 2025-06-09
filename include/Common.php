@@ -30,7 +30,7 @@ function list_valid_disks_by_id() {
   $sd_to_disk = [];
   foreach (glob("/mnt/disk*") as $disk_path) {
     $dev = exec("findmnt -n -o SOURCE --target " . escapeshellarg($disk_path));
-    $dev_base = preg_replace('#[0-9]+$#', '', $dev);
+    $dev_base = preg_replace('#p?[0-9]+$#', '', $dev);
     if ($dev_base && strpos($dev_base, '/dev/') === 0) {
       $sd_to_disk[$dev_base] = basename($disk_path);  // /dev/sdd → disk1
     }
