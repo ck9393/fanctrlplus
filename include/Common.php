@@ -27,9 +27,9 @@ function list_valid_disks_by_id() {
   $dev_to_disk = [];
   foreach (glob("/mnt/disk*") as $mnt) {
     $real = realpath($mnt);  // 会返回 /dev/mdX 或 /dev/sdX1
-    if ($real && preg_match('#/dev/(sd[a-z]+)[0-9]*$#', $real, $m)) {
-      $dev_base = "/dev/" . $m[1];  // 提取 /dev/sdX
-      $dev_to_disk[$dev_base] = basename($mnt);  // /dev/sdX → disk1
+    if ($real && preg_match('#/dev/(sd[a-z]+|md[0-9]+)[p0-9]*$#', $real, $m)) {
+      $dev_base = "/dev/" . $m[1];  // 支持 sdX 或 mdX
+      $dev_to_disk[$dev_base] = basename($mnt);  // /dev/md1 → disk1
     }
   }
 
@@ -48,13 +48,12 @@ function list_valid_disks_by_id() {
     $label = $id;
 
     // 追加 diskX 标签（通过 dev_base 匹配）
-    if (preg_match('#/dev/(sd[a-z]+)#', $real, $m)) {
+    if (preg_match('#/dev/(sd[a-z]+|md[0-9]+)#', $real, $m)) {
       $dev_base = "/dev/" . $m[1];
       if (isset($dev_to_disk[$dev_base])) {
         $label .= " → " . $dev_to_disk[$dev_base];
       }
     }
-
     $result[] = ['id' => $id, 'dev' => $real, 'label' => $label];
   }
 
