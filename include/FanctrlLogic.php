@@ -135,7 +135,6 @@ switch ($op) {
     $disks = list_valid_disks_by_id();
   
     echo render_fan_block($cfg, $index, $pwms, $disks);  // ✅ 改为传完整 $cfg
-    error_log("[fanctrlplus] newtemp block output success");
     exit;
 
   case 'delete':
@@ -160,7 +159,6 @@ switch ($op) {
       }
     }
   
-    error_log("[fanctrlplus] status result: " . ($running ? 'running' : 'stopped'));
     json_response(['status' => $running ? 'running' : 'stopped']);
     break;
 
@@ -191,7 +189,6 @@ switch ($op) {
       }
     }
   
-    error_log("[fanctrlplus] status_all result: " . json_encode($result));
     json_response($result);
     break;
 
