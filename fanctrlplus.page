@@ -31,7 +31,6 @@ if (empty($all_cfg)) {
 
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
-echo "<pre>" . json_encode($disks, JSON_PRETTY_PRINT) . "</pre>";
 $width = 300;
 ?>
 
@@ -64,38 +63,23 @@ $(function() {
   }
 
   function updateAllFanStatus() {
-  console.log("✅ updateAllFanStatus triggered");
-
-  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
-    console.log("✅ statusMap:", statusMap);
-
-    $('.fan-block').each(function() {
-      const block = $(this);
-      const input = block.find('input[name^="custom["]');
-
-      if (!input.length) {
-        console.warn("⚠️ Skipping fan block with missing custom name input");
-        return;  // ❌ 防止报错
-      }
-
-      const name = input.val().trim();
-      const indicator = block.find('.fan-status');
-
-      console.log("→ block:", name, "indicator exists:", indicator.length > 0);
-
-      if (!indicator.length) return;
-
-      const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
-      const status = matchedKey ? statusMap[matchedKey] : 'stopped';
-
-      console.log("→ matchedKey:", matchedKey, "status:", status);
-
-      indicator.text(status === 'running' ? '🟢' : '🔴');
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
+      $('.fan-block').each(function() {
+        const block = $(this);
+        const input = block.find('input[name^="custom["]');
+        if (!input.length) return;
+        const name = input.val().trim();
+        const indicator = block.find('.fan-status');
+        if (!indicator.length) return;
+        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
+        const status = matchedKey ? statusMap[matchedKey] : 'stopped';
+        indicator.text(status === 'running' ? '🟢' : '🔴');
+      });
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Failed to load status_all:", textStatus, errorThrown);
     });
-  }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error("❌ Failed to load status_all:", textStatus, errorThrown);
-  });
-}
+  }
+
   updateStatusLightAndButton();
   updateAllFanStatus();
 
@@ -110,15 +94,11 @@ $(function() {
     const action = btn.text().includes('Stop') ? 'stop' : 'start';
 
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
-      // 每 500ms 检查一次，最多等 10 次（5 秒）
-      let tries = 0;
-      const maxTries = 10;
-
+      let tries = 0, maxTries = 10;
       const check = () => {
         $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(data) {
           const isRunning = data.status === 'running';
           const wantRunning = action === 'start';
-
           if (isRunning === wantRunning || tries >= maxTries) {
             updateStatusLightAndButton();
             updateAllFanStatus();
@@ -129,13 +109,12 @@ $(function() {
           }
         });
       };
-
-    check();
-  }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
-    btn.prop('disabled', false);
-  });
-};
+      check();
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
+      btn.prop('disabled', false);
+    });
+  };
 
   window.pauseFan = function(pwm, btn) {
     $(btn).prop('disabled', true).text("Pausing...");
@@ -157,27 +136,19 @@ $(function() {
     if (!confirm("Are you sure you want to delete this fan configuration?")) return;
     const block = $(btn).closest('.fan-block');
     const file = block.find('input.cfg-file').val();
-
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
       .done(function(result) {
-        console.log("✅ Fan deleted:", result);
-        block.remove();                  // ✅ 先从页面移除
-        setTimeout(() => {
-          updateAllFanStatus();         // ✅ 然后刷新 status 灯
-        }, 500);
+        block.remove();
+        setTimeout(() => updateAllFanStatus(), 500);
       })
       .fail(function(jqXHR, textStatus, errorThrown) {
-        console.error("❌ Delete fan failed:", textStatus, errorThrown);
         alert("Failed to delete fan.");
       });
   };
 
   window.addFan = function() {
-    console.log("🟡 Add Fan clicked");
     const index = $('.fan-block').length;
-  
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(html) {
-      console.log("🟢 Fan HTML received");
       $('#fan-area').append(html);
       updateAllFanStatus();
       $('.disk-select').last().dropdownchecklist({
@@ -185,9 +156,7 @@ $(function() {
         width: <?=$width?>,
         explicitClose:'...close'
       });
-    }, 'html')  // ✅ 指定 HTML 返回类型，避免 JSON.parse 报错
-    .fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("🔴 Add fan failed:", textStatus, errorThrown);
+    }, 'html').fail(function(jqXHR, textStatus, errorThrown) {
       alert("Failed to add fan.");
     });
   };
@@ -196,39 +165,16 @@ $(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
 
-  // ✅ 使用事件委托绑定监听，支持后添加的 fan block
   $('form').on('change keyup', 'input, select, textarea', function() {
     $('form').trigger('ui:changed');
   });
 
-    // 👉 用户修改任何字段后激活 Apply 按钮
-  $('form input, form select, form textarea').on('change keyup', function() {
-    $('form').trigger('ui:changed');
-  });
-
-  // 👉 触发 ui:changed 时启用按钮
   $('form').on('ui:changed', function() {
     $('input[name="#apply"]').prop('disabled', false);
   });
 
-  // 👉 页面初始时禁用按钮
   $(document).ready(function() {
     $('input[name="#apply"]').prop('disabled', true);
-  });
-
-  // 👉 用户点击 Apply 后再次禁用按钮（可选）
-  $('form').on('submit', function() {
-    $('input[name="#apply"]').prop('disabled', true);
-    let valid = true;
-    $('input[name^="custom["]').each(function() {
-      if ($(this).val().trim() === '') {
-        alert("Custom Name cannot be empty!");
-        $(this).focus();
-        valid = false;
-        return false;
-      }
-    });
-    return valid;
   });
 
   $('form').on('submit', function() {
@@ -256,9 +202,9 @@ $(function() {
     }
     ?>
   </div>
-    <div style="clear:both; margin-top:15px; text-align: left;">
-      <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
-      <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
-      <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
-    </div>
+  <div style="clear:both; margin-top:15px; text-align: left;">
+    <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
+    <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
+    <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
+  </div>
 </form>
