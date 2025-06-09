@@ -195,7 +195,8 @@ $(function() {
     $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
   });
 
-  $('form input, form select, form textarea').on('change keyup', function() {
+  // ✅ 使用事件委托绑定监听，支持后添加的 fan block
+  $('form').on('change keyup', 'input, select, textarea', function() {
     $('form').trigger('ui:changed');
   });
 
