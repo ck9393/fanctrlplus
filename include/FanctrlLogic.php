@@ -144,7 +144,6 @@ switch ($op) {
     }
   
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
-    require_once "$docroot/plugins/$plugin/fanctrlplus.page"; // ✅ 加这个
   
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
