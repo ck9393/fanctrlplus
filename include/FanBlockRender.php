@@ -77,12 +77,16 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
             <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
               <?php
               $selected = explode(',', $cfg['disks'] ?? '');
-              foreach ($disks as $d):
-                $id = $d['id'];
-                $dev = $d['dev'];
-                $sel = in_array($id, $selected) ? 'selected' : '';
+              $disk_groups = list_valid_disks_by_id();
+              foreach ($disk_groups as $group => $entries):
               ?>
-                <option value="<?=$id?>" <?=$sel?> title="<?=$id?>&#10;<?=$dev?>"><?=$d['label']?></option>
+                <optgroup label="<?=htmlspecialchars($group)?>">
+                  <?php foreach ($entries as $disk):
+                    $sel = in_array($disk['id'], $selected) ? 'selected' : '';
+                  ?>
+                    <option value="<?=$disk['id']?>" <?=$sel?> title="<?=$disk['id']?>&#10;<?=$disk['dev']?>"><?=htmlspecialchars($disk['label'])?></option>
+                  <?php endforeach; ?>
+                </optgroup>
               <?php endforeach; ?>
             </select>
           </td>
