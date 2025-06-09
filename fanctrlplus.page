@@ -3,11 +3,6 @@ Title="FanCtrl Plus"
 Icon="fanctrlplus.png"
 ---
 
-<pre>
-=== DEBUG: $all_cfg ===
-<?php var_dump($all_cfg); ?>
-</pre>
-
 <?PHP
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
@@ -31,6 +26,10 @@ if (empty($all_cfg)) {
   }
   $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
 }
+
+echo "<pre>=== DEBUG: \$all_cfg ===\n";
+var_dump($all_cfg);
+echo "</pre>";
 
 function list_pwm() {
   $out = [];
