@@ -63,30 +63,38 @@ $(function() {
   }
 
   function updateAllFanStatus() {
-    console.log("✅ updateAllFanStatus triggered");
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
-      console.log("✅ statusMap:", statusMap);
+  console.log("✅ updateAllFanStatus triggered");
 
-      $('.fan-block').each(function() {
-        const block = $(this);
-        const name = block.find('input[name^="custom["]').val().trim();
-        const indicator = block.find('.fan-status');
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
+    console.log("✅ statusMap:", statusMap);
 
-        console.log("→ block:", name, "indicator exists:", indicator.length > 0);
+    $('.fan-block').each(function() {
+      const block = $(this);
+      const input = block.find('input[name^="custom["]');
 
-        if (!indicator.length) return;
+      if (!input.length) {
+        console.warn("⚠️ Skipping fan block with missing custom name input");
+        return;  // ❌ 防止报错
+      }
 
-        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
-        const status = matchedKey ? statusMap[matchedKey] : 'stopped';
+      const name = input.val().trim();
+      const indicator = block.find('.fan-status');
 
-        console.log("→ matchedKey:", matchedKey, "status:", status);
+      console.log("→ block:", name, "indicator exists:", indicator.length > 0);
 
-        indicator.text(status === 'running' ? '🟢' : '🔴');
-      });
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Failed to load status_all:", textStatus, errorThrown);
+      if (!indicator.length) return;
+
+      const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
+      const status = matchedKey ? statusMap[matchedKey] : 'stopped';
+
+      console.log("→ matchedKey:", matchedKey, "status:", status);
+
+      indicator.text(status === 'running' ? '🟢' : '🔴');
     });
-  }
+  }).fail(function(jqXHR, textStatus, errorThrown) {
+    console.error("❌ Failed to load status_all:", textStatus, errorThrown);
+  });
+}
   updateStatusLightAndButton();
   updateAllFanStatus();
 
