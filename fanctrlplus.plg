@@ -13,14 +13,14 @@
   <PLUGINURL>https://github.com/ck9393/fanctrlplus</PLUGINURL>
 
   <DESCRIPTION>
-FanCtrl Plus: Automatically control fan speed based on HDD, NVMe, and unassigned device temperatures.
+FanCtrl Plus: Automatically control fan speed based on disk temperature. This version includes full auto-start support for all array scenarios.
   </DESCRIPTION>
 
   <ICON>
 /usr/local/emhttp/plugins/fanctrlplus/images/fanctrlplus.png
   </ICON>
 
-  <!-- 清理旧版本的 txz（避免版本号相同但内容不同的缓存） -->
+  <!-- 清理旧 txz -->
   <FILE Run="/bin/bash">
     <INLINE>
 #!/bin/bash
@@ -33,20 +33,20 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
     <URL>&url;</URL>
   </FILE>
 
-  <!-- 开机自启：写入 /boot/config/go -->
+  <!-- 启动 array monitor 守护脚本 -->
   <FILE Run="/bin/bash">
     <INLINE>
 #!/bin/bash
-go_file="/boot/config/go"
-startup_line="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start &amp;"
-
-# 如果 go 文件中不存在这一行，就添加
-grep -qF "$startup_line" "$go_file" || echo "$startup_line" >> "$go_file"
+# 启动 fanctrlplus 守护脚本
+script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
+if [ -x "$script" ]; then
+  nohup "$script" >/dev/null 2>&1 &
+fi
 
 echo ""
 echo "-----------------------------------------------------------"
 echo " Plugin fanctrlplus is installed."
-echo " Auto-start entry added to /boot/config/go"
+echo " Array monitor is running."
 echo " Author: ck9393"
 echo " Version: 1.2.0"
 echo "-----------------------------------------------------------"
@@ -55,19 +55,22 @@ exit 0
     </INLINE>
   </FILE>
 
-  <!-- 卸载逻辑 -->
+  <!-- 卸载时清理后台和文件 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
 #!/bin/bash
-/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan stop 2>/dev/null
+/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
+pkill -f array_monitor.sh
+
 removepkg fanctrlplus
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
 
-# 清除 go 文件中的自启动行
-sed -i '\|fanctrlplus/scripts/rc.autofan start|d' /boot/config/go
+# 清除 go 中旧自启行
+sed -i '\|rc.fanctrlplus start|d' /boot/config/go
+sed -i '\|array_monitor.sh|d' /boot/config/go
 
-echo "[fanctrlplus] Plugin removed and go entry cleaned."
+echo "[fanctrlplus] Plugin fully removed."
 exit 0
     </INLINE>
   </FILE>
@@ -75,26 +78,6 @@ exit 0
   <CHANGES>
 Release Notes – v1.2.0
 
-1. Improved disk selection UI
-	•	The Include Disks dropdown now shows full device labels:
-	•	Array devices (Parity, Disk 1~N)
-	•	NVMe and SATA drives in each pool
-	•	Devices are grouped by Array and individual Pools
-	•	Labels follow Unraid’s Main tab format (e.g. “Disk 3 - ST4000VN008”)
 
-2. Dynamic disk list rendering
-	•	All disk options are rendered using JavaScript for better performance
-	•	Hover tooltips show full device paths and IDs
-	•	Unraid flash drive is excluded from selection
-	•	Uses /dev/disk/by-id to ensure stable device mapping
-
-3. Auto-start improvement
-	•	Plugin now auto-starts on boot via /boot/config/go entry
-	•	No longer uses temporary at-based delayed startup
-
-⸻
-
-This release focuses on better clarity and flexibility for fan-to-disk control.
   </CHANGES>
-
 </PLUGIN>
