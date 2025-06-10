@@ -5,7 +5,7 @@
   <!ENTITY author "ck9393">
   <!ENTITY launch "Settings/fanctrlplus">
   <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
-  <!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus/releases/download/v&version;/fanctrlplus-&version;.txz">
+  <!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
