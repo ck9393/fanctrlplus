@@ -99,15 +99,17 @@ function list_valid_disks_by_id() {
   if (isset($groups['Array'])) {
     usort($groups['Array'], function($a, $b) {
       $order = function($label) {
-        if (str_starts_with($label, 'Parity 2')) return -2;
-        if (str_starts_with($label, 'Parity'))   return -1;
-        if (preg_match('/Disk (\d+)/', $label, $m)) return intval($m[1]);
+        if (str_starts_with($label, 'Parity 2')) return 1;
+        if (str_starts_with($label, 'Parity'))   return 0;
+        if (preg_match('/Disk (\d+)/', $label, $m)) {
+          return 2 + intval($m[1]);
+        }
         return 999;
       };
       return $order($a['label']) <=> $order($b['label']);
     });
   }
-
+  
   // 其他组按 label 排序
   foreach ($groups as $group => &$entries) {
     if ($group !== 'Array') {

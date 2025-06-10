@@ -1,24 +1,26 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
   <!ENTITY name "fanctrlplus">
-  <!ENTITY version "1.2.0">
+  <!ENTITY version "1.2.1">
   <!ENTITY author "ck9393">
   <!ENTITY launch "Settings/fanctrlplus">
-  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-1.2.0.txz">
-  <!ENTITY url "https://github.com/ck9393/fanctrlplus/releases/download/v1.2.0/fanctrlplus-1.2.0.txz">
+  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
+  <!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus/releases/download/v&version;/fanctrlplus-&version;.txz">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.9.0">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
+  <CATEGORY>System</CATEGORY>
+  <PLUGINURL>https://github.com/ck9393/fanctrlplus</PLUGINURL>
 
   <DESCRIPTION>
-FanCtrl Plus: Automatically control fan speed based on HDD, NVMe, and unassigned device temperatures.
+FanCtrl Plus: Automatically control fan speed based on disk temperature. This version includes full auto-start support for all array scenarios.
   </DESCRIPTION>
 
   <ICON>
 /usr/local/emhttp/plugins/fanctrlplus/images/fanctrlplus.png
   </ICON>
 
-  <!-- 清理旧版本的 txz（避免版本号相同但内容不同的缓存） -->
+  <!-- 清理旧 txz -->
   <FILE Run="/bin/bash">
     <INLINE>
 #!/bin/bash
@@ -28,71 +30,57 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
 
   <!-- 下载并安装新的 .txz -->
   <FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
-    <URL>&url;</URL>
+    <URL>&pluginURL;</URL>
   </FILE>
 
-  <!-- 延迟启动 fanctrlplus 脚本，避免卡 WebUI -->
-  <FILE Name="/tmp/start_fanctrlplus" Mode="0770">
-    <INLINE>
-#!/bin/bash
-/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start 2>/dev/null
-    </INLINE>
-  </FILE>
-
+  <!-- 启动 array monitor 守护脚本 -->
   <FILE Run="/bin/bash">
-    <INLINE>
+<INLINE>
+<![CDATA[
 #!/bin/bash
-at -M -f /tmp/start_fanctrlplus now 2>/dev/null
-rm -f /tmp/start_fanctrlplus
+# 启动 fanctrlplus 守护脚本
+script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
+if [ -x "$script" ]; then
+  nohup "$script" >/dev/null 2>&1 &
+fi
+]]>
 
 echo ""
-echo "-----------------------------------------------------------"
-echo " Plugin fanctrlplus is installed."
-echo " This plugin requires Dynamix webGui to operate"
-echo " Author: ck9393"
-echo " Version: 1.2.0"
-echo "-----------------------------------------------------------"
+echo "------------------------------------------------"
+echo " Plugin &name; is installed."
+echo " Array monitor is running."
+echo " Author: &author;"
+echo " Version: &version;"
+echo "------------------------------------------------"
 echo ""
 exit 0
-    </INLINE>
+</INLINE>
   </FILE>
 
-  <!-- 卸载逻辑 -->
+  <!-- 卸载时清理后台和文件 -->
   <FILE Run="/bin/bash" Method="remove">
     <INLINE>
 #!/bin/bash
-/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan stop 2>/dev/null
-removepkg fanctrlplus
+/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
+pkill -f array_monitor.sh
+
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
-echo "[fanctrlplus] Plugin removed."
+
+# 清除 go 中旧自启行
+sed -i '\|rc.fanctrlplus start|d' /boot/config/go
+sed -i '\|array_monitor.sh|d' /boot/config/go
+
+echo "[fanctrlplus] Plugin fully removed."
 exit 0
     </INLINE>
   </FILE>
 
   <CHANGES>
-Release Notes – v1.2.0
+Release Notes – ###&version;
 
-1. Improved disk selection UI
-	•	The Include Disks dropdown now shows full device labels:
-	•	Array devices (Parity, Disk 1~N)
-	•	NVMe and SATA drives in each pool
-	•	Devices are grouped by Array and individual Pools
-	•	Labels follow Unraid’s Main tab format (e.g. “Disk 3 - ST4000VN008”)
+- Fixed: "Pause 30s" button UI now properly counts down and resets after resuming fan.
+- Improved: Parity and Parity 2 are now correctly ordered in the disk dropdown (Parity → Parity 2 → Disk X).
 
-2. Dynamic disk list rendering
-	•	All disk options are rendered using JavaScript for better performance
-	•	Hover tooltips show full device paths and IDs
-	•	Unraid flash drive is excluded from selection
-	•	Uses /dev/disk/by-id to ensure stable device mapping
-
-3. Other changes
-	•	Faster page loading and smoother UI interactions
-	•	Updated plugin structure and cleaner installation method
-
-⸻
-
-This release focuses on better clarity and flexibility for fan-to-disk control.
   </CHANGES>
-
 </PLUGIN>

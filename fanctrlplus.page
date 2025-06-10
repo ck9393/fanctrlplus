@@ -35,7 +35,7 @@ $width = 300;
 ?>
 
 <p style="margin: 4px 0 12px 12px; font-size:13px; font-weight:normal;">
-  <span style="font-weight:bold;">Fan Control:</span>
+  <span style="font-weight:normal;">Fan Control:</span>
   <span id="status-value" style="color:green;">Active</span>
 </p>
 
@@ -115,20 +115,35 @@ $(function() {
       btn.prop('disabled', false);
     });
   };
-
+  
   window.pauseFan = function(pwm, btn) {
-    $(btn).prop('disabled', true).text("Pausing...");
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
-      let seconds = 30;
-      let interval = setInterval(function() {
-        if (seconds <= 0) {
-          clearInterval(interval);
-          $(btn).text("Pause 30s").prop('disabled', false);
-        } else {
-          $(btn).text("Paused (" + seconds + "s)");
-          seconds--;
-        }
-      }, 1000);
+    if (!pwm || !btn) return;
+  
+    const $btn = $(btn);
+    $btn.prop('disabled', true).text("Pausing...");
+  
+    $.ajax({
+      url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
+      method: 'GET',
+      data: {op: 'pause', pwm: pwm},
+      timeout: 1000,
+      success: function(data) {
+        console.log("✅ Pause response:", data);
+        let seconds = 30;
+        const interval = setInterval(() => {
+          if (seconds <= 0) {
+            clearInterval(interval);
+            $btn.text("Pause 30s").prop('disabled', false);
+          } else {
+            $btn.text(`Paused (${seconds}s)`);
+            seconds--;
+          }
+        }, 1000);
+      },
+      error: function(xhr, status, err) {
+        console.error("❌ Pause failed:", status, err);
+        $btn.text("Pause 30s").prop('disabled', false);
+      }
     });
   };
 
