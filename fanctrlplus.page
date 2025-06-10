@@ -35,7 +35,7 @@ $width = 300;
 ?>
 
 <p style="margin: 4px 0 12px 12px; font-size:13px; font-weight:normal;">
-  <span style="font-weight:bold;">Fan Control:</span>
+  <span style="font-weight:normal;">Fan Control:</span>
   <span id="status-value" style="color:green;">Active</span>
 </p>
 
