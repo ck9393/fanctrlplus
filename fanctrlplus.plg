@@ -38,7 +38,7 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
     <INLINE>
 #!/bin/bash
 go_file="/boot/config/go"
-startup_line="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start &amp;
+startup_line="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start &amp;"
 
 # 如果 go 文件中不存在这一行，就添加
 grep -qF "$startup_line" "$go_file" || echo "$startup_line" >> "$go_file"
