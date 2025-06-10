@@ -35,7 +35,8 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
 
   <!-- 启动 array monitor 守护脚本 -->
   <FILE Run="/bin/bash">
-    <INLINE>
+<INLINE>
+<![CDATA[
 #!/bin/bash
 # 启动 fanctrlplus 守护脚本
 script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
@@ -44,15 +45,15 @@ if [ -x "$script" ]; then
 fi
 
 echo ""
-echo "-----------------------------------------------------------"
+echo "------------------------------------------------"
 echo " Plugin &name; is installed."
 echo " Array monitor is running."
 echo " Author: &author;"
 echo " Version: &version;"
-echo "-----------------------------------------------------------"
 echo ""
 exit 0
-    </INLINE>
+]]>
+</INLINE>
   </FILE>
 
   <!-- 卸载时清理后台和文件 -->
