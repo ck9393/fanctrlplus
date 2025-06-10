@@ -9,6 +9,8 @@
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.9.0">
+  <CATEGORY>System</CATEGORY>
+  <PLUGINURL>https://github.com/ck9393/fanctrlplus</PLUGINURL>
 
   <DESCRIPTION>
 FanCtrl Plus: Automatically control fan speed based on HDD, NVMe, and unassigned device temperatures.
