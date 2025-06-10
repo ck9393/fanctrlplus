@@ -48,8 +48,9 @@ echo ""
 echo "------------------------------------------------"
 echo " Plugin &name; is installed."
 echo " Array monitor is running."
-echo " Author: &author;"
-echo " Version: &version;"
+echo " Author: ck9393"
+echo " Version: 1.2.0;"
+echo "------------------------------------------------"
 echo ""
 exit 0
 ]]>
