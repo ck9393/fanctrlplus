@@ -98,16 +98,22 @@ function list_valid_disks_by_id() {
   // Array 内部排序（Parity → Parity 2 → Disk X）
   if (isset($groups['Array'])) {
     usort($groups['Array'], function($a, $b) {
-      $order = function($label) {
-        if (str_starts_with($label, 'Parity 2')) return -2;
-        if (str_starts_with($label, 'Parity'))   return -1;
-        if (preg_match('/Disk (\d+)/', $label, $m)) return intval($m[1]);
-        return 999;
-      };
-      return $order($a['label']) <=> $order($b['label']);
+      $la = $a['label'];
+      $lb = $b['label'];
+  
+      // ✅ 优先 Parity → Parity 2 → Disk X
+      if (str_starts_with($la, 'Parity') && !str_starts_with($lb, 'Parity')) return -1;
+      if (!str_starts_with($la, 'Parity') && str_starts_with($lb, 'Parity')) return 1;
+      if ($la === 'Parity') return -1;
+      if ($lb === 'Parity') return 1;
+  
+      // 排序 Disk N
+      preg_match('/Disk (\d+)/', $la, $ma);
+      preg_match('/Disk (\d+)/', $lb, $mb);
+      return ($ma[1] ?? 99) <=> ($mb[1] ?? 99);
     });
   }
-
+  
   // 其他组按 label 排序
   foreach ($groups as $group => &$entries) {
     if ($group !== 'Array') {
