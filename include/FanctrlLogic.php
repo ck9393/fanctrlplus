@@ -97,27 +97,26 @@ switch ($op) {
       exec("$autofan start >/dev/null");
     }
     exit;
-
   case 'pause':
     $pwm = $_GET['pwm'] ?? '';
     if (is_file($pwm)) {
       $original_pwm  = trim(@file_get_contents($pwm));
       $pwm_enable    = $pwm . "_enable";
       $original_mode = is_file($pwm_enable) ? trim(@file_get_contents($pwm_enable)) : '2';
-
+  
       @file_put_contents($pwm_enable, "1");
       @file_put_contents($pwm, "0");
-
+  
       $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
       exec("nohup bash -c \"$restore_cmd\" >/dev/null 2>&1 &");
-
-      echo "Fan paused for 30 seconds";
+  
+      json_response(['status' => 'ok', 'message' => 'Fan paused for 30 seconds']);
     } else {
-      echo "Invalid PWM path";
+      json_response(['status' => 'error', 'message' => 'Invalid PWM path']);
     }
-    exit;
-
+    break;
+  
   case 'newtemp':
     $index = $_REQUEST['index'] ?? 0;
     $cfg_dir = "/boot/config/plugins/$plugin";
