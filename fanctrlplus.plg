@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
   <!ENTITY name "fanctrlplus">
-  <!ENTITY version "1.2.0">
+  <!ENTITY version "1.2.1">
   <!ENTITY author "ck9393">
   <!ENTITY launch "Settings/fanctrlplus">
   <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
@@ -79,6 +79,8 @@ exit 0
   <CHANGES>
 Release Notes – ###&version;
 
+- Fixed: "Pause 30s" button UI now properly counts down and resets after resuming fan.
+- Improved: Parity and Parity 2 are now correctly ordered in the disk dropdown (Parity → Parity 2 → Disk X).
 
   </CHANGES>
 </PLUGIN>
