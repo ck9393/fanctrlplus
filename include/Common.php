@@ -99,11 +99,10 @@ function list_valid_disks_by_id() {
   if (isset($groups['Array'])) {
     usort($groups['Array'], function($a, $b) {
       $order = function($label) {
-        if (str_starts_with($label, 'Parity')) {
-          return $label === 'Parity' ? 0 : 1; // Parity → 0, Parity 2 → 1
-        }
+        if (str_starts_with($label, 'Parity 2')) return 1;
+        if (str_starts_with($label, 'Parity'))   return 0;
         if (preg_match('/Disk (\d+)/', $label, $m)) {
-          return 2 + intval($m[1]); // Disk 1 → 3, Disk 2 → 4, ...
+          return 2 + intval($m[1]);
         }
         return 999;
       };
