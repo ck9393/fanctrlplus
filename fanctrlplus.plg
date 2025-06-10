@@ -33,24 +33,20 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
     <URL>&url;</URL>
   </FILE>
 
-  <!-- 延迟启动 fanctrlplus 脚本，避免卡 WebUI -->
-  <FILE Name="/tmp/start_fanctrlplus" Mode="0770">
-    <INLINE>
-#!/bin/bash
-/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start 2>/dev/null
-    </INLINE>
-  </FILE>
-
+  <!-- 开机自启：写入 /boot/config/go -->
   <FILE Run="/bin/bash">
     <INLINE>
 #!/bin/bash
-at -M -f /tmp/start_fanctrlplus now 2>/dev/null
-rm -f /tmp/start_fanctrlplus
+go_file="/boot/config/go"
+startup_line="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.autofan start &"
+
+# 如果 go 文件中不存在这一行，就添加
+grep -qF "$startup_line" "$go_file" || echo "$startup_line" >> "$go_file"
 
 echo ""
 echo "-----------------------------------------------------------"
 echo " Plugin fanctrlplus is installed."
-echo " This plugin requires Dynamix webGui to operate"
+echo " Auto-start entry added to /boot/config/go"
 echo " Author: ck9393"
 echo " Version: 1.2.0"
 echo "-----------------------------------------------------------"
@@ -67,7 +63,11 @@ exit 0
 removepkg fanctrlplus
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
-echo "[fanctrlplus] Plugin removed."
+
+# 清除 go 文件中的自启动行
+sed -i '\|fanctrlplus/scripts/rc.autofan start|d' /boot/config/go
+
+echo "[fanctrlplus] Plugin removed and go entry cleaned."
 exit 0
     </INLINE>
   </FILE>
@@ -88,9 +88,9 @@ Release Notes – v1.2.0
 	•	Unraid flash drive is excluded from selection
 	•	Uses /dev/disk/by-id to ensure stable device mapping
 
-3. Other changes
-	•	Faster page loading and smoother UI interactions
-	•	Updated plugin structure and cleaner installation method
+3. Auto-start improvement
+	•	Plugin now auto-starts on boot via /boot/config/go entry
+	•	No longer uses temporary at-based delayed startup
 
 ⸻
 
