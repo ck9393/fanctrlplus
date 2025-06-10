@@ -115,21 +115,31 @@ $(function() {
       btn.prop('disabled', false);
     });
   };
-
+  
   window.pauseFan = function(pwm, btn) {
-    $(btn).prop('disabled', true).text("Pausing...");
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm}, function() {
-      let seconds = 30;
-      let interval = setInterval(function() {
-        if (seconds <= 0) {
-          clearInterval(interval);
-          $(btn).text("Pause 30s").prop('disabled', false);
-        } else {
-          $(btn).text("Paused (" + seconds + "s)");
-          seconds--;
-        }
-      }, 1000);
-    });
+    if (!pwm || !btn) return;
+    
+    const $btn = $(btn);
+    $btn.prop('disabled', true).text("Pausing...");
+  
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm})
+      .done(function(data) {
+        console.log("✅ Pause triggered for", pwm, data);
+        let seconds = 30;
+        const interval = setInterval(() => {
+          if (seconds <= 0) {
+            clearInterval(interval);
+            $btn.text("Pause 30s").prop('disabled', false);
+          } else {
+            $btn.text(`Paused (${seconds}s)`);
+            seconds--;
+          }
+        }, 1000);
+      })
+      .fail(function(xhr, status, err) {
+        console.error("❌ Pause failed", status, err);
+        $btn.text("Pause 30s").prop('disabled', false);
+      });
   };
 
   window.removeFan = function(btn) {
