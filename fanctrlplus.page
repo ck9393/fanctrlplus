@@ -118,13 +118,17 @@ $(function() {
   
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
-    
+  
     const $btn = $(btn);
     $btn.prop('disabled', true).text("Pausing...");
   
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'pause', pwm:pwm})
-      .done(function(data) {
-        console.log("✅ Pause triggered for", pwm, data);
+    $.ajax({
+      url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
+      method: 'GET',
+      data: {op: 'pause', pwm: pwm},
+      timeout: 1000,
+      success: function(data) {
+        console.log("✅ Pause response:", data);
         let seconds = 30;
         const interval = setInterval(() => {
           if (seconds <= 0) {
@@ -135,11 +139,12 @@ $(function() {
             seconds--;
           }
         }, 1000);
-      })
-      .fail(function(xhr, status, err) {
-        console.error("❌ Pause failed", status, err);
+      },
+      error: function(xhr, status, err) {
+        console.error("❌ Pause failed:", status, err);
         $btn.text("Pause 30s").prop('disabled', false);
-      });
+      }
+    });
   };
 
   window.removeFan = function(btn) {
