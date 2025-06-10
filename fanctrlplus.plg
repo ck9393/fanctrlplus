@@ -63,7 +63,6 @@ exit 0
 /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
 pkill -f array_monitor.sh
 
-removepkg fanctrlplus
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
 
