@@ -17,7 +17,7 @@ get_state() {
 }
 
 is_fanctrl_running() {
-  pgrep -f rc.fanctrlplus | grep -vq $$  # 排除自己
+  pgrep -f fanctrlplus_loop.sh | grep -vq $$  # 只要有任意 fanctrlplus_loop.sh 正在跑就认为在运行
 }
 
 while true; do
@@ -26,9 +26,13 @@ while true; do
 
   if [[ "$state" == "yes" ]]; then
     if [[ "$prev_state" != "yes" ]]; then
-      echo "[fanctrlplus] Array just started, triggering fanctrlplus at $(date)" >> "$LOG"
-      /etc/rc.d/rc.fanctrlplus start
-    elif ! is_fanctrl_running; then
+      if [ ! -f /var/run/fanctrlplus.user_stopped ]; then
+        echo "[fanctrlplus] Array just started, triggering fanctrlplus at $(date)" >> "$LOG"
+        /etc/rc.d/rc.fanctrlplus start
+      else
+        echo "[fanctrlplus] Array started, but user stop flag exists → not starting" >> "$LOG"
+      fi
+    elif ! is_fanctrl_running && [ ! -f /var/run/fanctrlplus.user_stopped ]; then
       echo "[fanctrlplus] Array already running, fanctrlplus not active → starting at $(date)" >> "$LOG"
       /etc/rc.d/rc.fanctrlplus start
     fi
