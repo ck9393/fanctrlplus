@@ -7,8 +7,12 @@ prev_state="unknown"
 echo "[fanctrlplus] Monitor started at $(date)" >> "$LOG"
 
 get_state() {
-  if [[ -f /var/local/emhttp/var.ini ]]; then
-    grep -Po '^arrayStarted="\K[^"]+' /var/local/emhttp/var.ini 2>/dev/null
+  if /usr/local/sbin/mdcmd status 2>/dev/null | grep -q "mdState=STARTED"; then
+    echo "yes"
+  elif mount | grep -q "/mnt/disk"; then
+    echo "yes"
+  else
+    echo "no"
   fi
 }
 
