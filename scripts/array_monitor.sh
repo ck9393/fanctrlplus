@@ -4,8 +4,12 @@ LOG="/var/log/fanctrlplus_array_watch.log"
 CHECK_INTERVAL=5
 prev_state="unknown"
 
+echo "[fanctrlplus] Monitor started at $(date)" >> "$LOG"
+
 get_state() {
-  grep -Po '^arrayStarted="\K[^"]+' /var/local/emhttp/var.ini 2>/dev/null
+  if [[ -f /var/local/emhttp/var.ini ]]; then
+    grep -Po '^arrayStarted="\K[^"]+' /var/local/emhttp/var.ini 2>/dev/null
+  fi
 }
 
 is_fanctrl_running() {
@@ -14,14 +18,15 @@ is_fanctrl_running() {
 
 while true; do
   state=$(get_state)
+  echo "[fanctrlplus] Current state: $state | Previous state: $prev_state" >> "$LOG"
 
   if [[ "$state" == "yes" ]]; then
     if [[ "$prev_state" != "yes" ]]; then
-      echo "[fanctrlplus] Array started at $(date)" >> "$LOG"
-      /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus start
+      echo "[fanctrlplus] Array just started, triggering fanctrlplus at $(date)" >> "$LOG"
+      /etc/rc.d/rc.fanctrlplus start
     elif ! is_fanctrl_running; then
-      echo "[fanctrlplus] Array already running but fanctrl not active, starting at $(date)" >> "$LOG"
-      /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus start
+      echo "[fanctrlplus] Array already running, fanctrlplus not active → starting at $(date)" >> "$LOG"
+      /etc/rc.d/rc.fanctrlplus start
     fi
   fi
 
