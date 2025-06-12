@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg height="800px" width="800px" version="1.1" id="fanctrlplus_dynamic_icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" xml:space="preserve">
 
-  <style>
-    .rotating {
-      transform-origin: 256px 256px;
-      animation: spin 2s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+<style id="rotor-style">
+  .rotating {
+    transform-origin: 256px 256px;
+    animation: none;
+  }
+  @keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
 
   <defs>
     <linearGradient id="flameGradient" x1="0%" y1="0%" x2="100%" y2="100%">
