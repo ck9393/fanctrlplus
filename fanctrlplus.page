@@ -80,13 +80,6 @@ function updateFanControlStatus(isRunning) {
   }
 }
 
-  if (fanObject.contentDocument) {
-    updateRotor();
-  } else {
-    fanObject.addEventListener('load', updateRotor, { once: true });
-  }
-}
-
   // 如果 SVG 还没加载，等它 load 完后才切换 class
   if (fanObject.contentDocument) {
     updateRotor();
