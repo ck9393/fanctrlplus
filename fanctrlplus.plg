@@ -22,15 +22,15 @@ FanCtrl Plus: Automatically control fan speed based on disk temperature. This ve
 
 <!-- 清理旧 txz -->
 <FILE Run="/bin/bash">
-  <INLINE>
+<INLINE>
 #!/bin/bash
 rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
-  </INLINE>
+</INLINE>
 </FILE>
 
 <!-- 下载并安装新的 .txz -->
 <FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
-  <URL>&pluginURL;</URL>
+<URL>&pluginURL;</URL>
 </FILE>
 
 <!-- 启动 array monitor 守护脚本 -->
