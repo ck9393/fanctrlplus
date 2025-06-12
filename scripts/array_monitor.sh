@@ -1,19 +1,33 @@
 #!/bin/bash
 
-# FanCtrlPlus Array Monitor
+plugin="fanctrlplus"
 LOG="/var/log/fanctrlplus_array_watch.log"
 CHECK_INTERVAL=5
-prev_state="unknown"
+rc_script="/etc/rc.d/rc.${plugin}"
+pidfile="/var/run/fanctrlplus.user_stopped"
+
+echo "[fanctrlplus] Array monitor started at $(date)" >> "$LOG"
+
+check_array_started() {
+  output=$(/usr/local/sbin/mdcmd status 2>/dev/null)
+  echo "$output" >> "$LOG"
+
+  if [[ "$output" == *"mdState=STARTED"* ]]; then
+    return 0
+  fi
+  return 1
+}
+
+is_fanctrl_running() {
+  pgrep -f fanctrlplus_loop.sh | grep -vq $$  # 当前脚本除外
+}
 
 while true; do
-  # 读取 array 启动状态
-  state=$(grep -Po '^arrayStarted="\K[^"]+' /var/local/emhttp/var.ini 2>/dev/null)
-
-  if [[ "$state" == "yes" && "$prev_state" != "yes" ]]; then
-    echo "[fanctrlplus] Detected array started at $(date)" >> "$LOG"
-    /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus start
+  if check_array_started; then
+    if ! is_fanctrl_running && [ ! -f "$pidfile" ]; then
+      echo "[fanctrlplus] Array started + not running + not stopped → launching" >> "$LOG"
+      "$rc_script" start
+    fi
   fi
-
-  prev_state="$state"
-  sleep $CHECK_INTERVAL
+  sleep "$CHECK_INTERVAL"
 done

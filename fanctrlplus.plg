@@ -1,39 +1,39 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
-  <!ENTITY name "fanctrlplus">
-  <!ENTITY version "1.2.1">
-  <!ENTITY author "ck9393">
-  <!ENTITY launch "Settings/fanctrlplus">
-  <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
-  <!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus/releases/download/v&version;/fanctrlplus-&version;.txz">
+<!ENTITY name "fanctrlplus">
+<!ENTITY version "1.2.1">
+<!ENTITY author "ck9393">
+<!ENTITY launch "Settings/fanctrlplus">
+<!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
+<!ENTITY pluginURL "https://github.com/ck9393/fanctrlplus/releases/download/v&version;/fanctrlplus-&version;.txz">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0">
-  <CATEGORY>System</CATEGORY>
-  <PLUGINURL>https://github.com/ck9393/fanctrlplus</PLUGINURL>
+<CATEGORY>System</CATEGORY>
+<PLUGINURL>https://github.com/ck9393/fanctrlplus</PLUGINURL>
 
-  <DESCRIPTION>
+<DESCRIPTION>
 FanCtrl Plus: Automatically control fan speed based on disk temperature. This version includes full auto-start support for all array scenarios.
-  </DESCRIPTION>
+</DESCRIPTION>
 
-  <ICON>
+<ICON>
 /usr/local/emhttp/plugins/fanctrlplus/images/fanctrlplus.png
-  </ICON>
+</ICON>
 
-  <!-- 清理旧 txz -->
-  <FILE Run="/bin/bash">
-    <INLINE>
+<!-- 清理旧 txz -->
+<FILE Run="/bin/bash">
+  <INLINE>
 #!/bin/bash
 rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
-    </INLINE>
-  </FILE>
+  </INLINE>
+</FILE>
 
-  <!-- 下载并安装新的 .txz -->
-  <FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
-    <URL>&pluginURL;</URL>
-  </FILE>
+<!-- 下载并安装新的 .txz -->
+<FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
+  <URL>&pluginURL;</URL>
+</FILE>
 
-  <!-- 启动 array monitor 守护脚本 -->
+<!-- 启动 array monitor 守护脚本 -->
 <FILE Run="/bin/bash">
 <INLINE>
 <![CDATA[
@@ -43,13 +43,16 @@ rm -f /boot/config/plugins/fanctrlplus/fanctrlplus-*.txz
 src="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus"
 dst="/etc/rc.d/rc.fanctrlplus"
 if [ -f "$src" ]; then
-  ln -sf "$src" "$dst"
+ln -sf "$src" "$dst"
 fi
+
+# 若之前启动过，先杀掉
+pkill -f "/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
 
 # 启动 array monitor 守护脚本
 script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
 if [ -x "$script" ]; then
-  nohup "$script" >/dev/null 2>&1 &
+nohup "$script" >/dev/null 2>&1 &
 fi
 ]]>
 
@@ -65,9 +68,9 @@ exit 0
 </INLINE>
 </FILE>
 
-  <!-- 卸载时清理后台和文件 -->
-  <FILE Run="/bin/bash" Method="remove">
-    <INLINE>
+<!-- 卸载时清理后台和文件 -->
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
 #!/bin/bash
 /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
 pkill -f array_monitor.sh
@@ -81,14 +84,14 @@ sed -i '\|array_monitor.sh|d' /boot/config/go
 
 echo "[fanctrlplus] Plugin fully removed."
 exit 0
-    </INLINE>
-  </FILE>
+</INLINE>
+</FILE>
 
-  <CHANGES>
+<CHANGES>
 Release Notes – ###&version;
 
 - Fixed: "Pause 30s" button UI now properly counts down and resets after resuming fan.
 - Improved: Parity and Parity 2 are now correctly ordered in the disk dropdown (Parity → Parity 2 → Disk X).
 
-  </CHANGES>
+</CHANGES>
 </PLUGIN>

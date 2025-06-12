@@ -6,6 +6,9 @@ loop_script="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_loop.sh"
 pid_dir="/var/run"
 
 fanctrlplus.start() {
+  # 清除用户手动 stop 标记
+  rm -f /var/run/fanctrlplus.user_stopped
+
   pkill -f "$loop_script" 2>/dev/null
 
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
@@ -28,6 +31,9 @@ fanctrlplus.start() {
 }
 
 fanctrlplus.stop() {
+  # 设置用户手动停止标记
+  touch /var/run/fanctrlplus.user_stopped
+
   pkill -f "$loop_script"
   rm -f "$pid_dir"/${plugin}_*.pid
   logger -t "$plugin" "All fanctrlplus stopped"
