@@ -46,6 +46,9 @@ if [ -f "$src" ]; then
   ln -sf "$src" "$dst"
 fi
 
+# 若之前启动过，先杀掉
+pkill -f array_monitor.sh
+
 # 启动 array monitor 守护脚本
 script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
 if [ -x "$script" ]; then
