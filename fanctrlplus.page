@@ -56,9 +56,9 @@ $(function() {
   function updateFanControlStatus(isRunning) {
     const statusElem = document.getElementById('status-value');
     if (!statusElem) return;
-      statusElem.textContent = isRunning ? 'Active' : 'Inactive';
-      statusElem.style.color = isRunning ? 'green' : 'red';
-    }
+    statusElem.textContent = isRunning ? 'Active' : 'Inactive';
+    statusElem.style.color = isRunning ? 'green' : 'red';
+    
     const fanIcon = document.getElementById('fan-icon');
     if (fanIcon) {
       fanIcon.classList.toggle('rotating', isRunning);
