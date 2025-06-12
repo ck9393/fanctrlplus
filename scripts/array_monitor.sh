@@ -14,9 +14,6 @@ check_array_started() {
 
   if [[ "$output" == *"mdState=STARTED"* ]]; then
     return 0
-  elif mount | grep -q "/mnt/disk"; then
-    echo "[fanctrlplus] fallback: /mnt/disk mount found" >> "$LOG"
-    return 0
   fi
   return 1
 }
