@@ -34,11 +34,13 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
+<img id="fan-status-icon" src="/plugins/fanctrlplus/images/fanctrlplus-static.svg" width="32" height="32" style="vertical-align: middle; margin-right: 10px;">
+
 <p style="margin: 4px 0 12px 12px; font-size:13px; font-weight:normal;">
   <span style="font-weight:normal;">Fan Control:</span>
   <span id="status-value" style="color:green;">Active</span>
-  <object id="fan-icon" type="image/svg+xml" data="/plugins/fanctrlplus/images/fanctrlplus.svg"
-          style="width:20px;height:20px;vertical-align:middle;margin-left:10px;"></object>
+  <img id="fan-status-icon" src="/plugins/fanctrlplus/images/fanctrlplus-static.svg"
+       width="32" height="32" style="vertical-align: middle; margin-left: 10px;">
 </p>
 
 <style>
@@ -53,17 +55,20 @@ $width = 300;
 
 <script>
 $(function() {
-  function updateFanControlStatus(isRunning) {
-    const statusElem = document.getElementById('status-value');
-    if (!statusElem) return;
-    statusElem.textContent = isRunning ? 'Active' : 'Inactive';
-    statusElem.style.color = isRunning ? 'green' : 'red';
-    
-    const fanIcon = document.getElementById('fan-icon');
-    if (fanIcon) {
-      fanIcon.classList.toggle('rotating', isRunning);
-    }
-  }
+function updateFanControlStatus(isRunning) {
+  const statusElem = document.getElementById('status-value');
+  const iconElem = document.getElementById('fan-status-icon');  // 注意 ID 是 fan-status-icon
+
+  if (!statusElem || !iconElem) return;
+
+  statusElem.textContent = isRunning ? 'Active' : 'Inactive';
+  statusElem.style.color = isRunning ? 'green' : 'red';
+
+  // 切换风扇图标：animated / static
+  iconElem.src = isRunning
+    ? "/plugins/fanctrlplus/images/fanctrlplus-animated.svg"
+    : "/plugins/fanctrlplus/images/fanctrlplus-static.svg";
+}
 
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
