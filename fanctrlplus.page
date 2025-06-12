@@ -34,11 +34,11 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<div id="top-fan-status" style="position: absolute; top: 12px; right: 24px; text-align: center;">
+<div id="top-fan-status" style="position: absolute; top: 12px; right: 24px; text-align: center; z-index: 10;">
   <object id="fan-icon" type="image/svg+xml"
           data="/plugins/fanctrlplus/images/fanctrlplus.svg"
-          style="width:48px; height:48px;"></object>
-  <div id="status-value" style="font-size:13px; color:green; margin-top:4px;">Active</div>
+          style="width:48px; height:48px; display:block; margin:auto;"></object>
+  <div id="status-value" style="font-size:13px; margin-top:4px; color: green;">Active</div>
 </div>
 
 <style>
@@ -53,6 +53,7 @@ $width = 300;
 
 <script>
 $(function() {
+// ✅ 正确封装的版本（已存在于 updateFanControlStatus 内）
 function updateFanControlStatus(isRunning) {
   const statusElem = document.getElementById('status-value');
   if (statusElem) {
@@ -71,6 +72,13 @@ function updateFanControlStatus(isRunning) {
       rotor.classList.toggle('rotating', isRunning);
     }
   };
+
+  if (fanObject.contentDocument) {
+    updateRotor();
+  } else {
+    fanObject.addEventListener('load', updateRotor, { once: true });
+  }
+}
 
   if (fanObject.contentDocument) {
     updateRotor();
