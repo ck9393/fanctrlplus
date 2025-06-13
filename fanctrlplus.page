@@ -86,7 +86,7 @@ $width = 300;
 
 .rotating {
   animation-name: spin;
-  animation-duration: 3s;
+  animation-duration: 0.8s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   transform-origin: 50% 50%;
