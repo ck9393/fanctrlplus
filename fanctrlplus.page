@@ -79,8 +79,8 @@ function updateRotor(isRunning = true) {
     const frameColor = getComputedStyle(document.documentElement).getPropertyValue('--frame-color').trim();
     const hubColor = getComputedStyle(document.documentElement).getPropertyValue('--hub-color').trim();
 
-    const frame = svgDoc.querySelector('path[d*="463.017,0H49.001"]'); // 外框
-    const hub = svgDoc.querySelector('path[d*="255.991,195.503"]');    // 中心圆
+    const frame = svgDoc.querySelector('.frame');
+    const hub = svgDoc.querySelector('.hub');
 
     if (frame) frame.setAttribute('fill', frameColor);
     if (hub)   hub.setAttribute('fill', hubColor);
