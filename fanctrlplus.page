@@ -83,10 +83,15 @@ $width = 300;
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
 .rotating {
-  animation: spin 3.0s linear infinite;
+  animation-name: spin;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
   transform-origin: 50% 50%;
 }
+
 </style>
 
 <script>
