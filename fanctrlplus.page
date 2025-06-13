@@ -98,14 +98,6 @@ $width = 300;
   to   { transform: rotate(360deg); }
 }
 
-.rotating-slow {
-  animation-name: spin;
-  animation-duration: 1.5s;
-  animation-timing-function: linear;
-  animation-iteration-count: 1;
-  transform-origin: 50% 50%;
-}
-
 .rotating {
   animation-name: spin;
   animation-duration: 1.2s;
@@ -125,35 +117,22 @@ $(function() {
   function updateRotor(isRunning = true) {
     const fanIcon = document.getElementById('fan-icon');
     if (!fanIcon) return;
-  
+
     const rotor = fanIcon.querySelector('.rotor');
-    if (!rotor) return;
-  
-    // ✅ 替代 toggle，用明确方式控制旋转
-    rotor.classList.remove('rotating', 'rotating-slow');
-  
-    if (isRunning) {
-      rotor.classList.add('rotating');
-    } else {
-      rotor.classList.add('rotating-slow');
-      // 🕒 动画播放完再清除 slow class，避免残留
-      setTimeout(() => {
-        rotor.classList.remove('rotating-slow');
-      }, 1600); // 与 CSS 动画时长一致
-    }
-  
-    // ✅ 明暗模式判断（保留）
+    if (rotor) rotor.classList.toggle('rotating', isRunning);
+
+    // 🔍 背景颜色检测 + 明暗判断（不依赖 prefers-color-scheme）
     const bg = getComputedStyle(document.body).backgroundColor;
     const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
     const isDark = brightness < 128;
-  
+
     const frameColor = isDark ? '#ffffff' : '#000000';
     const hubColor   = isDark ? '#cccccc' : '#666666';
-  
+
     const frame = fanIcon.querySelector('.frame');
     const hub   = fanIcon.querySelector('.hub');
-  
+
     if (DEBUG) {
       console.log("🌀 FanCtrlPlus:", {
         isRunning, bgColor: bg, brightness, isDark,
@@ -161,13 +140,13 @@ $(function() {
         frameExists: !!frame, hubExists: !!hub
       });
     }
-  
+
     if (!frame || !hub) {
       console.warn("🕒 frame or hub not ready, retrying...");
       setTimeout(() => updateRotor(isRunning), 100);
       return;
     }
-  
+
     frame.setAttribute('fill', frameColor);
     hub.setAttribute('fill', hubColor);
   }
