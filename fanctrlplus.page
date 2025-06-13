@@ -42,9 +42,9 @@ $width = 300;
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, var(--dot-color1), var(--dot-color2));
+    background: #00b300
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-    transition: all 0.6s ease;
+    transition: background-color 0.4s ease;
     transform: translateY(1px);
     z-index: 999;
   ">
@@ -85,8 +85,6 @@ $width = 300;
 :root {
   --frame-color: #000000;
   --hub-color: #666666;
-  --dot-color1: #33ff77;
-  --dot-color2: #00aa22;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -153,9 +151,8 @@ $(function() {
     hub.setAttribute('fill', hubColor);
   }
 
-function updateFanControlStatus(isRunning = null) {
+window.updateFanControlStatus = function(isRunning = null) {
   if (isRunning === null) {
-    // 若未传入，则自行请求
     fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
       .then(res => res.text())
       .then(status => updateFanControlStatus(status.trim() === "running"));
@@ -164,18 +161,12 @@ function updateFanControlStatus(isRunning = null) {
 
   const dot = document.getElementById("fanctrl-status-indicator");
   if (dot) {
-    if (isRunning) {
-      dot.style.setProperty('--dot-color1', '#33ff77');
-      dot.style.setProperty('--dot-color2', '#00aa22');
-    } else {
-      dot.style.setProperty('--dot-color1', '#ff6666');
-      dot.style.setProperty('--dot-color2', '#cc0000');
-    }
+    dot.style.backgroundColor = isRunning ? '#00b300' : '#cc0000';
   }
 
   // ✅ 同步控制风扇是否旋转
   updateRotor(isRunning);
-}
+};
 
 function updateStatusLightAndButton() {
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
