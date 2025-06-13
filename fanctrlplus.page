@@ -38,13 +38,13 @@ $width = 300;
   style="
     position: absolute;
     top: 31px;
-    left: 155px;
+    left: 150px;
     width: 12px;
     height: 12px;
     border-radius: 50%;
     background: #00b300
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.4s ease;
+    transition: background-color 0.3s ease;
     transform: translateY(1px);
     z-index: 999;
   ">
