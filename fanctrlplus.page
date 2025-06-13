@@ -42,9 +42,9 @@ $width = 300;
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #33ff77, #00aa22);
+    background: radial-gradient(circle at 30% 30%, var(--dot-color1), var(--dot-color2));
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s ease;
+    transition: all 0.6s ease;
     transform: translateY(1px);
     z-index: 999;
   ">
@@ -85,6 +85,8 @@ $width = 300;
 :root {
   --frame-color: #000000;
   --hub-color: #666666;
+  --dot-color1: #33ff77;
+  --dot-color2: #00aa22;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -162,15 +164,14 @@ function updateFanControlStatus(isRunning = null) {
 
   const dot = document.getElementById("fanctrl-status-indicator");
   if (dot) {
-    dot.style.background = isRunning
-      ? 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)'
-      : 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
+    if (isRunning) {
+      dot.style.setProperty('--dot-color1', '#33ff77');
+      dot.style.setProperty('--dot-color2', '#00aa22');
+    } else {
+      dot.style.setProperty('--dot-color1', '#ff6666');
+      dot.style.setProperty('--dot-color2', '#cc0000');
+    }
   }
-
-  const fanIcon = document.getElementById("fan-icon");
-  const rotor = fanIcon?.querySelector(".rotor");
-  if (rotor) rotor.classList.toggle("rotating", isRunning);
-}
 
 function updateStatusLightAndButton() {
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
