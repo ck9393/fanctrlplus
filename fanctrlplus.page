@@ -120,6 +120,7 @@ $(function() {
         frameColor, hubColor,
         frameExists: !!frame, hubExists: !!hub
       });
+    }
 
     if (!frame || !hub) {
       console.warn("🕒 frame or hub not ready, retrying...");
