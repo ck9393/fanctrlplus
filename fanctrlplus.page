@@ -58,12 +58,18 @@ $width = 300;
   to   { transform: rotate(360deg); }
 }
 .rotating {
-  animation: spin 1.2s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 </style>
 
 <script>
 $(function() {
+  // 插入 <meta name="color-scheme">，确保 prefers-color-scheme 能生效
+  const meta = document.createElement('meta');
+  meta.name = 'color-scheme';
+  meta.content = 'light dark';
+  document.head.appendChild(meta);
+
 // ✅ 正确封装的版本（已存在于 updateFanControlStatus 内）
 function updateFanControlStatus(isRunning) {
   const statusElem = document.getElementById('status-value');
@@ -103,6 +109,12 @@ function updateFanControlStatus(isRunning) {
     fanObject.addEventListener('load', updateRotor, { once: true });
   }
 }
+
+// 监听 prefers-color-scheme 的变化，重新刷新风扇颜色
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  const isRunning = $('#status-value').text().trim() === 'Active';
+  updateFanControlStatus(isRunning);
+});
 
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
