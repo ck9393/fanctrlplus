@@ -64,7 +64,6 @@ $width = 300;
 
 <script>
 $(function() {
-
 function updateRotor(isRunning = true) {
   const fanObject = document.getElementById('fan-icon');
   if (!fanObject) return;
@@ -133,7 +132,7 @@ function updateFanControlStatus(isRunning) {
   };
 
   updateRotor(isRunning);
-
+}
 // 监听 prefers-color-scheme 的变化，重新刷新风扇颜色
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
   const isRunning = $('#status-value').text().trim() === 'Active';
