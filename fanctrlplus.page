@@ -94,8 +94,6 @@ $(function() {
   updateRotor(true);  // 页面加载立即执行一次颜色注入和旋转控制
 
 function updateRotor(isRunning = true) {
-  setTimeout(() => updateRotor(true), 100);  // 💡 延迟执行确保 SVG 加载完成
-  console.log("[FanCtrlPlus] Rotor updated:", isRunning);
   const fanIcon = document.getElementById('fan-icon');
   if (!fanIcon) return;
 
@@ -103,14 +101,15 @@ function updateRotor(isRunning = true) {
   if (rotor) rotor.classList.toggle('rotating', isRunning);
 
   const frameColor = getComputedStyle(document.documentElement).getPropertyValue('--frame-color').trim();
-  const hubColor = getComputedStyle(document.documentElement).getPropertyValue('--hub-color').trim();
+  const hubColor   = getComputedStyle(document.documentElement).getPropertyValue('--hub-color').trim();
 
   const frame = fanIcon.querySelector('.frame');
-  const hub = fanIcon.querySelector('.hub');
-  console.log("🎯 found frame/hub:", { frame, hub });
+  const hub   = fanIcon.querySelector('.hub');
+
+  console.log("🌀 FanCtrlPlus:", { isRunning, frameColor, hubColor, frameExists: !!frame, hubExists: !!hub });
 
   if (!frame || !hub) {
-    console.log("🕒 frame or hub not ready, retrying...");
+    console.warn("🕒 frame or hub not ready, retrying...");
     setTimeout(() => updateRotor(isRunning), 100);
     return;
   }
