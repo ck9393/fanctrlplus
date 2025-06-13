@@ -172,6 +172,7 @@ function updateFanControlStatus(isRunning = null) {
       dot.style.setProperty('--dot-color2', '#cc0000');
     }
   }
+}
 
 function updateStatusLightAndButton() {
   $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
