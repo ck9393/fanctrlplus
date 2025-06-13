@@ -151,39 +151,40 @@ $(function() {
     hub.setAttribute('fill', hubColor);
   }
 
-function updateFanControlStatus() {
-  fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
-    .then(res => res.text())
-    .then(status => {
-      const dot = document.getElementById("fanctrl-status-indicator");
-      if (!dot) return;
-
-      const isRunning = status.trim() === "running";
-      dot.style.background = isRunning
-        ? 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)'
-        : 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
-
-      // 控制旋转（可选）
-      const fanIcon = document.getElementById("fan-icon");
-      const rotor = fanIcon?.querySelector(".rotor");
-      if (rotor) rotor.classList.toggle("rotating", isRunning);
-    });
-}
-
-  function updateStatusLightAndButton() {
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
-      const isRunning = statusObj.status === 'running';
-      updateFanControlStatus();
-
-      const btn = $('#toggle-daemon');
-      btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
-      btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
-      btn.prop('disabled', false);
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Failed to load status:", textStatus, errorThrown);
-    });
+function updateFanControlStatus(isRunning = null) {
+  if (isRunning === null) {
+    // 若未传入，则自行请求
+    fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
+      .then(res => res.text())
+      .then(status => updateFanControlStatus(status.trim() === "running"));
+    return;
   }
 
+  const dot = document.getElementById("fanctrl-status-indicator");
+  if (dot) {
+    dot.style.background = isRunning
+      ? 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)'
+      : 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
+  }
+
+  const fanIcon = document.getElementById("fan-icon");
+  const rotor = fanIcon?.querySelector(".rotor");
+  if (rotor) rotor.classList.toggle("rotating", isRunning);
+}
+
+function updateStatusLightAndButton() {
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
+    const isRunning = statusObj.status === 'running';
+    updateFanControlStatus(isRunning); // ✅ 改为传值，不重复 fetch
+
+    const btn = $('#toggle-daemon');
+    btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
+    btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
+    btn.prop('disabled', false);
+  }).fail(function(jqXHR, textStatus, errorThrown) {
+    console.error("❌ Failed to load status:", textStatus, errorThrown);
+  });
+}
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
       $('.fan-block').each(function() {
