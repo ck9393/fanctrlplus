@@ -37,8 +37,8 @@ $width = 300;
 <div id="fanctrl-status-indicator"
   style="
     position: absolute;
-    top: 12px;
-    left: 190px;
+    top: 8px;
+    left: 160px;
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -151,10 +151,9 @@ $(function() {
   }
 
 function updateFanControlStatus(isRunning) {
-  const statusElem = document.getElementById('status-value');
-  if (statusElem) {
-    statusElem.textContent = '';
-    statusElem.style.backgroundColor = isRunning ? '#00cc44' : '#cc4444';
+  const indicator = document.getElementById('fanctrl-status-indicator');
+  if (indicator) {
+    indicator.style.backgroundColor = isRunning ? '#00cc44' : '#cc4444';
   }
 
   updateRotor(isRunning);
