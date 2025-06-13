@@ -152,20 +152,21 @@ $(function() {
   }
 
 function updateFanControlStatus() {
-  fetch("/plugins/fanctrlplus/FanctrlLogic.php?op=status")
+  fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
     .then(res => res.text())
     .then(status => {
       const dot = document.getElementById("fanctrl-status-indicator");
-      const icon = document.getElementById("fan-status-icon");
-      const label = document.getElementById("fan-status-label");
+      if (!dot) return;
 
-      if (status.trim() === "running") {
-        dot.style.background = 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)';
-        if (icon) icon.classList.add("rotating");
-      } else {
-        dot.style.background = 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
-        if (icon) icon.classList.remove("rotating");
-      }
+      const isRunning = status.trim() === "running";
+      dot.style.background = isRunning
+        ? 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)'
+        : 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
+
+      // 控制旋转（可选）
+      const fanIcon = document.getElementById("fan-icon");
+      const rotor = fanIcon?.querySelector(".rotor");
+      if (rotor) rotor.classList.toggle("rotating", isRunning);
     });
 }
 
