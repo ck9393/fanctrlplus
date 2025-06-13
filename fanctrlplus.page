@@ -92,7 +92,6 @@ $width = 300;
 <script>
 $(function() {
   updateRotor(true);  // 页面加载立即执行一次颜色注入和旋转控制
-
 function updateRotor(isRunning = true) {
   const fanIcon = document.getElementById('fan-icon');
   if (!fanIcon) return;
@@ -100,13 +99,17 @@ function updateRotor(isRunning = true) {
   const rotor = fanIcon.querySelector('.rotor');
   if (rotor) rotor.classList.toggle('rotating', isRunning);
 
-  const frameColor = getComputedStyle(document.documentElement).getPropertyValue('--frame-color').trim();
-  const hubColor   = getComputedStyle(document.documentElement).getPropertyValue('--hub-color').trim();
+  // ✅ 通过背景色判断是否是暗色主题（避免依赖 matchMedia 和 class）
+  const bgColor = getComputedStyle(document.body).backgroundColor;
+  const isDark = !bgColor.includes('255, 255, 255');
+
+  const frameColor = isDark ? '#ffffff' : '#000000';
+  const hubColor   = isDark ? '#cccccc' : '#666666';
 
   const frame = fanIcon.querySelector('.frame');
   const hub   = fanIcon.querySelector('.hub');
 
-  console.log("🌀 FanCtrlPlus:", { isRunning, frameColor, hubColor, frameExists: !!frame, hubExists: !!hub });
+  console.log("🌀 FanCtrlPlus:", { isRunning, bgColor, isDark, frameColor, hubColor, frameExists: !!frame, hubExists: !!hub });
 
   if (!frame || !hub) {
     console.warn("🕒 frame or hub not ready, retrying...");
@@ -127,12 +130,6 @@ function updateFanControlStatus(isRunning) {
 
   updateRotor(isRunning);
 }
-
-// 监听 prefers-color-scheme 的变化，重新刷新风扇颜色
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-  const isRunning = $('#status-value').text().trim() === 'Active';
-  updateFanControlStatus(isRunning);
-});
 
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
