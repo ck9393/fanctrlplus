@@ -78,10 +78,23 @@ function updateFanControlStatus(isRunning) {
   const updateRotor = () => {
     const svgDoc = fanObject.contentDocument;
     if (!svgDoc) return;
+
+    // 设置动画类
     const rotor = svgDoc.querySelector('.rotor');
     if (rotor) {
       rotor.classList.toggle('rotating', isRunning);
     }
+
+    // 读取父页面定义的 CSS 变量
+    const frameColor = getComputedStyle(document.documentElement).getPropertyValue('--frame-color').trim();
+    const hubColor = getComputedStyle(document.documentElement).getPropertyValue('--hub-color').trim();
+
+    // 注入颜色到 SVG path 元素
+    const frame = svgDoc.querySelector('path[d*="463.017,0H49.001"]');  // 外框
+    const hub = svgDoc.querySelector('path[d*="255.991,195.503"]');     // 中心圆
+
+    if (frame) frame.setAttribute('fill', frameColor);
+    if (hub)   hub.setAttribute('fill', hubColor);
   };
 
   if (fanObject.contentDocument) {
