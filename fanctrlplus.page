@@ -173,7 +173,7 @@ function updateFanControlStatus() {
   function updateStatusLightAndButton() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
       const isRunning = statusObj.status === 'running';
-      updateFanControlStatus(isRunning);
+      updateFanControlStatus();
 
       const btn = $('#toggle-daemon');
       btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
