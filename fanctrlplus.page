@@ -99,7 +99,7 @@ $width = 300;
 }
 
 .rotating-slow {
-  animation-name: spin-slow;
+  animation-name: spin;
   animation-duration: 1.5s;
   animation-timing-function: linear;
   animation-iteration-count: 1;
