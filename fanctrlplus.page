@@ -34,7 +34,7 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<div id="top-fan-status" style="position: absolute; top: 12px; right: 24px; text-align: center; z-index: 10;">
+<div id="top-fan-status" style="position: absolute; top: 12px; left: 24px; text-align: center; z-index: 10;">
   <object id="fan-icon" type="image/svg+xml"
           data="/plugins/fanctrlplus/images/fanctrlplus.svg"
           style="width:48px; height:48px; display:block; margin:auto;"></object>
@@ -42,6 +42,17 @@ $width = 300;
 </div>
 
 <style>
+:root {
+  --frame-color: #000;
+  --hub-color: #000;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --frame-color: #fff;
+    --hub-color: #fff;
+  }
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
