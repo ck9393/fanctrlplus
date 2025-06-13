@@ -37,13 +37,13 @@ $width = 300;
 <div id="fanctrl-status-indicator"
   style="
     position: absolute;
-    top: 16px;
-    left: 160px;
+    top: 31px;
+    left: 155px;
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background-color: #00cc44;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+    background: radial-gradient(circle at 30% 30%, #33ff77, #00aa22);
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
     transition: background-color 0.3s ease;
     transform: translateY(1px);
     z-index: 999;
@@ -151,13 +151,26 @@ $(function() {
     hub.setAttribute('fill', hubColor);
   }
 
-function updateFanControlStatus(isRunning) {
-  const indicator = document.getElementById('fanctrl-status-indicator');
-  if (indicator) {
-    indicator.style.backgroundColor = isRunning ? '#00cc44' : '#cc4444';
-  }
+function updateFanControlStatus() {
+  fetch("/plugins/fanctrlplus/FanctrlLogic.php?op=status")
+    .then(res => res.text())
+    .then(status => {
+      const dot = document.getElementById("fanctrl-status-indicator");
+      const icon = document.getElementById("fan-status-icon");
+      const label = document.getElementById("fan-status-label");
 
-  updateRotor(isRunning);
+      if (status.trim() === "running") {
+        dot.style.background = 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)';
+        label.textContent = "🟢 Active";
+        label.style.color = "#33cc66";
+        if (icon) icon.classList.add("rotating");
+      } else {
+        dot.style.background = 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
+        label.textContent = "🔴 Stopped";
+        label.style.color = "#cc0000";
+        if (icon) icon.classList.remove("rotating");
+      }
+    });
 }
 
   function updateStatusLightAndButton() {
