@@ -172,6 +172,9 @@ function updateFanControlStatus(isRunning = null) {
       dot.style.setProperty('--dot-color2', '#cc0000');
     }
   }
+
+  // ✅ 同步控制风扇是否旋转
+  updateRotor(isRunning);
 }
 
 function updateStatusLightAndButton() {
