@@ -127,7 +127,6 @@ $(function() {
     frame.setAttribute('fill', frameColor);
     hub.setAttribute('fill', hubColor);
   }
-});
 
 function updateFanControlStatus(isRunning) {
   const statusElem = document.getElementById('status-value');
