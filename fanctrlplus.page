@@ -66,8 +66,6 @@ $width = 300;
 
   <div id="status-value" style="font-size:13px; margin-top:4px; color: green;">Active</div>
 </div>
-  <div id="status-value" style="font-size:13px; margin-top:4px; color: green;">Active</div>
-</div>
 
 <style>
 :root {
@@ -87,11 +85,14 @@ $width = 300;
 }
 .rotating {
   animation: spin 0.8s linear infinite;
+  transform-origin: 50% 50%;
 }
 </style>
 
 <script>
 $(function() {
+  updateRotor(true);  // 页面加载立即执行一次颜色注入和旋转控制
+
 function updateRotor(isRunning = true) {
   console.log("[FanCtrlPlus] Rotor updated:", isRunning);
   const fanIcon = document.getElementById('fan-icon');
