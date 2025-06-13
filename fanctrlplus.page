@@ -92,34 +92,42 @@ $width = 300;
 <script>
 $(function() {
   updateRotor(true);  // 页面加载立即执行一次颜色注入和旋转控制
-function updateRotor(isRunning = true) {
-  const fanIcon = document.getElementById('fan-icon');
-  if (!fanIcon) return;
 
-  const rotor = fanIcon.querySelector('.rotor');
-  if (rotor) rotor.classList.toggle('rotating', isRunning);
+  function updateRotor(isRunning = true) {
+    const fanIcon = document.getElementById('fan-icon');
+    if (!fanIcon) return;
 
-  // ✅ 通过背景色判断是否是暗色主题（避免依赖 matchMedia 和 class）
-  const bgColor = getComputedStyle(document.body).backgroundColor;
-  const isDark = !bgColor.includes('255, 255, 255');
+    const rotor = fanIcon.querySelector('.rotor');
+    if (rotor) rotor.classList.toggle('rotating', isRunning);
 
-  const frameColor = isDark ? '#ffffff' : '#000000';
-  const hubColor   = isDark ? '#cccccc' : '#666666';
+    // 🔍 背景颜色检测 + 明暗判断（不依赖 prefers-color-scheme）
+    const bg = getComputedStyle(document.body).backgroundColor;
+    const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
+    const isDark = brightness < 128;
 
-  const frame = fanIcon.querySelector('.frame');
-  const hub   = fanIcon.querySelector('.hub');
+    const frameColor = isDark ? '#ffffff' : '#000000';
+    const hubColor   = isDark ? '#cccccc' : '#666666';
 
-  console.log("🌀 FanCtrlPlus:", { isRunning, bgColor, isDark, frameColor, hubColor, frameExists: !!frame, hubExists: !!hub });
+    const frame = fanIcon.querySelector('.frame');
+    const hub   = fanIcon.querySelector('.hub');
 
-  if (!frame || !hub) {
-    console.warn("🕒 frame or hub not ready, retrying...");
-    setTimeout(() => updateRotor(isRunning), 100);
-    return;
+    console.log("🌀 FanCtrlPlus:", {
+      isRunning, bgColor: bg, brightness, isDark,
+      frameColor, hubColor,
+      frameExists: !!frame, hubExists: !!hub
+    });
+
+    if (!frame || !hub) {
+      console.warn("🕒 frame or hub not ready, retrying...");
+      setTimeout(() => updateRotor(isRunning), 100);
+      return;
+    }
+
+    frame.setAttribute('fill', frameColor);
+    hub.setAttribute('fill', hubColor);
   }
-
-  frame.setAttribute('fill', frameColor);
-  hub.setAttribute('fill', hubColor);
-}
+});
 
 function updateFanControlStatus(isRunning) {
   const statusElem = document.getElementById('status-value');
