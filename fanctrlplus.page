@@ -44,7 +44,7 @@ $width = 300;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #33ff77, #00aa22);
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s ease;
+    transition: background-color 1.0s ease;
     transform: translateY(1px);
     z-index: 999;
   ">
