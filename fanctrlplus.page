@@ -43,13 +43,13 @@ $width = 300;
 
 <style>
 :root {
-  --frame-color: #000;
-  --hub-color: #000;
+  --frame-color: #000000;
+  --hub-color: #666666;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --frame-color: #fff;
-    --hub-color: #fff;
+    --frame-color: #ffffff;
+    --hub-color: #cccccc;
   }
 }
 
@@ -64,6 +64,35 @@ $width = 300;
 
 <script>
 $(function() {
+
+function updateRotor(isRunning = true) {
+  const fanObject = document.getElementById('fan-icon');
+  if (!fanObject) return;
+
+  const applyUpdate = () => {
+    const svgDoc = fanObject.contentDocument;
+    if (!svgDoc) return;
+
+    const rotor = svgDoc.querySelector('.rotor');
+    if (rotor) rotor.classList.toggle('rotating', isRunning);
+
+    const frameColor = getComputedStyle(document.documentElement).getPropertyValue('--frame-color').trim();
+    const hubColor = getComputedStyle(document.documentElement).getPropertyValue('--hub-color').trim();
+
+    const frame = svgDoc.querySelector('path[d*="463.017,0H49.001"]'); // 外框
+    const hub = svgDoc.querySelector('path[d*="255.991,195.503"]');    // 中心圆
+
+    if (frame) frame.setAttribute('fill', frameColor);
+    if (hub)   hub.setAttribute('fill', hubColor);
+  };
+
+  if (fanObject.contentDocument) {
+    applyUpdate();
+  } else {
+    fanObject.addEventListener('load', applyUpdate, { once: true });
+  }
+}
+
   // 插入 <meta name="color-scheme">，确保 prefers-color-scheme 能生效
   const meta = document.createElement('meta');
   meta.name = 'color-scheme';
@@ -103,12 +132,7 @@ function updateFanControlStatus(isRunning) {
     if (hub)   hub.setAttribute('fill', hubColor);
   };
 
-  if (fanObject.contentDocument) {
-    updateRotor();
-  } else {
-    fanObject.addEventListener('load', updateRotor, { once: true });
-  }
-}
+  updateRotor(isRunning);
 
 // 监听 prefers-color-scheme 的变化，重新刷新风扇颜色
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
