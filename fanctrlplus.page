@@ -90,6 +90,8 @@ $width = 300;
 </style>
 
 <script>
+const DEBUG = false; // ✅ 设置是否开启调试输出
+
 $(function() {
   updateRotor(true);  // 页面加载立即执行一次颜色注入和旋转控制
 
@@ -112,11 +114,12 @@ $(function() {
     const frame = fanIcon.querySelector('.frame');
     const hub   = fanIcon.querySelector('.hub');
 
-    console.log("🌀 FanCtrlPlus:", {
-      isRunning, bgColor: bg, brightness, isDark,
-      frameColor, hubColor,
-      frameExists: !!frame, hubExists: !!hub
-    });
+    if (DEBUG) {
+      console.log("🌀 FanCtrlPlus:", {
+        isRunning, bgColor: bg, brightness, isDark,
+        frameColor, hubColor,
+        frameExists: !!frame, hubExists: !!hub
+      });
 
     if (!frame || !hub) {
       console.warn("🕒 frame or hub not ready, retrying...");
