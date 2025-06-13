@@ -161,13 +161,9 @@ function updateFanControlStatus() {
 
       if (status.trim() === "running") {
         dot.style.background = 'radial-gradient(circle at 30% 30%, #33ff77, #00aa22)';
-        label.textContent = "🟢 Active";
-        label.style.color = "#33cc66";
         if (icon) icon.classList.add("rotating");
       } else {
         dot.style.background = 'radial-gradient(circle at 30% 30%, #ff6666, #cc0000)';
-        label.textContent = "🔴 Stopped";
-        label.style.color = "#cc0000";
         if (icon) icon.classList.remove("rotating");
       }
     });
