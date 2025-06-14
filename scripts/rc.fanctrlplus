@@ -44,13 +44,20 @@ fanctrlplus.stop() {
   rm -f "$pid_dir"/${plugin}_*.pid
   logger -t "$plugin" "All fanctrlplus stopped"
 
-  # ✅ 停止后，将所有 pwmX 控制权交还 BIOS
-  for pwm in /sys/class/hwmon/hwmon*/pwm[0-9]; do
-    [[ -e "$pwm" ]] || continue
+  # ✅ 停止后：仅对被控制的 PWM 设置回 50%
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
+    [[ -f "$cfg" ]] || continue
+    service=$(grep -Po '^service="\K[^"]+' "$cfg")
+    [[ "$service" != "1" ]] && continue
+
+    pwm=$(grep -Po '^controller="\K[^"]+' "$cfg")
+    [[ -z "$pwm" || ! -w "$pwm" ]] && continue
+
     enable="${pwm}_enable"
     if [[ -w "$enable" ]]; then
-      echo 2 > "$enable"
-      logger -t "$plugin" "Returned control of $(basename "$pwm") to BIOS"
+      echo 1 > "$enable"
+      echo 128 > "$pwm"
+      logger -t "$plugin" "Set $(basename "$pwm") to 50% (manual mode)"
     fi
   done
 }
