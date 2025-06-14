@@ -198,7 +198,7 @@ function updateStatusLightAndButton() {
           // 🆕 设置鼠标悬停 title 状态
           const container = fanSvg.closest('.fan-svg-container');
           if (container) {
-            container.title = `Fan status: ${isRunning ? 'Running' : 'Stopped'}`;
+            container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
           }
         });
       }).fail(function(jqXHR, textStatus, errorThrown) {
