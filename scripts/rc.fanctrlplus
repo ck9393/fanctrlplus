@@ -43,6 +43,16 @@ fanctrlplus.stop() {
   pkill -f "$loop_script"
   rm -f "$pid_dir"/${plugin}_*.pid
   logger -t "$plugin" "All fanctrlplus stopped"
+
+  # ✅ 停止后，将所有 pwmX 控制权交还 BIOS
+  for pwm in /sys/class/hwmon/hwmon*/pwm[0-9]; do
+    [[ -e "$pwm" ]] || continue
+    enable="${pwm}_enable"
+    if [[ -w "$enable" ]]; then
+      echo 2 > "$enable"
+      logger -t "$plugin" "Returned control of $(basename "$pwm") to BIOS"
+    fi
+  done
 }
 
 fanctrlplus.status() {
