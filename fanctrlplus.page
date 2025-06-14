@@ -107,7 +107,7 @@ $width = 300;
 }
 
 .frame, .hub {
-    transition: fill 0.6s ease;
+    transition: fill 0.3s ease;
 }
 
 </style>
