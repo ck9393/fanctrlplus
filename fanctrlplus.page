@@ -130,8 +130,8 @@ $(function() {
     // ✅ 根据运行状态决定颜色
     let frameColor, hubColor;
     if (isRunning) {
-      frameColor = isDark ? '#000000' : '#ffffff';
-      hubColor   = isDark ? '#666666' : '#cccccc';
+      frameColor = isDark ? '#ffffff' : '#000000';
+      hubColor   = isDark ? '#cccccc' : '#666666';
     } else {
       frameColor = '#cc0000';
       hubColor   = '#ff6666';
