@@ -169,21 +169,17 @@ function updateStatusLightAndButton() {
           if (!input.length) return;
           const name = input.val().trim();
     
-          // 状态圆点
-          const indicator = block.find('.fan-status');
           const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
           const status = matchedKey ? statusMap[matchedKey] : 'stopped';
-          indicator.text(status === 'running' ? '🟢' : '🔴');
+          const isRunning = status === 'running';
     
-          // 控制对应 SVG 风扇旋转与颜色
+          // 控制 SVG 风扇旋转与颜色
           const fanSvg = document.getElementById(`fan-icon-${index}`);
           if (!fanSvg) return;
     
           const rotor = fanSvg.querySelector('.rotor');
           const frame = fanSvg.querySelector('.frame');
-          const hub = fanSvg.querySelector('.hub');
-    
-          const isRunning = status === 'running';
+          const hub   = fanSvg.querySelector('.hub');
     
           if (rotor) rotor.classList.toggle('rotating', isRunning);
     
@@ -193,23 +189,22 @@ function updateStatusLightAndButton() {
           const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
           const isDark = brightness < 128;
     
-          let frameColor, hubColor;
-          if (isRunning) {
-            frameColor = isDark ? '#ffffff' : '#000000';
-            hubColor   = isDark ? '#cccccc' : '#666666';
-          } else {
-            frameColor = '#cc0000';
-            hubColor   = '#ff6666';
-          }
+          const frameColor = isRunning ? (isDark ? '#ffffff' : '#000000') : '#cc0000';
+          const hubColor   = isRunning ? (isDark ? '#cccccc' : '#666666') : '#ff6666';
     
           if (frame) frame.setAttribute('fill', frameColor);
-          if (hub) hub.setAttribute('fill', hubColor);
+          if (hub)   hub.setAttribute('fill', hubColor);
+    
+          // 🆕 设置鼠标悬停 title 状态
+          const container = fanSvg.closest('.fan-svg-container');
+          if (container) {
+            container.title = `Fan status: ${isRunning ? 'Running' : 'Stopped'}`;
+          }
         });
       }).fail(function(jqXHR, textStatus, errorThrown) {
         console.error("❌ Failed to load status_all:", textStatus, errorThrown);
       });
     }
-
   updateStatusLightAndButton();
   updateAllFanStatus();
 
