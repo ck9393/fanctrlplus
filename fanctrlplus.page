@@ -106,6 +106,10 @@ $width = 300;
   transform-origin: 50% 50%;
 }
 
+.frame, .hub {
+    transition: fill 0.6s ease;
+}
+
 </style>
 
 <script>
