@@ -145,6 +145,8 @@ window.updateFanControlStatus = function(isRunning = null) {
   const dot = document.getElementById("fanctrl-status-indicator");
   if (dot) {
     dot.style.backgroundColor = isRunning ? '#00b300' : '#cc0000';
+    dot.style.cursor = 'help';
+    dot.title = isRunning ? 'Active' : 'Inactive';
   }
 };
 
