@@ -37,17 +37,17 @@ fanctrlplus.start() {
 }
 
 fanctrlplus.stop() {
+  # 设置用户手动停止标记
   touch /var/run/fanctrlplus.user_stopped
 
   pkill -f "$loop_script"
   rm -f "$pid_dir"/${plugin}_*.pid
   logger -t "$plugin" "All fanctrlplus stopped"
 
-  declare -A controlled_pwms
-
-  # ✅ 停止后：仅对有 cfg 的 pwm 设为 50%
+  # ✅ 只对 fanctrlplus 控制的 pwm 设为 50%，其他不动
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     [[ -f "$cfg" ]] || continue
+
     service=$(grep -Po '^service="\K[^"]+' "$cfg")
     [[ "$service" != "1" ]] && continue
 
@@ -59,20 +59,7 @@ fanctrlplus.stop() {
       echo 1 > "$enable"
       echo 128 > "$pwm"
       logger -t "$plugin" "Set $(basename "$pwm") to 50% (manual mode)"
-      controlled_pwms["$pwm"]=1
     fi
-  done
-
-  # ✅ 其余未被控制但处于 enable=1 的 pwm，设为 100（中速），避免暴冲
-  for pwm in /sys/class/hwmon/hwmon*/pwm[0-9]; do
-    [[ -e "$pwm" ]] || continue
-    [[ ${controlled_pwms["$pwm"]} == 1 ]] && continue
-
-    enable="${pwm}_enable"
-    [[ ! -w "$enable" || "$(cat "$enable")" != "1" ]] && continue
-
-    echo 100 > "$pwm"
-    logger -t "$plugin" "Unmanaged $(basename "$pwm") was manually limited to 100"
   done
 }
 
