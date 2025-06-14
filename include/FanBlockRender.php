@@ -7,8 +7,8 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
     <input type="hidden" name="#file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>" class="cfg-file">
 
     <fieldset style="margin:10px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
-      <div class="fan-svg-container" style="position:absolute; top:6px; right:8px; width:26px; height:26px;">
-        <svg id="fan-icon-<?=$i?>" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style=width:100%; height:100%; display:block; margin:auto;">
+      <div class="fan-svg-container" style="position:absolute; top:6px; right:8px; width:36px; height:36px; cursor:help;">
+        <svg id="fan-icon-<?=$i?>" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="width:36px; height:36px; display:block; margin:auto;">
           <defs>
             <linearGradient id="flameGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="5%" stop-color="#FFD700"/>
