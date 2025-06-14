@@ -95,15 +95,15 @@ exit 0
 Release Notes – ###&version;
 
 New Features and Improvements:
-	1.	Reworked status indicator
-	    •	The top green/red status dot is now rendered using CSS for consistent styling and visibility.
-	2.	Per-fan SVG status indicator
-	    •	Each fan block now includes a live SVG icon to indicate control status (Active / Inactive), with automatic rotation and color changes based on running state.
-	3.	Safe fallback on Stop
-	    •	When clicking the Stop button, any fan that was actively controlled will be set to 50% PWM in manual mode. This helps prevent full-speed ramp-ups or complete fan stalls when BIOS fails to take over.
-	4.	Log optimization and UI refinements
-	    •	Fixed excessive log writes in earlier versions.
-	•	Minor UI alignment and layout improvements.
+1. Reworked status indicator
+   - The top green/red status dot is now rendered using CSS for consistent styling and visibility.
+2. Per-fan SVG status indicator
+   - Each fan block now includes a live SVG icon to indicate control status (Active / Inactive), with automatic rotation and color changes based on running state.
+3. Safe fallback on Stop
+   - When clicking the Stop button, any fan that was actively controlled will be set to 50% PWM in manual mode. This helps prevent full-speed ramp-ups or complete fan stalls when BIOS fails to take over.
+4. Log optimization and UI refinements
+   - Fixed excessive log writes in earlier versions.
+   - Minor UI alignment and layout improvements.
 
 </CHANGES>
 </PLUGIN>
