@@ -37,7 +37,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </svg>
       </div>
       
-      <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 1px);">DELETE</button>
+      <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
         <tr>
