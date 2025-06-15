@@ -67,8 +67,8 @@ $width = 300;
   display: flex;
   gap: 6px;
   position: absolute;
-  top: 56px; /* ⚠️ 往下压，避免重叠 Unraid 标题栏 */
-  left: 12px;
+  top: 82px; /* 下压靠近 fan block 顶部边线 */
+  left: 32px;
   z-index: 999;
 }
 
@@ -76,34 +76,27 @@ $width = 300;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #00cc44;
+  background-color: #00b300;
   opacity: 0;
-  transition: opacity 1.2s ease;
+  transform: scale(0.8);
+  transition: opacity 1s ease, transform 1s ease;
 }
 
-/* 更缓慢的呼吸动画 */
-@keyframes breathe-slow {
-  0%   { opacity: 0; }
-  50%  { opacity: 1; }
-  100% { opacity: 0; }
+.fanctrl-dot.visible {
+  opacity: 1;
+  transform: scale(1.3);
 }
 
-.fanctrl-indicator-container.active-1 .fanctrl-dot:nth-child(1),
-.fanctrl-indicator-container.active-2 .fanctrl-dot:nth-child(2),
-.fanctrl-indicator-container.active-3 .fanctrl-dot:nth-child(3) {
-  animation: breathe-slow 3.6s ease-in-out infinite; /* 每颗循环 3.6s 更慢 */
-}
-
-/* 停止状态：全红常亮 */
 .fanctrl-stopped .fanctrl-dot {
-  animation: none !important;
-  opacity: 1 !important;
   background-color: #cc0000 !important;
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  transition: none !important;
 }
 
 </style>
 
-<div class="fanctrl-indicator-container" id="fanctrl-indicator">
+<div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
@@ -113,15 +106,21 @@ $width = 300;
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
 $(function() {
-  let dotStep = 0;
-  setInterval(() => {
-    const container = document.getElementById('fanctrl-indicator');
-    if (!container || container.classList.contains('fanctrl-stopped')) return;
+  let dotIndex = 0;
+    const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
   
-    dotStep = (dotStep % 3) + 1;
-    container.classList.remove('active-1', 'active-2', 'active-3');
-    container.classList.add(`active-${dotStep}`);
-  }, 1200);  // 每 1.2 秒切换下一颗，和上面 3.6s 动画协调
+    function animateDots() {
+      const container = document.getElementById('fanctrl-indicator');
+      if (!container || container.classList.contains('fanctrl-stopped')) return;
+  
+      dotEls.forEach(dot => dot.classList.remove('visible'));
+  
+      dotIndex = (dotIndex + 1) % dotEls.length;
+      dotEls[dotIndex].classList.add('visible');
+    }
+  
+    setInterval(animateDots, 2000); // 每 2 秒亮一颗：1s 亮起 + 1s 熄灭
+  });
 
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
