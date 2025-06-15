@@ -82,9 +82,9 @@ $width = 300;
 }
 
 /* 初始状态：全部变暗 */
-.fanctrl-dot.active-1:nth-child(1),
-.fanctrl-dot.active-2:nth-child(2),
-.fanctrl-dot.active-3:nth-child(3) {
+.fanctrl-indicator-container.active-1 .fanctrl-dot:nth-child(1),
+.fanctrl-indicator-container.active-2 .fanctrl-dot:nth-child(2),
+.fanctrl-indicator-container.active-3 .fanctrl-dot:nth-child(3) {
   opacity: 1;
 }
 
