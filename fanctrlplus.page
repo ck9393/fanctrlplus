@@ -108,6 +108,12 @@ $width = 300;
 
 </style>
 
+<div class="fanctrl-indicator-container" title="Fan control: Active">
+  <div class="fanctrl-dot"></div>
+  <div class="fanctrl-dot"></div>
+  <div class="fanctrl-dot"></div>
+</div>
+
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
