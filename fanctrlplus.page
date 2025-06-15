@@ -34,22 +34,6 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<div id="fanctrl-status-indicator"
-  style="
-    position: absolute;
-    top: 31px;
-    left: 150px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #00b300;
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s ease;
-    transform: translateY(1px);
-    z-index: 999;
-  ">
-</div>
-
 <style>
 :root {
   --frame-color: #000000;
@@ -77,6 +61,49 @@ $width = 300;
 
 .frame, .hub {
     transition: fill 0.3s ease;
+}
+
+.fanctrl-indicator-container {
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  top: 36px; /* 可微调 */
+  left: 150px;
+  z-index: 999;
+}
+
+.fanctrl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #00b300;
+  opacity: 0.3;
+  animation: pulse 1.5s infinite ease-in-out;
+  transition: background-color 0.6s ease, opacity 0.6s ease;
+}
+
+.fanctrl-dot:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.fanctrl-dot:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.fanctrl-stopped .fanctrl-dot {
+  background-color: #cc0000 !important;
+  animation: none !important;
+  opacity: 1 !important;
 }
 
 </style>
@@ -142,11 +169,15 @@ window.updateFanControlStatus = function(isRunning = null) {
     return;
   }
 
-  const dot = document.getElementById("fanctrl-status-indicator");
-  if (dot) {
-    dot.style.backgroundColor = isRunning ? '#00b300' : '#cc0000';
-    dot.style.cursor = 'help';
-    dot.title = isRunning ? 'Active' : 'Inactive';
+  const container = document.querySelector('.fanctrl-indicator-container');
+  if (container) {
+    if (isRunning) {
+      container.classList.remove('fanctrl-stopped');
+      container.title = "Fan control: Active";
+    } else {
+      container.classList.add('fanctrl-stopped');
+      container.title = "Fan control: Inactive";
+    }
   }
 };
 
