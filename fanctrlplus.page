@@ -106,21 +106,21 @@ $width = 300;
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
 $(function() {
-  let dotIndex = 0;
-    const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
-  
-    function animateDots() {
-      const container = document.getElementById('fanctrl-indicator');
-      if (!container || container.classList.contains('fanctrl-stopped')) return;
-  
-      dotEls.forEach(dot => dot.classList.remove('visible'));
-  
-      dotIndex = (dotIndex + 1) % dotEls.length;
-      dotEls[dotIndex].classList.add('visible');
-    }
-  
-    setInterval(animateDots, 2000); // 每 2 秒亮一颗：1s 亮起 + 1s 熄灭
-  });
+let dotIndex = 0;
+  const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
+
+  function animateDots() {
+    const container = document.getElementById('fanctrl-indicator');
+    if (!container || container.classList.contains('fanctrl-stopped')) return;
+
+    dotEls.forEach(dot => dot.classList.remove('visible'));
+
+    dotIndex = (dotIndex + 1) % dotEls.length;
+    dotEls[dotIndex].classList.add('visible');
+  }
+
+  setInterval(animateDots, 2000); // 每 2 秒亮一颗：1s 亮起 + 1s 熄灭
+});
 
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
