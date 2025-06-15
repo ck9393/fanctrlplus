@@ -67,7 +67,7 @@ $width = 300;
   display: flex;
   gap: 6px;
   position: absolute;
-  top: 36px;  /* 微调到 .content-title 下方 */
+  top: 56px; /* ⚠️ 往下压，避免重叠 Unraid 标题栏 */
   left: 12px;
   z-index: 999;
 }
@@ -78,11 +78,11 @@ $width = 300;
   border-radius: 50%;
   background-color: #00cc44;
   opacity: 0;
-  transition: opacity 1s ease;
+  transition: opacity 1.2s ease;
 }
 
-/* 呼吸动画 */
-@keyframes breathe {
+/* 更缓慢的呼吸动画 */
+@keyframes breathe-slow {
   0%   { opacity: 0; }
   50%  { opacity: 1; }
   100% { opacity: 0; }
@@ -91,10 +91,10 @@ $width = 300;
 .fanctrl-indicator-container.active-1 .fanctrl-dot:nth-child(1),
 .fanctrl-indicator-container.active-2 .fanctrl-dot:nth-child(2),
 .fanctrl-indicator-container.active-3 .fanctrl-dot:nth-child(3) {
-  animation: breathe 2s ease-in-out infinite;
+  animation: breathe-slow 3.6s ease-in-out infinite; /* 每颗循环 3.6s 更慢 */
 }
 
-/* 停止状态：全部红点常亮 */
+/* 停止状态：全红常亮 */
 .fanctrl-stopped .fanctrl-dot {
   animation: none !important;
   opacity: 1 !important;
@@ -113,7 +113,6 @@ $width = 300;
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
 $(function() {
-
   let dotStep = 0;
   setInterval(() => {
     const container = document.getElementById('fanctrl-indicator');
@@ -122,7 +121,7 @@ $(function() {
     dotStep = (dotStep % 3) + 1;
     container.classList.remove('active-1', 'active-2', 'active-3');
     container.classList.add(`active-${dotStep}`);
-  }, 600);
+  }, 1200);  // 每 1.2 秒切换下一颗，和上面 3.6s 动画协调
 
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
