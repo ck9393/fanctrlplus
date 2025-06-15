@@ -74,12 +74,12 @@ $width = 300;
 }
 
 .fanctrl-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: #00b300;
-  min-width: 64px;
-  text-align: right;
-  transition: color 0.4s ease;
+  min-width: 72px;
+  text-align: left;
+  transition: color 0.3s ease;
 }
 
 .fanctrl-dot {
