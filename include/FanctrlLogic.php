@@ -190,24 +190,15 @@ switch ($op) {
   
     json_response($result);
     break;
-
-    case 'start':
-      $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-      if (is_file($rc)) {
-        exec("$rc start >/dev/null 2>&1 &");
-        json_response(['status' => 'started']);
-      } else {
-        json_response(['error' => 'rc script not found']);
-      }
-      break;  // ✅ 必须加上
   
-    case 'stop':
-      $rc = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-      exec("$rc stop >/dev/null 2>&1 &");
-      json_response(['status' => 'stopped']);
-      break;  // ✅ 必须加上
+  case 'start':
+    shell_exec("/etc/rc.d/rc.fanctrlplus start");
+    json_response(['status' => 'started']);
+    break;
   
-    default:
-      json_response(['error' => 'Invalid op']);
+  case 'stop':
+    shell_exec("/etc/rc.d/rc.fanctrlplus stop");
+    json_response(['status' => 'stopped']);
+    break;
 }
 ?>

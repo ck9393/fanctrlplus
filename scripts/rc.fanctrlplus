@@ -28,6 +28,12 @@ fanctrlplus.start() {
     echo $! > "$pid_dir/${plugin}_${custom_safe}.pid"
     logger -t "$plugin" "Started [$custom_safe] from $cfg"
   done
+
+  # ✅ 确保 array_monitor.sh 已启动（若未运行）
+  script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
+  if [ -x "$script" ] && ! pgrep -f array_monitor.sh >/dev/null; then
+    nohup "$script" >/dev/null 2>&1 &
+  fi
 }
 
 fanctrlplus.stop() {
@@ -37,6 +43,24 @@ fanctrlplus.stop() {
   pkill -f "$loop_script"
   rm -f "$pid_dir"/${plugin}_*.pid
   logger -t "$plugin" "All fanctrlplus stopped"
+
+  # ✅ 只对 fanctrlplus 控制的 pwm 设为 50%，其他不动
+  for cfg in "$cfg_path"/${plugin}_*.cfg; do
+    [[ -f "$cfg" ]] || continue
+
+    service=$(grep -Po '^service="\K[^"]+' "$cfg")
+    [[ "$service" != "1" ]] && continue
+
+    pwm=$(grep -Po '^controller="\K[^"]+' "$cfg")
+    [[ -z "$pwm" || ! -w "$pwm" ]] && continue
+
+    enable="${pwm}_enable"
+    if [[ -w "$enable" ]]; then
+      echo 1 > "$enable"
+      echo 128 > "$pwm"
+      logger -t "$plugin" "Stopped control of $(basename "$pwm"); set to 50% (manual mode) to ensure sufficient airflow and avoid overheating"
+    fi
+  done
 }
 
 fanctrlplus.status() {

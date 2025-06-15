@@ -34,52 +34,234 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 ?>
 
-<p style="margin: 4px 0 12px 12px; font-size:13px; font-weight:normal;">
-  <span style="font-weight:normal;">Fan Control:</span>
-  <span id="status-value" style="color:green;">Active</span>
-</p>
+<style>
+:root {
+  --frame-color: #000000;
+  --hub-color: #666666;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --frame-color: #ffffff;
+    --hub-color: #cccccc;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.rotating {
+  animation-name: spin;
+  animation-duration: 1.2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  transform-origin: 50% 50%;
+}
+
+.frame, .hub {
+    transition: fill 0.3s ease;
+}
+
+.fanctrl-indicator-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  top: 75px; /* 你可以微调 */
+  left: 10px;
+  z-index: 999;
+}
+
+.fanctrl-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #00b300;
+  min-width: 50px;
+  text-align: left;
+  transition: color 0.3s ease;
+}
+
+.fanctrl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00b300;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+.fanctrl-dot.visible {
+  opacity: 1;
+  transform: scale(1.3);
+}
+
+.fanctrl-stopped .fanctrl-label {
+  color: #cc0000;
+}
+
+.fanctrl-stopped .fanctrl-dot {
+  background-color: #cc0000 !important;
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  transition: none !important;
+}
+
+</style>
+
+<div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
+  <span class="fanctrl-label">Active</span>
+  <div class="fanctrl-dot"></div>
+  <div class="fanctrl-dot"></div>
+  <div class="fanctrl-dot"></div>
+</div>
 
 <script>
+const DEBUG = false; // ✅ 设置是否开启调试输出
+
 $(function() {
-  function updateFanControlStatus(isRunning) {
-    const statusElem = document.getElementById('status-value');
-    if (!statusElem) return;
-    statusElem.textContent = isRunning ? 'Active' : 'Inactive';
-    statusElem.style.color = isRunning ? 'green' : 'red';
-  }
+  let dotIndex = 0;
+    const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
+  
+    function animateDots() {
+      const container = document.getElementById('fanctrl-indicator');
+      if (!container || container.classList.contains('fanctrl-stopped')) return;
+  
+      dotEls.forEach(dot => dot.classList.remove('visible'));
+  
+      dotIndex = (dotIndex + 1) % dotEls.length;
+      dotEls[dotIndex].classList.add('visible');
+    }
+  
+    setInterval(animateDots, 2000); // 每 2 秒亮一颗：1s 亮起 + 1s 熄灭
 
-  function updateStatusLightAndButton() {
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
-      const isRunning = statusObj.status === 'running';
-      updateFanControlStatus(isRunning);
+  $('.fan-block svg[id^="fan-icon-"]').each(function() {
+    const id = $(this).attr('id');
+    updateRotorById(id, true);
+  });
+  
+  function updateRotorById(fanId, isRunning = true) {
+    const fanIcon = document.getElementById(fanId);
+    if (!fanIcon) return;
 
-      const btn = $('#toggle-daemon');
-      btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
-      btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
-      btn.prop('disabled', false);
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Failed to load status:", textStatus, errorThrown);
-    });
-  }
+    const rotor = fanIcon.querySelector('.rotor');
+    if (rotor) rotor.classList.toggle('rotating', isRunning);
 
-  function updateAllFanStatus() {
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
-      $('.fan-block').each(function() {
-        const block = $(this);
-        const input = block.find('input[name^="custom["]');
-        if (!input.length) return;
-        const name = input.val().trim();
-        const indicator = block.find('.fan-status');
-        if (!indicator.length) return;
-        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
-        const status = matchedKey ? statusMap[matchedKey] : 'stopped';
-        indicator.text(status === 'running' ? '🟢' : '🔴');
+    // 🔍 背景颜色检测 + 明暗判断（不依赖 prefers-color-scheme）
+    const bg = getComputedStyle(document.body).backgroundColor;
+    const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
+    const isDark = brightness < 128;
+
+    // ✅ 根据运行状态决定颜色
+    let frameColor, hubColor;
+    if (isRunning) {
+      frameColor = isDark ? '#ffffff' : '#000000';
+      hubColor   = isDark ? '#cccccc' : '#666666';
+    } else {
+      frameColor = '#cc0000';
+      hubColor   = '#ff6666';
+    }
+
+    const frame = fanIcon.querySelector('.frame');
+    const hub   = fanIcon.querySelector('.hub');
+
+    if (DEBUG) {
+      console.log("🌀 FanCtrlPlus:", {
+        isRunning, bgColor: bg, brightness, isDark,
+        frameColor, hubColor,
+        frameExists: !!frame, hubExists: !!hub
       });
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Failed to load status_all:", textStatus, errorThrown);
-    });
+    }
+
+    if (!frame || !hub) {
+      console.warn("🕒 frame or hub not ready, retrying...");
+      setTimeout(() => updateRotorById(fanId, isRunning), 100);
+      return;
+    }
+
+    frame.setAttribute('fill', frameColor);
+    hub.setAttribute('fill', hubColor);
   }
 
+window.updateFanControlStatus = function(isRunning = null) {
+  if (isRunning === null) {
+    fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
+      .then(res => res.text())
+      .then(status => updateFanControlStatus(status.trim() === "running"));
+    return;
+  }
+
+  const container = document.getElementById('fanctrl-indicator');
+  const label = container.querySelector('.fanctrl-label');
+  
+  if (isRunning) {
+    container.classList.remove('fanctrl-stopped');
+    label.textContent = 'Active';
+  } else {
+    container.classList.add('fanctrl-stopped');
+    label.textContent = 'Inactive';
+  }
+};
+
+function updateStatusLightAndButton() {
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
+    const isRunning = statusObj.status === 'running';
+    updateFanControlStatus(isRunning); // ✅ 改为传值，不重复 fetch
+
+    const btn = $('#toggle-daemon');
+    btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
+    btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
+    btn.prop('disabled', false);
+  }).fail(function(jqXHR, textStatus, errorThrown) {
+    console.error("❌ Failed to load status:", textStatus, errorThrown);
+  });
+}
+    function updateAllFanStatus() {
+      $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
+        $('.fan-block').each(function(index) {
+          const block = $(this);
+          const input = block.find('input[name^="custom["]');
+          if (!input.length) return;
+          const name = input.val().trim();
+    
+          const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
+          const status = matchedKey ? statusMap[matchedKey] : 'stopped';
+          const isRunning = status === 'running';
+    
+          // 控制 SVG 风扇旋转与颜色
+          const fanSvg = document.getElementById(`fan-icon-${index}`);
+          if (!fanSvg) return;
+    
+          const rotor = fanSvg.querySelector('.rotor');
+          const frame = fanSvg.querySelector('.frame');
+          const hub   = fanSvg.querySelector('.hub');
+    
+          if (rotor) rotor.classList.toggle('rotating', isRunning);
+    
+          // 背景亮度判断
+          const bg = getComputedStyle(document.body).backgroundColor;
+          const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
+          const isDark = brightness < 128;
+    
+          const frameColor = isRunning ? (isDark ? '#ffffff' : '#000000') : '#cc0000';
+          const hubColor   = isRunning ? (isDark ? '#cccccc' : '#666666') : '#ff6666';
+    
+          if (frame) frame.setAttribute('fill', frameColor);
+          if (hub)   hub.setAttribute('fill', hubColor);
+    
+          // 🆕 设置鼠标悬停 title 状态
+          const container = fanSvg.closest('.fan-svg-container');
+          if (container) {
+            container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
+          }
+        });
+      }).fail(function(jqXHR, textStatus, errorThrown) {
+        console.error("❌ Failed to load status_all:", textStatus, errorThrown);
+      });
+    }
   updateStatusLightAndButton();
   updateAllFanStatus();
 

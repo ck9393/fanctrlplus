@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.2.1">
+<!ENTITY version "1.2.2">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
@@ -72,17 +72,21 @@ exit 0
 <FILE Run="/bin/bash" Method="remove">
 <INLINE>
 #!/bin/bash
+
+# 停止 fanctrlplus 服务
 /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
 pkill -f array_monitor.sh
 
+# 清理插件文件和注册的 rc.d 启动脚本
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
+rm -f /etc/rc.d/rc.fanctrlplus
 
-# 清除 go 中旧自启行
-sed -i '\|rc.fanctrlplus start|d' /boot/config/go
-sed -i '\|array_monitor.sh|d' /boot/config/go
-
-echo "[fanctrlplus] Plugin fully removed."
+echo "============================================================"
+echo "⚠️  FanCtrl Plus has been removed."
+echo "👉  To ensure fan control is restored to BIOS or other tools,"
+echo "    it is strongly recommended to reboot your Unraid server."
+echo "============================================================"
 exit 0
 </INLINE>
 </FILE>
@@ -90,8 +94,16 @@ exit 0
 <CHANGES>
 Release Notes – ###&version;
 
-- Fixed: "Pause 30s" button UI now properly counts down and resets after resuming fan.
-- Improved: Parity and Parity 2 are now correctly ordered in the disk dropdown (Parity → Parity 2 → Disk X).
+New Features and Improvements:
+1. Reworked status indicator
+   - The top green/red status dot is now rendered using CSS for consistent styling and visibility.
+2. Per-fan SVG status indicator
+   - Each fan block now includes a live SVG icon to indicate control status (Active / Inactive), with automatic rotation and color changes based on running state.
+3. Safe fallback on Stop
+   - When clicking the Stop button, any fan that was actively controlled will be set to 50% PWM in manual mode. This helps prevent full-speed ramp-ups or complete fan stalls when BIOS fails to take over.
+4. Log optimization and UI refinements
+   - Fixed excessive log writes in earlier versions.
+   - Minor UI alignment and layout improvements.
 
 </CHANGES>
 </PLUGIN>
