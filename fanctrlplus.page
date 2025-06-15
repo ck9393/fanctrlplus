@@ -67,8 +67,8 @@ $width = 300;
   display: flex;
   gap: 6px;
   position: absolute;
-  top: 36px; /* 可微调 */
-  left: 150px;
+  top: 36px; /* 你可以微调位置 */
+  right: 16px;
   z-index: 999;
 }
 
@@ -78,37 +78,24 @@ $width = 300;
   border-radius: 50%;
   background-color: #00b300;
   opacity: 0.3;
-  animation: pulse 1.5s infinite ease-in-out;
-  transition: background-color 0.6s ease, opacity 0.6s ease;
+  transition: background-color 0.5s ease, opacity 0.5s ease;
 }
 
-.fanctrl-dot:nth-child(2) {
-  animation-delay: 0.3s;
-}
-.fanctrl-dot:nth-child(3) {
-  animation-delay: 0.6s;
-}
-
-@keyframes pulse {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.3;
-  }
-  40% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
+/* 初始状态：全部变暗 */
+.fanctrl-dot.active-1:nth-child(1),
+.fanctrl-dot.active-2:nth-child(2),
+.fanctrl-dot.active-3:nth-child(3) {
+  opacity: 1;
 }
 
 .fanctrl-stopped .fanctrl-dot {
   background-color: #cc0000 !important;
-  animation: none !important;
   opacity: 1 !important;
 }
 
 </style>
 
-<div class="fanctrl-indicator-container" title="Fan control: Active">
+<div class="fanctrl-indicator-container" id="fanctrl-indicator">
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
@@ -118,6 +105,17 @@ $width = 300;
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
 $(function() {
+
+  let dotStep = 0;
+  setInterval(() => {
+    const container = document.getElementById('fanctrl-indicator');
+    if (!container || container.classList.contains('fanctrl-stopped')) return;
+  
+    dotStep = (dotStep % 3) + 1;
+    container.classList.remove('active-1', 'active-2', 'active-3');
+    container.classList.add(`active-${dotStep}`);
+  }, 600);
+
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
     updateRotorById(id, true);
