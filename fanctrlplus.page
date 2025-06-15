@@ -67,8 +67,8 @@ $width = 300;
   display: flex;
   gap: 6px;
   position: absolute;
-  top: 36px; /* 你可以微调位置 */
-  right: 16px;
+  top: 36px;  /* 微调到 .content-title 下方 */
+  left: 12px;
   z-index: 999;
 }
 
@@ -76,21 +76,29 @@ $width = 300;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #00b300;
-  opacity: 0.3;
-  transition: background-color 0.5s ease, opacity 0.5s ease;
+  background-color: #00cc44;
+  opacity: 0;
+  transition: opacity 1s ease;
 }
 
-/* 初始状态：全部变暗 */
+/* 呼吸动画 */
+@keyframes breathe {
+  0%   { opacity: 0; }
+  50%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .fanctrl-indicator-container.active-1 .fanctrl-dot:nth-child(1),
 .fanctrl-indicator-container.active-2 .fanctrl-dot:nth-child(2),
 .fanctrl-indicator-container.active-3 .fanctrl-dot:nth-child(3) {
-  opacity: 1;
+  animation: breathe 2s ease-in-out infinite;
 }
 
+/* 停止状态：全部红点常亮 */
 .fanctrl-stopped .fanctrl-dot {
-  background-color: #cc0000 !important;
+  animation: none !important;
   opacity: 1 !important;
+  background-color: #cc0000 !important;
 }
 
 </style>
