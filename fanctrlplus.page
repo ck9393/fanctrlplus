@@ -84,7 +84,7 @@ $width = 300;
 
 .fanctrl-dot.visible {
   opacity: 1;
-  transform: scale(1.3);
+  transform: scale(1.0);
 }
 
 .fanctrl-stopped .fanctrl-dot {
