@@ -409,8 +409,7 @@ function updateStatusLightAndButton() {
   </div>
 </form>
 <?php
-// 插入 Dashboard 模块（Unraid 6.12+ 新版 Dashboard 结构）
-if (stripos($_SERVER['REQUEST_URI'], "dashboard") !== false) {
+// 插入 Dashboard 模块（测试阶段先不判断路径）
 ?>
 <script type="text/javascript">
 $(function() {
@@ -439,7 +438,3 @@ $(function() {
   setInterval(updateFanDashboard, 30000);
 });
 </script>
-<?php
-  error_log("[FanCtrlPlus DEBUG] REQUEST_URI = " . $_SERVER['REQUEST_URI']);
-  echo "<!-- FanCtrlPlus DEBUG: REQUEST_URI = {$_SERVER['REQUEST_URI']} -->";
-} ?>
