@@ -416,6 +416,7 @@ if (version_compare(parse_ini_file('/etc/unraid-version')['version'], '6.12.0-be
 $pluginname = "FanCtrl Plus";
 
 $mytiles[$pluginname]['column2'] = <<<EOT
+error_log("[FanCtrlPlus DEBUG] \$mytiles set with Dashboard tile");
 <tbody id="fanctrlplus-tile" title="FanCtrl Plus">
   <tr><td>
     <i class="fa fa-spinner fa-spin"></i>
