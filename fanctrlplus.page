@@ -423,8 +423,8 @@ $(function() {
       </td></tr>
     </tbody>
   `;
-  if ($('#db-box2').length) {
-    $('#db-box2').append(tileHtml);
+  if ($('#db_box2').length) {
+    $('#db_box2').append(tileHtml);
   }
 
   function updateFanDashboard() {
