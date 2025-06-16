@@ -1,0 +1,24 @@
+Menu="SystemProfiler:99"
+Title="FanCtrl Plus"
+---
+<?PHP
+$plugin = 'fanctrlplus';
+?>
+<script>
+$(function() {
+  $.get('/plugins/<?=$plugin?>/include/FanctrlLogic.php?op=status_all', function(data) {
+    const tbody = $('#fan-status-table');
+    Object.entries(data).forEach(([name, status]) => {
+      const tr = $('<tr>');
+      tr.append(`<td>${name}</td>`);
+      tr.append(`<td>${status}</td>`);
+      tbody.append(tr);
+    });
+  });
+});
+</script>
+
+<table class='share_status small'>
+<thead><td>Fan</td><td>Status</td></thead>
+<tbody id="fan-status-table"></tbody>
+</table>
