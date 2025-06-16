@@ -1,14 +1,26 @@
 <!--
 menu: Dashboard
 title: FanCtrl Plus
+icon: fanctrlplus.png
 -->
 
 ---
+
 <table class="share_status small">
-  <thead>
-    <tr><th>Fan</th><th>Status</th></tr>
-  </thead>
-  <tbody>
+  <thead><tr><th>Fan</th><th>Status</th></tr></thead>
+  <tbody id="fanctrlplus-dashboard-body">
     <tr><td>TestFan</td><td>🟢 Running</td></tr>
   </tbody>
 </table>
+
+<script>
+$(function() {
+  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status_all', function(data) {
+    const tbody = $('#fanctrlplus-dashboard-body').empty();
+    for (const [name, state] of Object.entries(data)) {
+      const emoji = state === 'running' ? '🟢' : '🔴';
+      tbody.append(`<tr><td>${name}</td><td>${emoji} ${state}</td></tr>`);
+    }
+  });
+});
+</script>
