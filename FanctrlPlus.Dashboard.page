@@ -1,0 +1,30 @@
+Menu="Dashboard:0"
+Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9','>')"
+---
+<?php
+$pluginname = "fanctrlplus";
+
+$mytiles[$pluginname]['column2'] = <<<EOT
+<tbody title="Fan Control Status">
+<tr><td>FanCtrl Plus</td></tr>
+<tr><td>
+  <span class="w36">Status:</span>
+  <span id="fanctrlplus-dashboard-status">Loading...</span>
+</td></tr>
+</tbody>
+EOT;
+?>
+
+<script>
+function updateFanCtrlPlusTile() {
+  fetch('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status')
+    .then(r => r.json())
+    .then(d => {
+      const status = d.status === 'running' ? '🟢 Running' : '🔴 Stopped';
+      const el = document.getElementById('fanctrlplus-dashboard-status');
+      if (el) el.innerHTML = status;
+    });
+}
+updateFanCtrlPlusTile();
+setInterval(updateFanCtrlPlusTile, 30000);
+</script>
