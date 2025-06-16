@@ -409,7 +409,7 @@ function updateStatusLightAndButton() {
   </div>
 </form>
 <?php
-// 插入 Dashboard 模块（测试阶段先不判断路径）
+// 插入 Dashboard 模块（Unraid 6.12+ 动态 Dashboard）
 ?>
 <script type="text/javascript">
 $(function() {
@@ -423,8 +423,13 @@ $(function() {
       </td></tr>
     </tbody>
   `;
-  if ($('#db_box2').length) {
-    $('#db_box2').append(tileHtml);
+
+  // ✅ 动态判断使用哪个 dashboard 容器
+  const target = $('#db_box2').length ? '#db_box2' : ($('#db_box1').length ? '#db_box1' : null);
+  if (target) {
+    $(target).append(tileHtml);
+  } else {
+    console.warn("❌ FanCtrl Plus: dashboard container not found.");
   }
 
   function updateFanDashboard() {
