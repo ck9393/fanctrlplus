@@ -6,36 +6,35 @@ $pluginname = "fanctrlplus";
 $cfg_path = "/boot/config/plugins/$pluginname";
 $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
-$running = file_exists("/var/run/fanctrlplus.pid");
-$status_label = $running ? "Running" : "Stopped";
-$status_color = $running ? "green-text" : "red-text";
+// 检查插件是否正在运行
+$status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
+$status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构造每个风扇状态行
-$tile_rows = "";
+// 构建风扇状态列表
+$rows = "";
 foreach ($cfg_files as $i => $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
 
-  $name = $cfg['custom'] ?? basename($file);
-  $rpm_path = "/var/tmp/fanctrlplus/rpm_$i";
-  $rpm = file_exists($rpm_path) ? trim(file_get_contents($rpm_path)) : "-";
-  $tile_rows .= "<tr><td><span class='w36'>$name – $rpm RPM</span></td></tr>\n";
+  $label = $cfg['custom'] ?? basename($file);
+  $rpm_file = "/var/tmp/{$pluginname}/rpm_$i";
+  $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
+  $rows .= "<div><span class='w44'>$label</span> – <span>$rpm RPM</span></div>\n";
 }
 
-// 输出 tile 结构
-$mytiles[$pluginname]['column1'] = <<<EOT
+// 输出 tile
+$mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr title="">
-  <i class="fa fa-fw fa-close control" onclick="dismiss(\$(this))" title="Close Tile"></i>
-  <i class="fa fa-fw fa-chevron-up control openclose" onclick="openClose(\$(this))" title="Show/Hide Content"></i>
-  <img src="/plugins/fanctrlplus/icons/fanctrlplus.png" class="icon icon32">
-  <div class="section">FanCtrl Plus</div>
-  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
-    <i class="fa fa-fw fa-cog control"></i>
-  </a>
+<tr>
+  <td>
+    <i class="icon" style="background-image:url('/plugins/fanctrlplus/icons/fanctrlplus.png');"></i>
+    <div class="section">FanCtrl Plus<br><span class="$status_color">Status: $status_text</span></div>
+    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-fw fa-cog control"></i></a>
+  </td>
 </tr>
-<tr><td><span class="$status_color">Status: $status_label</span></td></tr>
-$tile_rows
+<tr>
+  <td>$rows</td>
+</tr>
 </tbody>
 EOT;
 ?>
