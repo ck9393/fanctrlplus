@@ -34,10 +34,13 @@ foreach ($cfg_files as $i => $file) {
 $mytiles[$pluginname]['column1'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" title="FanCtrl Plus">
 <tr><td>
-  <a class="settings" href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-cog"></i></a>
+  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+    <i class="fa fa-fw fa-cog control"></i>
+  </a>
   <div class="section">FanCtrl Plus<br>Status: <span class="green-text">Running</span></div>
 </td></tr>
-$tile_rows
+<tr><td><span>HDD Bay – 1400 RPM</span></td></tr>
+<tr><td><span>Enclosure – 890 RPM</span></td></tr>
 </tbody>
 EOT;
 ?>
