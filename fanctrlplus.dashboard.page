@@ -1,24 +1,30 @@
 Menu="SystemProfiler:97"
-Title="fanctrlplus"
+Title="FanCtrl Plus"
 ---
 <?php
 $plugin = 'fanctrlplus';
+$cfg_dir = "/boot/config/plugins/$plugin";
+$statuses = [];
+
+foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
+  $cfg = parse_ini_file($file);
+  $custom = $cfg['custom'] ?? basename($file);
+  $pid = "/var/run/fanctrlplus_$custom.pid";
+  $status = file_exists($pid) ? 'running' : 'stopped';
+  $statuses[] = ['name' => $custom, 'status' => $status];
+}
 ?>
-<script>
-$(function() {
-  $.get('/plugins/<?=$plugin?>/include/FanctrlLogic.php?op=status_all', function(data) {
-    const tbody = $('#fan-status-table');
-    Object.entries(data).forEach(([name, status]) => {
-      const tr = $('<tr>');
-      tr.append(`<td>${name}</td>`);
-      tr.append(`<td>${status}</td>`);
-      tbody.append(tr);
-    });
-  });
-});
-</script>
 
 <table class='share_status small'>
-<thead><td>Fan</td><td>Status</td></thead>
-<tbody id="fan-status-table"></tbody>
+  <thead>
+    <tr><td>Fan</td><td>Status</td></tr>
+  </thead>
+  <tbody>
+    <?php foreach ($statuses as $fan): ?>
+    <tr>
+      <td><?=htmlspecialchars($fan['name'])?></td>
+      <td><?=($fan['status'] == 'running' ? '🟢' : '🔴')?></td>
+    </tr>
+    <?php endforeach; ?>
+  </tbody>
 </table>
