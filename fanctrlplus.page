@@ -408,3 +408,35 @@ function updateStatusLightAndButton() {
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
 </form>
+<?php
+// 插入 Dashboard 模块（Unraid 6.12+ 新版 Dashboard 结构）
+if (stripos($_SERVER['REQUEST_URI'], "dashboard") !== false) {
+?>
+<script type="text/javascript">
+$(function() {
+  const tileHtml = `
+    <tbody title="FanCtrl Plus">
+      <tr><td>
+        <i class="fa fa-spinner fa-spin"></i>
+        <div class="section">FanCtrl Plus<br>
+          <span id="fanctrlplus-dashboard-status">Loading...</span>
+        </div>
+      </td></tr>
+    </tbody>
+  `;
+  if ($('#db-box2').length) {
+    $('#db-box2').append(tileHtml);
+  }
+
+  function updateFanDashboard() {
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status', function(data) {
+      const status = (data.status === 'running') ? '🟢 Running' : '🔴 Stopped';
+      $('#fanctrlplus-dashboard-status').html(status);
+    });
+  }
+
+  updateFanDashboard();
+  setInterval(updateFanDashboard, 30000);
+});
+</script>
+<?php } ?>
