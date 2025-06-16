@@ -408,13 +408,12 @@ function updateStatusLightAndButton() {
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
 </form>
-<?php
-// 插入 Dashboard 模块（Unraid 6.12+ 动态 Dashboard）
-?>
+
+<!-- 插入 FanCtrl Plus Dashboard 模块（Unraid 6.12+） -->
 <script type="text/javascript">
-$(function() {
+window.addEventListener("DOMContentLoaded", function() {
   const tileHtml = `
-    <tbody title="FanCtrl Plus">
+    <tbody title="FanCtrl Plus" id="fanctrlplus-tile">
       <tr><td>
         <i class="fa fa-spinner fa-spin"></i>
         <div class="section">FanCtrl Plus<br>
@@ -424,19 +423,22 @@ $(function() {
     </tbody>
   `;
 
-  // ✅ 动态判断使用哪个 dashboard 容器
-  const target = $('#db_box2').length ? '#db_box2' : ($('#db_box1').length ? '#db_box1' : null);
-  if (target) {
-    $(target).append(tileHtml);
+  let container = document.getElementById("db_box2") || document.getElementById("db_box1");
+  if (container && !document.getElementById("fanctrlplus-tile")) {
+    container.insertAdjacentHTML("beforeend", tileHtml);
+    console.log("✅ FanCtrl Plus tile inserted.");
   } else {
-    console.warn("❌ FanCtrl Plus: dashboard container not found.");
+    console.warn("❌ FanCtrl Plus tile insert failed: container not found.");
   }
 
   function updateFanDashboard() {
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status', function(data) {
-      const status = (data.status === 'running') ? '🟢 Running' : '🔴 Stopped';
-      $('#fanctrlplus-dashboard-status').html(status);
-    });
+    fetch('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status')
+      .then(res => res.json())
+      .then(data => {
+        const status = (data.status === 'running') ? '🟢 Running' : '🔴 Stopped';
+        const el = document.getElementById("fanctrlplus-dashboard-status");
+        if (el) el.innerHTML = status;
+      });
   }
 
   updateFanDashboard();
