@@ -6,12 +6,11 @@ $pluginname = "fanctrlplus";
 $cfg_path = "/boot/config/plugins/$pluginname";
 $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
-// 检查插件是否正在运行
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇状态列表
-$rows = "";
+// 构建风扇项目
+$fan_rows = "";
 foreach ($cfg_files as $i => $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
@@ -19,21 +18,24 @@ foreach ($cfg_files as $i => $file) {
   $label = $cfg['custom'] ?? basename($file);
   $rpm_file = "/var/tmp/{$pluginname}/rpm_$i";
   $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
-  $rows .= "<div><span class='w44'>$label</span> – <span>$rpm RPM</span></div>\n";
+
+  $fan_rows .= "<div><span class='w44'>$label</span> – <span>$rpm RPM</span></div>\n";
 }
 
-// 输出 tile
+// 输出 Dashboard tile
 $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr>
+<tr title="">
   <td>
-    <i class="icon" style="background-image:url('/plugins/fanctrlplus/icons/fanctrlplus.png');"></i>
+    <i class="icon" style="background-image:url('/plugins/fanctrlplus/icons/fanctrlplus.png')"></i>
     <div class="section">FanCtrl Plus<br><span class="$status_color">Status: $status_text</span></div>
     <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-fw fa-cog control"></i></a>
   </td>
 </tr>
-<tr>
-  <td>$rows</td>
+<tr title="">
+  <td>
+    $fan_rows
+  </td>
 </tr>
 </tbody>
 EOT;
