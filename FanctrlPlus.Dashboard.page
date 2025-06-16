@@ -3,28 +3,41 @@ Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9',
 ---
 <?php
 $pluginname = "fanctrlplus";
+$cfg_path = "/boot/config/plugins/$pluginname";
+$cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
-$mytiles[$pluginname]['column2'] = <<<EOT
-<tbody title="Fan Control Status">
-<tr><td>FanCtrl Plus</td></tr>
-<tr><td>
-  <span class="w36">Status:</span>
-  <span id="fanctrlplus-dashboard-status">Loading...</span>
-</td></tr>
+$tile_rows = "";
+foreach ($cfg_files as $i => $file) {
+  $cfg = parse_ini_file($file);
+  if (($cfg['service'] ?? '0') !== '1') continue;
+
+  $name = $cfg['custom'] ?? basename($file);
+  $rpm = file_exists("/var/tmp/fanctrlplus/rpm_$i") ? trim(file_get_contents("/var/tmp/fanctrlplus/rpm_$i")) : "-";
+  $status = file_exists("/var/run/fanctrlplus_${i}.pid") ? "running" : "stopped";
+
+  $color = $status === "running" ? "green" : "red";
+  $icon_id = "fan-icon-dashboard-$i";
+  $tile_rows .= "
+  <tr><td>
+    <div style='display:flex; align-items:center; gap:10px;'>
+      <svg id='$icon_id' class='fan-svg' width='20' height='20' viewBox='0 0 100 100'>
+        <circle class='frame' cx='50' cy='50' r='45' fill='" . ($color === "green" ? "#000000" : "#cc0000") . "' />
+        <circle class='hub' cx='50' cy='50' r='10' fill='" . ($color === "green" ? "#666666" : "#ff6666") . "' />
+      </svg>
+      <span>$name – $rpm RPM</span>
+    </div>
+  </td></tr>";
+}
+
+$mytiles[$pluginname]['column1'] = <<<EOT
+<tbody id="fanctrlplus-dashboard" title="FanCtrl Plus">
+<tr>
+  <td style="position:relative;">
+    <i class="fa fa-cog" style="position:absolute; top:4px; right:6px; cursor:pointer;" onclick="location.href='/Settings/fanctrlplus'" title="Go to FanCtrl Plus Settings"></i>
+    <div class="section">FanCtrl Plus<br><span>Status: <span style="color:limegreen;">Running</span></span></div>
+  </td>
+</tr>
+$tile_rows
 </tbody>
 EOT;
 ?>
-
-<script>
-function updateFanCtrlPlusTile() {
-  fetch('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status')
-    .then(r => r.json())
-    .then(d => {
-      const status = d.status === 'running' ? '🟢 Running' : '🔴 Stopped';
-      const el = document.getElementById('fanctrlplus-dashboard-status');
-      if (el) el.innerHTML = status;
-    });
-}
-updateFanCtrlPlusTile();
-setInterval(updateFanCtrlPlusTile, 30000);
-</script>
