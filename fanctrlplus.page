@@ -439,4 +439,7 @@ $(function() {
   setInterval(updateFanDashboard, 30000);
 });
 </script>
-<?php } ?>
+<?php
+  error_log("[FanCtrlPlus DEBUG] REQUEST_URI = " . $_SERVER['REQUEST_URI']);
+  echo "<!-- FanCtrlPlus DEBUG: REQUEST_URI = {$_SERVER['REQUEST_URI']} -->";
+} ?>
