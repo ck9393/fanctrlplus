@@ -27,8 +27,7 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
 <tr title="">
   <td>
-    <i class="fa fa-fw fa-chevron-up control openclose" onclick="openClose($(this))" title="Show/Hide Content"></i>
-    <i class="icon" style="background-image:url('/plugins/fanctrlplus/icons/fanctrlplus.png');"></i>
+    <i class="icon-fanctrlplus f32"></i>
     <div class="section">FanCtrl Plus<br><span class="$status_color">Status: $status_text</span></div>
     <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-fw fa-cog control"></i></a>
   </td>
