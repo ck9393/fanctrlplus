@@ -1,0 +1,39 @@
+<!--
+title: FanCtrl Plus
+menu: Dashboard
+icon: fanctrlplus.png
+-->
+
+<?php
+$plugin = 'fanctrlplus';
+?>
+
+<script>
+$(function() {
+  $.get('/plugins/<?=$plugin?>/include/FanctrlLogic.php?op=status_all', function(data) {
+    const tbody = $('#fanctrlplus-dashboard-body');
+    Object.entries(data).forEach(([name, status]) => {
+      const tr = $('<tr>');
+      const state = status === 'running' ? '🟢 Running' : '🔴 Stopped';
+      tr.append(`<td>${name}</td><td>${state}</td>`);
+      tbody.append(tr);
+    });
+  });
+});
+</script>
+
+<style>
+#fanctrlplus-dashboard-body td {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+</style>
+
+<table class="share_status small">
+  <thead>
+    <tr><th>Fan</th><th>Status</th></tr>
+  </thead>
+  <tbody id="fanctrlplus-dashboard-body">
+    <!-- JS 动态插入内容 -->
+  </tbody>
+</table>
