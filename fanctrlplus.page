@@ -123,6 +123,9 @@ const DEBUG = false; // ✅ 设置是否开启调试输出
 $(function() {
   let dotIndex = 0;
     const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
+
+    dotEls.forEach(dot => dot.classList.remove('visible'));
+    dotEls[dotIndex].classList.add('visible');
   
     function animateDots() {
       const container = document.getElementById('fanctrl-indicator');
