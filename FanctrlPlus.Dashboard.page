@@ -33,7 +33,7 @@ $mytiles[$pluginname]['column1'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" title="FanCtrl Plus">
 <tr>
   <td style="position:relative;">
-    <i class="fa fa-cog" style="position:absolute; top:4px; right:6px; cursor:pointer;" onclick="location.href='/Settings/fanctrlplus'" title="Go to FanCtrl Plus Settings"></i>
+    <a class="settings" href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-cog"></i></a>
     <div class="section">FanCtrl Plus<br><span>Status: <span style="color:limegreen;">Running</span></span></div>
   </td>
 </tr>
