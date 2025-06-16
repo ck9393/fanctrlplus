@@ -12,34 +12,31 @@ foreach ($cfg_files as $i => $file) {
   if (($cfg['service'] ?? '0') !== '1') continue;
 
   $name = $cfg['custom'] ?? basename($file);
-  $rpm_path = "/var/tmp/fanctrlplus/rpm_$i";
-  $pid_path = "/var/run/fanctrlplus_${i}.pid";
+  $rpm = file_exists("/var/tmp/fanctrlplus/rpm_$i") ? trim(file_get_contents("/var/tmp/fanctrlplus/rpm_$i")) : "-";
+  $status = file_exists("/var/run/fanctrlplus_${i}.pid") ? "running" : "stopped";
 
-  $rpm = file_exists($rpm_path) ? trim(file_get_contents($rpm_path)) : "-";
-  $status = file_exists($pid_path) ? "running" : "stopped";
-
-  $color = $status === "running" ? "green" : "red";
-  $frame_color = $color === "green" ? "#000000" : "#cc0000";
-  $hub_color   = $color === "green" ? "#666666" : "#ff6666";
+  $frame_color = $status === "running" ? "#000000" : "#cc0000";
+  $hub_color   = $status === "running" ? "#666666" : "#ff6666";
   $icon_id = "fan-icon-dashboard-$i";
 
-  $tile_rows .= <<<HTML
-  <tr><td>
-    <div style='display:flex; align-items:center; gap:10px;'>
-      <svg id="$icon_id" class="fan-svg" width="20" height="20" viewBox="0 0 100 100">
-        <circle class="frame" cx="50" cy="50" r="45" fill="$frame_color" />
-        <circle class="hub"   cx="50" cy="50" r="10" fill="$hub_color" />
-      </svg>
-      <span>$name – $rpm RPM</span>
-    </div>
-  </td></tr>
-HTML;
+  $tile_rows .= "
+<tr><td>
+  <div style='display:flex; align-items:center; gap:10px;'>
+    <svg id='$icon_id' class='fan-svg' width='20' height='20' viewBox='0 0 100 100'>
+      <circle class='frame' cx='50' cy='50' r='45' fill='$frame_color' />
+      <circle class='hub' cx='50' cy='50' r='10' fill='$hub_color' />
+    </svg>
+    <span>$name – $rpm RPM</span>
+  </div>
+</td></tr>";
 }
 
 $mytiles[$pluginname]['column1'] = <<<EOT
-<a class="settings" href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-cog"></i></a>
 <tbody id="fanctrlplus-dashboard" title="FanCtrl Plus">
-<tr><td>Status: <span class="green-text">Running</span></td></tr>
+<tr><td>
+  <a class="settings" href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-cog"></i></a>
+  <div class="section">FanCtrl Plus<br>Status: <span class="green-text">Running</span></div>
+</td></tr>
 $tile_rows
 </tbody>
 EOT;
