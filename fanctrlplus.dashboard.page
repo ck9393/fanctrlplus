@@ -1,5 +1,5 @@
 Menu="SystemProfiler:97"
-Title="FanCtrl Plus"
+Title="fanctrlplus"
 ---
 <?php
 $plugin = 'fanctrlplus';
