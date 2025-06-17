@@ -1,17 +1,13 @@
 @font-face {
   font-family: 'fanctrlplus';
-  src:  url('fonts/fanctrlplus.eot?rl7l5x');
-  src:  url('fonts/fanctrlplus.eot?rl7l5x#iefix') format('embedded-opentype'),
-    url('fonts/fanctrlplus.ttf?rl7l5x') format('truetype'),
-    url('fonts/fanctrlplus.woff?rl7l5x') format('woff'),
-    url('fonts/fanctrlplus.svg?rl7l5x#fanctrlplus') format('svg');
+  src: url('/plugins/fanctrlplus/fonts/fanctrlplus.woff') format('woff');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 
-i {
-  /* use !important to prevent issues with browser extensions that change fonts */
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
   font-family: 'fanctrlplus' !important;
   speak: never;
   font-style: normal;
@@ -19,8 +15,6 @@ i {
   font-variant: normal;
   text-transform: none;
   line-height: 1;
-
-  /* Better Font Rendering =========== */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
