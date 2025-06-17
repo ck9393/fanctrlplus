@@ -17,7 +17,7 @@ foreach ($cfg_files as $file) {
   $label = $cfg['custom'] ?? basename($file);
   $fan_rows .= "<div class='fanctrlplus-rpm-item' data-label='$label'>Loading...</div>\n";
 }
-$fan_block = "<div class='fanctrlplus-rpm-block'>$fan_rows</div>";
+$fan_block = "<div class='desc fanctrlplus-rpm-block'>$fan_rows</div>";
 
 // 加载图标字体样式
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
