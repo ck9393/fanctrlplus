@@ -9,19 +9,22 @@ $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇行（两行结构）
-$labels = $values = [];
+// 构建每个风扇的行（使用 span.w26 + w18 对齐）
+$fan_lines = "";
 foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
-  $labels[] = "<span class='fan'>$label</span>";
-  $values[] = "<span class='fan fanctrlplus-rpm' data-label='$label'>Loading...</span>";
+
+  $fan_lines .= <<<HTML
+<tr title=""><td>
+  <span class="w26">$label</span>
+  <span class="w18 fanctrlplus-rpm-item" data-label="$label">Loading...</span>
+</td></tr>
+HTML;
 }
 
-$fan_lines = implode("", $labels) . "<br>" . implode("", $values);
-
-// 样式输出
+// 输出字体样式
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
 echo <<<EOT
 <style>
@@ -31,30 +34,25 @@ echo <<<EOT
   display: inline-block;
   margin-bottom: 4px;
 }
-
-.fan {
-  width: 36%;
-  display: inline-block;
-}
-
-.fanctrlplus-rpm {
+.fanctrlplus-rpm-item {
   font-size: 13px;
+  white-space: pre;
 }
 </style>
 EOT;
 
-// 输出 tile
+// 输出 tile HTML
 $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
 <tr><td>
   <i class="icon-fanctrlplus f32"></i>
   <div class="section">FanCtrl Plus</div>
-  <span class="$status_color fanctrlplus-status">Status: $status_text</span><br>
-  $fan_lines
+  <span class="$status_color fanctrlplus-status">Status: $status_text</span>
   <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
     <i class="fa fa-fw fa-cog control"></i>
   </a>
 </td></tr>
+$fan_lines
 </tbody>
 EOT;
 ?>
@@ -74,7 +72,7 @@ function updateFanctrlplusTile() {
       }
 
       data.fans.forEach(f => {
-        const el = tile.querySelector(`.fanctrlplus-rpm[data-label="${f.label}"]`);
+        const el = tile.querySelector(`.fanctrlplus-rpm-item[data-label="${f.label}"]`);
         if (el) el.textContent = f.text;
       });
     })
