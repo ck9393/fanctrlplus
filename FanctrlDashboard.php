@@ -25,7 +25,7 @@ foreach ($cfg_files as $i => $file) {
   $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
 
   $result["fans"][] = [
-    "label" => $label,
+    "label" => $custom,
     "rpm" => $rpm
   ];
 }
