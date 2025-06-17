@@ -16,10 +16,7 @@ foreach ($cfg_files as $i => $file) {
   if (($cfg['service'] ?? '0') !== '1') continue;
 
   $label = $cfg['custom'] ?? basename($file);
-  $rpm_file = "/var/tmp/{$pluginname}/rpm_$i";
-  $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
-
-  $fan_rows .= "<div><span class='w44'>$label</span> – <span class='fanctrlplus-rpm-item' data-label='$label'>$rpm RPM</span></div>\n";
+  $fan_rows .= "<div><span class='w44'>$label</span> – <span class='fanctrlplus-rpm-item' data-label='$label'>Loading...</span></div>\n";
 }
 
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
@@ -73,7 +70,9 @@ function updateFanctrlplusTile() {
     });
 }
 
-// 初始加载和每 30 秒自动更新
-updateFanctrlplusTile();
-setInterval(updateFanctrlplusTile, 30000);
+// 等 DOM 完全加载后再执行首次刷新与定时器
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(updateFanctrlplusTile, 200);        // 初始延迟刷新
+  setInterval(updateFanctrlplusTile, 15000);     // 每 30 秒自动更新
+});
 </script>
