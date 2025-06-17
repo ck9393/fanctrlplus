@@ -16,13 +16,20 @@ foreach ($cfg_files as $i => $file) {
   if (($cfg['service'] ?? '0') !== '1') continue;
 
   $label = $cfg['custom'] ?? basename($file);
-  $fan_rows .= "<span class='fanctrlplus-rpm-item fanctrlplus-summary' data-label='$label'>Loading...</span><br>\n";
+  $fan_rows .= "<div class='fanctrlplus-row fanctrlplus-rpm-item' data-label='$label'>Loading...</div>\n";
 }
 
 // 输出字体样式和图标
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
 echo <<<EOT
 <style>
+.fanctrlplus-rpm-item {
+  margin: 2px 0;
+  font-family: monospace;
+  font-size: 13px;
+  white-space: pre;
+}
+
 .fanctrlplus-summary {
   font-weight: normal;
   text-transform: none;
