@@ -21,8 +21,8 @@ foreach ($cfg_files as $i => $file) {
   $custom = $cfg['custom'] ?? '';
   if (!$custom) continue;
 
-  $rpm_file = "/var/tmp/{$pluginname}/rpm_" . $custom;
-  $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
+  $rpm_file = "/var/tmp/{$pluginname}/rpm_{$pluginname}_{$custom}";
+  $rpm = (file_exists($rpm_file) && is_readable($rpm_file)) ? trim(file_get_contents($rpm_file)) : "-";
 
   $result["fans"][] = [
     "label" => $custom,
