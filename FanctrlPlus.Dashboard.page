@@ -22,6 +22,8 @@ foreach ($cfg_files as $i => $file) {
   $fan_rows .= "<div><span class='w44'>$label</span> – <span>$rpm RPM</span></div>\n";
 }
 
+echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
+
 // 输出 Dashboard tile
 $mytiles[$pluginname]['column2'] = <<<EOT
 html:<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
