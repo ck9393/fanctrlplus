@@ -30,15 +30,54 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tr title="">
   <td>
     <i class="icon-fanctrlplus f32"></i>
-    <div class="section">FanCtrl Plus<br><span class="$status_color">Status: $status_text</span></div>
-    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-fw fa-cog control"></i></a>
+    <div class="section">FanCtrl Plus<br>
+      <span class="$status_color fanctrlplus-status">Status: $status_text</span>
+    </div>
+    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+      <i class="fa fa-fw fa-cog control"></i>
+    </a>
   </td>
 </tr>
 <tr title="">
-  <td>
+  <td class="fanctrlplus-rpm">
     $fan_rows
   </td>
 </tr>
 </tbody>
 EOT;
 ?>
+<script>
+function updateFanctrlplusTile() {
+  const tile = document.getElementById("fanctrlplus-dashboard");
+  if (!tile) return;
+
+  fetch("/plugins/fanctrlplus/FanctrlDashboard.php")
+    .then(res => res.json())
+    .then(data => {
+      // 更新状态文字
+      const statusSpan = tile.querySelector(".fanctrlplus-status");
+      if (statusSpan) {
+        statusSpan.textContent = "Status: " + data.status;
+        statusSpan.className = data.status === "Running" ? "green-text fanctrlplus-status" : "red-text fanctrlplus-status";
+      }
+
+      // 更新每个风扇的 RPM
+      const rpmContainer = tile.querySelector(".fanctrlplus-rpm");
+      if (rpmContainer) {
+        rpmContainer.innerHTML = data.fans.map(f => {
+          return `<div><span class='w44'>${f.label}</span> – <span>${f.rpm} RPM</span></div>`;
+        }).join("\n");
+      }
+    })
+    .catch(err => {
+      const statusSpan = document.querySelector(".fanctrlplus-status");
+      if (statusSpan) statusSpan.textContent = "Status: Loading...";
+      const rpmContainer = document.querySelector(".fanctrlplus-rpm");
+      if (rpmContainer) rpmContainer.innerHTML = "<div>Loading...</div>";
+    });
+}
+
+// 初始加载和每 30 秒自动更新
+updateFanctrlplusTile();
+setInterval(updateFanctrlplusTile, 30000);
+</script>
