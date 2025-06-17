@@ -48,6 +48,9 @@ $mytiles[$pluginname]['column2'] = <<<EOT
   <div class="section">FanCtrl Plus<br>
     <span class="$status_color fanctrlplus-status">Status: $status_text</span>
   </div>
+  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+    <i class="fa fa-fw fa-cog control"></i>
+  </a>
 </td></tr>
 <tr><td>
   <span class="w26">Name</span>
@@ -56,13 +59,9 @@ $mytiles[$pluginname]['column2'] = <<<EOT
   <span class="w18">Status</span>
 </td></tr>
 $fan_rows
-<tr><td>
-  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-fw fa-cog control"></i></a>
-</td></tr>
 </tbody>
 EOT;
 ?>
-
 <script>
 function updateFanctrlplusTile() {
   const tile = document.getElementById("fanctrlplus-dashboard");
