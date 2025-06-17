@@ -9,20 +9,23 @@ $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇项目（使用 span.fan 与 <br> 分隔）
-$fan_lines = [];
+// 构建风扇项（风扇名行 + 数值行）
+$fan_labels = $fan_values = [];
+
 foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
-  $fan_lines[] = "<span class='fanctrlplus-line' data-label='$label'>Loading...</span>";
+  $fan_labels[] = "<span class='fan'>$label</span>";
+  $fan_values[] = "<span class='fan fanctrlplus-rpm-item' data-label='$label'>Loading...</span>";
 }
-$fan_block = implode("<br>", $fan_lines);
+
+$fan_block = implode("", $fan_labels) . "<br>" . implode("", $fan_values);
 
 // 加载图标字体样式
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
 
-// 加载自定义样式（轻量）
+// 自定义样式（遵循官方）
 echo <<<EOT
 <style>
 .fanctrlplus-status {
@@ -32,16 +35,14 @@ echo <<<EOT
   margin-top: 4px;
 }
 
-.fanctrlplus-line {
+.fan {
+  width: 36%;
   display: inline-block;
-  width: 100%;
-  font-family: monospace;
+}
+
+.fanctrlplus-rpm-item {
   font-size: 13px;
-  font-weight: normal;
-  text-transform: none;
-  white-space: pre;
   line-height: 1.5;
-  margin: 1px 0;
 }
 </style>
 EOT;
@@ -52,9 +53,9 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tr>
   <td>
     <i class="icon-fanctrlplus f32"></i>
-    <div class="section">FanCtrl Plus</div>
-    <span class="$status_color fanctrlplus-status">Status: $status_text</span>
-    <br>
+    <div class="section">FanCtrl Plus<br>
+      <span class="$status_color fanctrlplus-status">Status: $status_text</span><br>
+    </div>
     $fan_block
     <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
       <i class="fa fa-fw fa-cog control"></i>
@@ -76,7 +77,7 @@ function updateFanctrlplusTile() {
       const statusSpan = tile.querySelector(".fanctrlplus-status");
       if (statusSpan) {
         statusSpan.textContent = "Status: " + data.status;
-        statusSpan.className = "desc fanctrlplus-status " + (data.status === "Running" ? "green-text" : "red-text");
+        statusSpan.className = "fanctrlplus-status " + (data.status === "Running" ? "green-text" : "red-text");
       }
       data.fans.forEach(f => {
         const el = tile.querySelector(`.fanctrlplus-rpm-item[data-label="${f.label}"]`);
