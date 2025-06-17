@@ -1,5 +1,6 @@
 Menu="Dashboard:0"
 Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9','>')"
+<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
 ---
 <?php
 $pluginname = "fanctrlplus";
@@ -27,7 +28,7 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
 <tr title="">
   <td>
-    <i class="icon" style="background-image:url('/plugins/fanctrlplus/icons/fanctrlplus.png'); width:32px; height:32px; background-size:contain;"></i>
+    <i class="icon-fanctrlplus f32"></i>
     <div class="section">FanCtrl Plus<br><span class="$status_color">Status: $status_text</span></div>
     <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings"><i class="fa fa-fw fa-cog control"></i></a>
   </td>
