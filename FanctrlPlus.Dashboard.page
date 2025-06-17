@@ -9,30 +9,27 @@ $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇项（风扇名行 + 数值行）
-$fan_labels = $fan_values = [];
-
+// 构建风扇行（两行结构）
+$labels = $values = [];
 foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
-  $fan_labels[] = "<span class='fan'>$label</span>";
-  $fan_values[] = "<span class='fan fanctrlplus-rpm-item' data-label='$label'>Loading...</span>";
+  $labels[] = "<span class='fan'>$label</span>";
+  $values[] = "<span class='fan fanctrlplus-rpm' data-label='$label'>Loading...</span>";
 }
 
-$fan_block = implode("", $fan_labels) . "<br>" . implode("", $fan_values);
+$fan_lines = implode("", $labels) . "<br>" . implode("", $values);
 
-// 加载图标字体样式
+// 样式输出
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
-
-// 自定义样式（遵循官方）
 echo <<<EOT
 <style>
 .fanctrlplus-status {
   font-weight: normal;
   font-size: 13px;
   display: inline-block;
-  margin-top: 4px;
+  margin-bottom: 4px;
 }
 
 .fan {
@@ -40,9 +37,8 @@ echo <<<EOT
   display: inline-block;
 }
 
-.fanctrlplus-rpm-item {
+.fanctrlplus-rpm {
   font-size: 13px;
-  line-height: 1.5;
 }
 </style>
 EOT;
@@ -50,18 +46,15 @@ EOT;
 // 输出 tile
 $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr>
-  <td>
-    <i class="icon-fanctrlplus f32"></i>
-    <div class="section">FanCtrl Plus<br>
-      <span class="$status_color fanctrlplus-status">Status: $status_text</span><br>
-    </div>
-    $fan_block
-    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
-      <i class="fa fa-fw fa-cog control"></i>
-    </a>
-  </td>
-</tr>
+<tr><td>
+  <i class="icon-fanctrlplus f32"></i>
+  <div class="section">FanCtrl Plus</div>
+  <span class="$status_color fanctrlplus-status">Status: $status_text</span><br>
+  $fan_lines
+  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+    <i class="fa fa-fw fa-cog control"></i>
+  </a>
+</td></tr>
 </tbody>
 EOT;
 ?>
@@ -79,8 +72,9 @@ function updateFanctrlplusTile() {
         statusSpan.textContent = "Status: " + data.status;
         statusSpan.className = "fanctrlplus-status " + (data.status === "Running" ? "green-text" : "red-text");
       }
+
       data.fans.forEach(f => {
-        const el = tile.querySelector(`.fanctrlplus-rpm-item[data-label="${f.label}"]`);
+        const el = tile.querySelector(`.fanctrlplus-rpm[data-label="${f.label}"]`);
         if (el) el.textContent = f.text;
       });
     })
