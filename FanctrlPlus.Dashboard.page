@@ -1,6 +1,6 @@
 Menu="Dashboard:0"
 Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9','>')"
-<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
+html:<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
 ---
 <?php
 $pluginname = "fanctrlplus";
