@@ -18,8 +18,10 @@ foreach ($cfg_files as $i => $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
 
-  $label = $cfg['custom'] ?? basename($file);
-  $rpm_file = "/var/tmp/{$pluginname}/rpm_$i";
+  $custom = $cfg['custom'] ?? '';
+  if (!$custom) continue;
+
+  $rpm_file = "/var/tmp/{$pluginname}/rpm_" . $custom;
   $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
 
   $result["fans"][] = [
