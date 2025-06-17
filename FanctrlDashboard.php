@@ -1,40 +1,43 @@
 <?php
 header('Content-Type: application/json');
 
-$pluginname = "fanctrlplus";
-$cfg_path = "/boot/config/plugins/$pluginname";
-$cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
-$tmp_path = "/var/tmp/$pluginname";
+$plugin = "fanctrlplus";
+$cfg_path = "/boot/config/plugins/$plugin";
+$tmp_path = "/var/tmp/$plugin";
 
-$result = [
-  "status" => "Loading...",
-  "fans" => []
-];
+$fans = [];
 
-// 判断主守护进程是否运行
-$result["status"] = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
-
-foreach ($cfg_files as $file) {
+foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
 
-  $custom = $cfg['custom'] ?? '';
-  if (!$custom) continue;
+  $custom = $cfg['custom'] ?? basename($file, '.cfg');
+  $label = $custom;
 
-  // 从 dashboard_update.sh 写入的缓存读取温度与 rpm
-  $rpm_file = "$tmp_path/rpm_{$pluginname}_{$custom}";
-  $temp_file = "$tmp_path/temp_{$pluginname}_{$custom}";
-  $status_file = "$tmp_path/status_{$pluginname}_{$custom}";
+  // 读取临时缓存的温度、RPM、状态
+  $temp = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
+  $rpm = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
+  $status = trim(@file_get_contents("$tmp_path/status_{$plugin}_$custom"));
 
-  $rpm = (file_exists($rpm_file) && is_readable($rpm_file)) ? trim(file_get_contents($rpm_file)) : "-";
-  $temp = (file_exists($temp_file) && is_readable($temp_file)) ? trim(file_get_contents($temp_file)) : "-";
-  $status = (file_exists($status_file) && is_readable($status_file)) ? trim(file_get_contents($status_file)) : "-";
+  // 容错处理
+  $temp = ($temp !== "" && is_numeric($temp)) ? "{$temp}°C" : "-";
+  $rpm = ($rpm !== "" && is_numeric($rpm)) ? $rpm : "-";
+  $status = in_array($status, ['Running', 'Stopped']) ? $status : "-";
 
-  // 输出统一格式
-  $result["fans"][] = [
-    "label" => $custom,
-    "text" => "[$custom] Temp={$temp}°C, RPM={$rpm}"
+  $fans[] = [
+    'label' => $label,
+    'temp' => $temp,
+    'rpm' => $rpm,
+    'status' => $status
   ];
 }
 
-echo json_encode($result);
+// 总运行状态（用于顶部 status 圆点）
+$daemon_running = file_exists("/var/run/{$plugin}.pid");
+$status_text = $daemon_running ? "Running" : "Stopped";
+
+header("Content-Type: application/json");
+echo json_encode([
+  'status' => $status_text,
+  'fans' => $fans
+]);
