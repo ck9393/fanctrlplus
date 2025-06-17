@@ -15,7 +15,7 @@ foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
-  $fan_lines[] = "<span class='fan fanctrlplus-rpm-item' data-label='$label'>Loading...</span>";
+  $fan_lines[] = "<span class='fanctrlplus-line' data-label='$label'>Loading...</span>";
 }
 $fan_block = implode("<br>", $fan_lines);
 
@@ -32,16 +32,16 @@ echo <<<EOT
   margin-top: 4px;
 }
 
-.fan {
-  width: 36%;
+.fanctrlplus-line {
   display: inline-block;
-}
-
-.fanctrlplus-rpm-item {
+  width: 100%;
   font-family: monospace;
   font-size: 13px;
+  font-weight: normal;
+  text-transform: none;
   white-space: pre;
-  line-height: 1.4;
+  line-height: 1.5;
+  margin: 1px 0;
 }
 </style>
 EOT;
