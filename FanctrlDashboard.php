@@ -20,7 +20,7 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $status = trim(@file_get_contents("$tmp_path/status_{$plugin}_$custom"));
 
   // 容错处理
-  $temp = ($temp !== "" && is_numeric($temp)) ? "{$temp}°C" : "-";
+  $temp = (is_numeric($temp)) ? "{$temp}°C" : "-";
   $rpm = ($rpm !== "" && is_numeric($rpm)) ? $rpm : "-";
   $status = in_array($status, ['Running', 'Stopped']) ? $status : "-";
 
