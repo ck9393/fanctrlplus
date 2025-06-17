@@ -9,15 +9,15 @@ $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇输出行
-$fan_rows = "";
+// 构建风扇项目（使用 span.fan 与 <br> 分隔）
+$fan_lines = [];
 foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
-  $fan_rows .= "<div class='fanctrlplus-rpm-item' data-label='$label'>Loading...</div>\n";
+  $fan_lines[] = "<span class='fan fanctrlplus-rpm-item' data-label='$label'>Loading...</span>";
 }
-$fan_block = "<div class='desc fanctrlplus-rpm-block'>$fan_rows</div>";
+$fan_block = implode("<br>", $fan_lines);
 
 // 加载图标字体样式
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
@@ -25,14 +25,22 @@ echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP
 // 加载自定义样式（轻量）
 echo <<<EOT
 <style>
-.fanctrlplus-rpm-block {
-  margin-top: 6px;
+.fanctrlplus-status {
+  font-weight: normal;
+  font-size: 13px;
+  display: inline-block;
+  margin-top: 4px;
 }
+
+.fan {
+  width: 36%;
+  display: inline-block;
+}
+
 .fanctrlplus-rpm-item {
   font-family: monospace;
   font-size: 13px;
   white-space: pre;
-  margin: 2px 0;
   line-height: 1.4;
 }
 </style>
@@ -44,10 +52,9 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tr>
   <td>
     <i class="icon-fanctrlplus f32"></i>
-    <div class="section">
-      FanCtrl Plus<br>
-      <span class="desc $status_color fanctrlplus-status">Status: $status_text</span>
-    </div>
+    <div class="section">FanCtrl Plus</div>
+    <span class="$status_color fanctrlplus-status">Status: $status_text</span>
+    <br>
     $fan_block
     <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
       <i class="fa fa-fw fa-cog control"></i>
