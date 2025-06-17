@@ -19,7 +19,7 @@ foreach ($cfg_files as $i => $file) {
   $rpm_file = "/var/tmp/{$pluginname}/rpm_$i";
   $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
 
-  $fan_rows .= "<div><span class='w44'>$label</span> – <span>$rpm RPM</span></div>\n";
+  $fan_rows .= "<div><span class='w44'>$label</span> – <span class='fanctrlplus-rpm-item' data-label='$label'>$rpm RPM</span></div>\n";
 }
 
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
@@ -62,18 +62,14 @@ function updateFanctrlplusTile() {
       }
 
       // 更新每个风扇的 RPM
-      const rpmContainer = tile.querySelector(".fanctrlplus-rpm");
-      if (rpmContainer) {
-        rpmContainer.innerHTML = data.fans.map(f => {
-          return `<div><span class='w44'>${f.label}</span> – <span>${f.rpm} RPM</span></div>`;
-        }).join("\n");
-      }
+      data.fans.forEach(f => {
+        const el = tile.querySelector(`.fanctrlplus-rpm-item[data-label="${f.label}"]`);
+        if (el) el.textContent = `${f.rpm} RPM`;
+      });
     })
-    .catch(err => {
+    .catch(() => {
       const statusSpan = document.querySelector(".fanctrlplus-status");
       if (statusSpan) statusSpan.textContent = "Status: Loading...";
-      const rpmContainer = document.querySelector(".fanctrlplus-rpm");
-      if (rpmContainer) rpmContainer.innerHTML = "<div>Loading...</div>";
     });
 }
 
