@@ -16,33 +16,42 @@ foreach ($cfg_files as $i => $file) {
   if (($cfg['service'] ?? '0') !== '1') continue;
 
   $label = $cfg['custom'] ?? basename($file);
-  $fan_rows .= "<div class='fanctrlplus-rpm-item' data-label='$label'>Loading...</div>\n";
+  $fan_rows .= "<span class='fanctrlplus-rpm-item fanctrlplus-summary' data-label='$label'>Loading...</span><br>\n";
 }
 
+// 输出字体样式和图标
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
+echo <<<EOT
+<style>
+.fanctrlplus-summary {
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+}
+</style>
+EOT;
 
 // 输出 Dashboard tile
 $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr title="">
+<tr>
   <td>
     <i class="icon-fanctrlplus f32"></i>
-    <div class="section">FanCtrl Plus<br>
-      <span class="$status_color fanctrlplus-status">Status: $status_text</span>
+    <div class="section">
+      FanCtrl Plus<br>
+      <span class="$status_color fanctrlplus-status">Status: $status_text</span><br>
+      $fan_rows
     </div>
     <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
       <i class="fa fa-fw fa-cog control"></i>
     </a>
   </td>
 </tr>
-<tr title="">
-  <td class="fanctrlplus-rpm">
-    $fan_rows
-  </td>
-</tr>
 </tbody>
 EOT;
 ?>
+
 <script>
 function updateFanctrlplusTile() {
   const tile = document.getElementById("fanctrlplus-dashboard");
@@ -55,13 +64,13 @@ function updateFanctrlplusTile() {
       const statusSpan = tile.querySelector(".fanctrlplus-status");
       if (statusSpan) {
         statusSpan.textContent = "Status: " + data.status;
-        statusSpan.className = data.status === "Running" ? "green-text fanctrlplus-status" : "red-text fanctrlplus-status";
+        statusSpan.className = (data.status === "Running" ? "green-text" : "red-text") + " fanctrlplus-status";
       }
 
-      // 更新每个风扇的 RPM
+      // 更新每个风扇的 text 内容
       data.fans.forEach(f => {
         const el = tile.querySelector(`.fanctrlplus-rpm-item[data-label="${f.label}"]`);
-        el.textContent = f.text;
+        if (el) el.textContent = f.text;
       });
     })
     .catch(() => {
@@ -70,9 +79,9 @@ function updateFanctrlplusTile() {
     });
 }
 
-// 等 DOM 完全加载后再执行首次刷新与定时器
+// 延迟初始执行，并每 15 秒刷新
 document.addEventListener("DOMContentLoaded", function () {
-  setTimeout(updateFanctrlplusTile, 200);        // 初始延迟刷新
-  setInterval(updateFanctrlplusTile, 15000);     // 每 15 秒自动更新
+  setTimeout(updateFanctrlplusTile, 200);
+  setInterval(updateFanctrlplusTile, 15000);
 });
 </script>
