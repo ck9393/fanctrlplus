@@ -63,6 +63,8 @@ while true; do
     fi
 
     label="[${custom}]"
+    mkdir -p /var/tmp/fanctrlplus
+    echo "$rpm" > "/var/tmp/fanctrlplus/rpm_${custom}"
     logger -t fanctrlplus "$label Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
     prev_pwm=$pwm_val
   fi
