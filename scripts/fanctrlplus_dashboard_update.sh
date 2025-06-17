@@ -35,6 +35,11 @@ while true; do
     # 写入 Dashboard 专用临时文件
     echo "$rpm" > "$tmp_path/rpm_${plugin}_${custom}"
     echo "$temp" > "$tmp_path/temp_${plugin}_${custom}"
+    # 状态写入
+    if [[ "$rpm" =~ ^[0-9]+$ ]] && (( rpm > 0 )); then
+      echo "Running" > "$tmp_path/status_${plugin}_${custom}"
+    else
+      echo "Stopped" > "$tmp_path/status_${plugin}_${custom}"
   done
 
   sleep 15  # dashboard 刷新频率，不影响风扇控制逻辑
