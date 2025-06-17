@@ -24,6 +24,8 @@ foreach ($cfg_files as $i => $file) {
   $rpm_file = "/var/tmp/{$pluginname}/rpm_{$custom}";
   $rpm = (file_exists($rpm_file) && is_readable($rpm_file)) ? trim(file_get_contents($rpm_file)) : "-";
 
+  $fan_rows .= "<div><span class='w44'>$custom</span> – <span class='fanctrlplus-rpm-item' data-label='$custom'>{$rpm} RPM</span></div>\n";
+
   $result["fans"][] = [
     "label" => $custom,
     "rpm" => $rpm
