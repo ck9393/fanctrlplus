@@ -1,6 +1,5 @@
 Menu="Dashboard:0"
 Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9','>')"
-html:<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
 ---
 <?php
 $pluginname = "fanctrlplus";
@@ -25,6 +24,7 @@ foreach ($cfg_files as $i => $file) {
 
 // 输出 Dashboard tile
 $mytiles[$pluginname]['column2'] = <<<EOT
+html:<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
 <tr title="">
   <td>
