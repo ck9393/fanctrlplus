@@ -27,19 +27,21 @@ while true; do
     rpm="-"
     [[ -f "$fan_path" ]] && rpm=$(< "$fan_path")
 
-    # 使用 loop.sh 写入的温度值，不读取真实磁盘温度（避免唤醒）
-    temp_file="$tmp_path/temp_${plugin}_${custom}"
+    # ✅ 正确读取 loop.sh 写入的缓存温度文件
     temp="-"
+    temp_file="/var/tmp/${plugin}/temp_${custom}"
     [[ -f "$temp_file" ]] && temp=$(< "$temp_file")
 
-    # 写入 Dashboard 专用临时文件
+    # ✅ 写入 Dashboard 所需文件
     echo "$rpm" > "$tmp_path/rpm_${plugin}_${custom}"
     echo "$temp" > "$tmp_path/temp_${plugin}_${custom}"
-    # 状态写入
+
+    # ✅ 状态判断
     if [[ "$rpm" =~ ^[0-9]+$ ]] && (( rpm > 0 )); then
       echo "Running" > "$tmp_path/status_${plugin}_${custom}"
     else
       echo "Stopped" > "$tmp_path/status_${plugin}_${custom}"
+    fi
   done
 
   sleep 15  # dashboard 刷新频率，不影响风扇控制逻辑
