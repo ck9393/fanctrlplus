@@ -69,5 +69,5 @@ while true; do
     prev_pwm=$pwm_val
   fi
 
-  sleep $((interval * 60))
+  sleep $((interval * 2))
 done
