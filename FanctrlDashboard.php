@@ -1,25 +1,31 @@
 <?php
-$plugin = "fanctrlplus";
-$cfg_path = "/boot/config/plugins/$plugin";
-$cfg_files = glob("$cfg_path/{$plugin}_*.cfg");
+header('Content-Type: application/json');
 
-$status = file_exists("/var/run/{$plugin}.pid") ? "Running" : "Stopped";
+$pluginname = "fanctrlplus";
+$cfg_path = "/boot/config/plugins/$pluginname";
+$cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
-$data = [
-  'status' => $status,
-  'fans' => []
+$result = [
+  "status" => "Loading...",
+  "fans" => []
 ];
 
+// 判断是否运行中
+$result["status"] = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
+
+// 收集各个风扇的 RPM
 foreach ($cfg_files as $i => $file) {
   $cfg = parse_ini_file($file);
   if (($cfg['service'] ?? '0') !== '1') continue;
 
-  $label = $cfg['custom'] ?? "Fan $i";
-  $rpm_path = "/var/tmp/{$plugin}/rpm_$i";
-  $rpm = file_exists($rpm_path) ? trim(file_get_contents($rpm_path)) : "N/A";
+  $label = $cfg['custom'] ?? basename($file);
+  $rpm_file = "/var/tmp/{$pluginname}/rpm_$i";
+  $rpm = file_exists($rpm_file) ? trim(file_get_contents($rpm_file)) : "-";
 
-  $data['fans'][] = ['label' => $label, 'rpm' => $rpm];
+  $result["fans"][] = [
+    "label" => $label,
+    "rpm" => $rpm
+  ];
 }
 
-header('Content-Type: application/json');
-echo json_encode($data);
+echo json_encode($result);
