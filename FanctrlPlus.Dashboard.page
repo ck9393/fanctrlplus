@@ -50,10 +50,10 @@ $mytiles[$pluginname]['column2'] = <<<EOT
   </div>
 </td></tr>
 <tr><td>
-  <span class="w26"><strong>Name</strong></span>
-  <span class="w18"><strong>Temp</strong></span>
-  <span class="w18"><strong>RPM</strong></span>
-  <span class="w18"><strong>Status</strong></span>
+  <span class="w26">Name</span>
+  <span class="w18">Temp</span>
+  <span class="w18">RPM</span>
+  <span class="w18">Status</span>
 </td></tr>
 $fan_rows
 <tr><td>
