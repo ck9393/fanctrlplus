@@ -79,12 +79,13 @@ function updateFanctrlplusTile() {
 
       // 更新每个风扇的 Temp / RPM / 状态
       data.fans.forEach(f => {
-        const tempEl = tile.querySelector(`.fanctrlplus-temp[data-label="${f.label}"]`);
-        const rpmEl = tile.querySelector(`.fanctrlplus-rpm[data-label="${f.label}"]`);
-        const statusEl = tile.querySelector(`.fanctrlplus-individual-status[data-label="${f.label}"]`);
-        if (tempEl) tempEl.textContent = f.temp + "°C";
-        if (rpmEl) rpmEl.textContent = f.rpm + " RPM";
-        if (statusEl) statusEl.textContent = f.rpm > 0 ? "Running" : "Stopped";
+        const label = f.label;
+        const tempEl = tile.querySelector(`.fanctrlplus-temp[data-label="${label}"]`);
+        const rpmEl = tile.querySelector(`.fanctrlplus-rpm[data-label="${label}"]`);
+        const statusEl = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
+        if (tempEl) tempEl.textContent = f.temp;
+        if (rpmEl) rpmEl.textContent = f.rpm;
+        if (statusEl) statusEl.textContent = f.status;
       });
     })
     .catch(() => {
