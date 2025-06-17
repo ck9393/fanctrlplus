@@ -3,6 +3,7 @@
 plugin="fanctrlplus"
 cfg_path="/boot/config/plugins/$plugin"
 loop_script="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_loop.sh"
+dashboard_updater="/usr/local/emhttp/plugins/$plugin/scripts/fanctrlplus_dashboard_update.sh"
 pid_dir="/var/run"
 
 fanctrlplus.start() {
@@ -34,6 +35,12 @@ fanctrlplus.start() {
   if [ -x "$script" ] && ! pgrep -f array_monitor.sh >/dev/null; then
     nohup "$script" >/dev/null 2>&1 &
   fi
+
+  # 启动 dashboard updater（避免重复）
+  pkill -f "$dashboard_updater" 2>/dev/null
+  if [[ -x "$dashboard_updater" ]]; then
+    nohup "$dashboard_updater" >/dev/null 2>&1 &
+  fi
 }
 
 fanctrlplus.stop() {
@@ -43,6 +50,9 @@ fanctrlplus.stop() {
   pkill -f "$loop_script"
   rm -f "$pid_dir"/${plugin}_*.pid
   logger -t "$plugin" "All fanctrlplus stopped"
+
+  # 停止 dashboard updater
+  pkill -f "$dashboard_updater"
 
   # ✅ 只对 fanctrlplus 控制的 pwm 设为 50%，其他不动
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
