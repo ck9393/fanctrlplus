@@ -26,7 +26,6 @@ echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP
 
 // 输出 Dashboard tile
 $mytiles[$pluginname]['column2'] = <<<EOT
-html:<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
 <tr title="">
   <td>
