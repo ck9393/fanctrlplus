@@ -1,5 +1,6 @@
 #!/bin/bash
-# fanctrlplus_dashboard_update.sh - 用于 Dashboard 实时刷新 RPM 和上次温度
+# fanctrlplus_dashboard_update.sh - 实时更新 Dashboard 所需的 RPM 和上次温度
+
 plugin="fanctrlplus"
 cfg_path="/boot/config/plugins/$plugin"
 tmp_path="/var/tmp/$plugin"
@@ -9,11 +10,12 @@ mkdir -p "$tmp_path"
 while true; do
   for cfg in "$cfg_path"/${plugin}_*.cfg; do
     [[ -f "$cfg" ]] || continue
+
     source "$cfg"
     [[ "$service" != "1" ]] && continue
     [[ -z "$controller" || -z "$custom" ]] && continue
 
-    # 提取 fan 路径
+    # 提取 fan 路径：从 pwmX 推导为 fanX_input
     if [[ "$controller" =~ pwm([0-9]+)$ ]]; then
       fan_index="${BASH_REMATCH[1]}"
       fan_path="$(dirname "$controller")/fan${fan_index}_input"
@@ -22,20 +24,18 @@ while true; do
     fi
 
     # 读取 RPM
-    if [[ -f "$fan_path" ]]; then
-      rpm=$(< "$fan_path")
-    else
-      rpm="?"
-    fi
+    rpm="-"
+    [[ -f "$fan_path" ]] && rpm=$(< "$fan_path")
 
-    # 尝试读取 loop.sh 写入的温度文件
+    # 使用 loop.sh 写入的温度值，不读取真实磁盘温度（避免唤醒）
     temp_file="$tmp_path/temp_${plugin}_${custom}"
     temp="-"
     [[ -f "$temp_file" ]] && temp=$(< "$temp_file")
 
+    # 写入 Dashboard 专用临时文件
     echo "$rpm" > "$tmp_path/rpm_${plugin}_${custom}"
     echo "$temp" > "$tmp_path/temp_${plugin}_${custom}"
   done
 
-  sleep 15
+  sleep 15  # dashboard 刷新频率，不影响风扇控制逻辑
 done
