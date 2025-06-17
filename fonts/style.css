@@ -6,8 +6,7 @@
   font-display: block;
 }
 
-[class^="icon-"]:before,
-[class*=" icon-"]:before {
+.icon-fanctrlplus {
   font-family: 'fanctrlplus' !important;
   speak: never;
   font-style: normal;
