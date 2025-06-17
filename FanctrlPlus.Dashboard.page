@@ -23,6 +23,13 @@ $fan_block = "<div class='fanctrlplus-rpm-block'>$fan_rows</div>";
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
 echo <<<EOT
 <style>
+.fanctrlplus-status {
+  font-weight: normal;
+  font-size: 13px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
 .fanctrlplus-rpm-block {
   margin-top: 6px;
   font-weight: normal;
@@ -30,11 +37,13 @@ echo <<<EOT
   letter-spacing: 0;
   white-space: normal;
 }
+
 .fanctrlplus-rpm-item {
   font-family: monospace;
   font-size: 13px;
   white-space: pre;
   margin: 2px 0;
+  line-height: 1.4;
 }
 </style>
 EOT;
