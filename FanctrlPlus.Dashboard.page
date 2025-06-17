@@ -18,7 +18,7 @@ foreach ($cfg_files as $file) {
   $label = $cfg['custom'] ?? basename($file);
   $fan_rows .= <<<ROW
 <tr>
-  <td><span class="w26">$label</span><span class="w18 fanctrlplus-temp" data-label="$label">--</span><span class="w18 fanctrlplus-rpm" data-label="$label">--</span><span class="w18 fanctrlplus-individual-status" data-label="$label">--</span></td>
+  <td><span class="w26">$label</span><span class="w18 fanctrlplus-temp" data-label="$label">--</span><span class="w18 fanctrlplus-rpm" data-label="$label">--</span><span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
 </tr>
 ROW;
 }
@@ -91,6 +91,11 @@ function updateFanctrlplusTile() {
     .catch(() => {
       const statusSpan = document.querySelector(".fanctrlplus-status");
       if (statusSpan) statusSpan.textContent = "Status: Loading...";
+    
+      // 清空风扇数据
+      document.querySelectorAll(".fanctrlplus-temp, .fanctrlplus-rpm, .fanctrlplus-fanstatus").forEach(el => {
+        el.textContent = "--";
+      });
     });
 }
 
