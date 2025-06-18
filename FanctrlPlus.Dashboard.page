@@ -18,7 +18,7 @@ foreach ($cfg_files as $file) {
   $label = $cfg['custom'] ?? basename($file);
   $fan_rows .= <<<ROW
 <tr>
-  <td><span class="w36">$label</span><span class="w26 fanctrlplus-temp" data-label="$label">--</span><span class="w26 fanctrlplus-rpm" data-label="$label">--</span><span class="fanctrlplus-fanstatus" data-label="$label">--</span>
+  <td><span class="w26">$label</span><span class="w18 fanctrlplus-temp" data-label="$label">--</span><span class="w18 fanctrlplus-rpm" data-label="$label">--</span><span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
 </tr>
 ROW;
 }
@@ -33,8 +33,9 @@ echo <<<STYLE
   display: inline-block;
   margin-bottom: 6px;
 }
-.w36, .w26 {
+.w18, .w26 {
   font-size: 12px;
+  line-height: 1.4;
   display: inline-block;
   vertical-align: top;
 }
@@ -54,10 +55,10 @@ $mytiles[$pluginname]['column2'] = <<<EOT
   </a>
 </td></tr>
 <tr><td>
-  <span class="w36">NAME</span>
-  <span class="w26">TEMP</span>
-  <span class="w26">RPM</span>
-  <span>STATUS</span>
+  <span class="w26">NAME</span>
+  <span class="w18">TEMP</span>
+  <span class="w18">RPM</span>
+  <span class="w18">STATUS</span>
 </td></tr>
 $fan_rows
 </tbody>
