@@ -3,7 +3,7 @@
 
 cfg_file="$1"
 [[ -f "$cfg_file" ]] || exit 1
-source "$cfg_file
+source "$cfg_file"
 
 plugin="fanctrlplus"
 custom="${custom:-$(basename "$cfg_file" .cfg)}"
