@@ -64,6 +64,8 @@ while true; do
 
     label="[${custom}]"
     logger -t fanctrlplus "$label Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
+    # ✅ 写入 Dashboard 读取的温度缓存
+    echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${custom}"
     prev_pwm=$pwm_val
   fi
 
