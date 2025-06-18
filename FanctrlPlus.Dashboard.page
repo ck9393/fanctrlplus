@@ -29,7 +29,7 @@ echo <<<STYLE
 <style>
 .fanctrlplus-status {
   font-weight: normal;
-  font-size: 13px;
+  font-size: 12px;
   display: inline-block;
   margin-bottom: 6px;
 }
