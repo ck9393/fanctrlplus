@@ -50,6 +50,9 @@ while true; do
     pwm_val=$((pwm + delta * (255 - pwm) / range))
   fi
 
+  # ✅ 写入 Dashboard 读取的温度缓存
+  echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${custom}"
+
   # 只有 PWM 有明显变化时才写入
   if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
     [[ -f "$controller_enable" ]] && echo 1 > "$controller_enable"
@@ -64,8 +67,6 @@ while true; do
 
     label="[${custom}]"
     logger -t fanctrlplus "$label Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
-    # ✅ 写入 Dashboard 读取的温度缓存
-    echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${custom}"
     prev_pwm=$pwm_val
   fi
 
