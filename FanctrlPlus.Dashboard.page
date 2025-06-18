@@ -85,7 +85,7 @@ function updateFanctrlplusTile() {
         const statusEl = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
         if (tempEl) tempEl.textContent = f.temp;
         if (rpmEl) rpmEl.textContent = f.rpm;
-        if (statusEl) statusEl.textContent = f.status;
+        if (statusEl) statusEl.innerHTML = f.status;
       });
     })
     .catch(() => {
