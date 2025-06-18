@@ -29,7 +29,7 @@ while true; do
 
     # ✅ 正确读取 loop.sh 写入的缓存温度文件
     temp="-"
-    temp_file="/var/tmp/${plugin}/temp_${custom}"
+    ttemp_file="/var/tmp/${plugin}/temp_${plugin}_${custom}"
     [[ -f "$temp_file" ]] && temp=$(< "$temp_file")
 
     # ✅ 写入 Dashboard 所需文件
