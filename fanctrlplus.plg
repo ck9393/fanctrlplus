@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.2.2">
+<!ENTITY version "1.2.3">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY txz "/boot/config/plugins/&name;/fanctrlplus-&version;.txz">
@@ -94,16 +94,10 @@ exit 0
 <CHANGES>
 Release Notes – ###&version;
 
-New Features and Improvements:
-1. Reworked status indicator
-   - The top green/red status dot is now rendered using CSS for consistent styling and visibility.
-2. Per-fan SVG status indicator
-   - Each fan block now includes a live SVG icon to indicate control status (Active / Inactive), with automatic rotation and color changes based on running state.
-3. Safe fallback on Stop
-   - When clicking the Stop button, any fan that was actively controlled will be set to 50% PWM in manual mode. This helps prevent full-speed ramp-ups or complete fan stalls when BIOS fails to take over.
-4. Log optimization and UI refinements
-   - Fixed excessive log writes in earlier versions.
-   - Minor UI alignment and layout improvements.
+This version adds Dashboard tile support for Unraid:
+•	Displays each fan’s current temperature, RPM, and status.
+•	Indicates whether the main daemon is running.
+•	Supports both enabled and disabled fans (shown as Active or Inactive).
 
 </CHANGES>
 </PLUGIN>

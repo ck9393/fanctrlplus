@@ -111,7 +111,7 @@ $width = 300;
 </style>
 
 <div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
-  <span class="fanctrl-label">Active</span>
+  <span class="fanctrl-label">Runing</span>
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
@@ -123,6 +123,9 @@ const DEBUG = false; // ✅ 设置是否开启调试输出
 $(function() {
   let dotIndex = 0;
     const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
+
+    dotEls.forEach(dot => dot.classList.remove('visible'));
+    dotEls[dotIndex].classList.add('visible');
   
     function animateDots() {
       const container = document.getElementById('fanctrl-indicator');
@@ -198,7 +201,7 @@ window.updateFanControlStatus = function(isRunning = null) {
   
   if (isRunning) {
     container.classList.remove('fanctrl-stopped');
-    label.textContent = 'Active';
+    label.textContent = 'Running';
   } else {
     container.classList.add('fanctrl-stopped');
     label.textContent = 'Inactive';
@@ -405,3 +408,39 @@ function updateStatusLightAndButton() {
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
 </form>
+
+<?php
+if (version_compare(parse_ini_file('/etc/unraid-version')['version'], '6.12.0-beta5', '>') &&
+    stripos($_SERVER['REQUEST_URI'], 'dashboard') !== false) {
+
+$pluginname = "FanCtrl Plus";
+
+$mytiles[$pluginname]['column2'] = <<<EOT
+error_log("[FanCtrlPlus DEBUG] \$mytiles set with Dashboard tile");
+<tbody id="fanctrlplus-tile" title="FanCtrl Plus">
+  <tr><td>
+    <i class="fa fa-spinner fa-spin"></i>
+    <div class="section">FanCtrl Plus<br>
+      <span id="fanctrlplus-dashboard-status">Loading...</span>
+    </div>
+  </td></tr>
+</tbody>
+EOT;
+?>
+<script>
+function updateFanCtrlPlusDashboard() {
+  fetch('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status')
+    .then(res => res.json())
+    .then(data => {
+      const status = (data.status === 'running') ? '🟢 Running' : '🔴 Stopped';
+      const el = document.getElementById("fanctrlplus-dashboard-status");
+      if (el) el.innerHTML = status;
+    });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  updateFanCtrlPlusDashboard();
+  setInterval(updateFanCtrlPlusDashboard, 30000);
+});
+</script>
+<?php } ?>

@@ -1,0 +1,23 @@
+@font-face {
+  font-family: 'fanctrlplus';
+  src: url('/plugins/fanctrlplus/fonts/fanctrlplus.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+.icon-fanctrlplus {
+  font-family: 'fanctrlplus' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-fanctrlplus:before {
+  content: "\e900";
+}

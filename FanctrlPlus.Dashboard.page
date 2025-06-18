@@ -1,0 +1,108 @@
+Menu="Dashboard:0"
+Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9','>')"
+---
+<?php
+$pluginname = "fanctrlplus";
+$cfg_path = "/boot/config/plugins/$pluginname";
+$cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
+
+// 获取状态
+$status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Inactive";
+$status_color = $status_text === "Running" ? "green-text" : "red-text";
+
+// 构建风扇行
+$fan_rows = "";
+foreach ($cfg_files as $file) {
+  $cfg = parse_ini_file($file);
+  // if (($cfg['service'] ?? '0') !== '1') continue;
+  $label = $cfg['custom'] ?? basename($file);
+  $fan_rows .= <<<ROW
+<tr>
+  <td><span class="w26">$label</span><span class="w18 fanctrlplus-temp" data-label="$label">--</span><span class="w18 fanctrlplus-rpm" data-label="$label">--</span><span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
+</tr>
+ROW;
+}
+
+// 样式输出
+echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
+echo <<<STYLE
+<style>
+.fanctrlplus-status {
+  font-weight: normal;
+  font-size: 12px;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+.w18, .w26 {
+  font-size: 12px;
+  line-height: 1.4;
+  display: inline-block;
+  vertical-align: top;
+}
+</style>
+STYLE;
+
+// 输出 tile
+$mytiles[$pluginname]['column2'] = <<<EOT
+<tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
+<tr><td>
+  <i class="icon-fanctrlplus f32"></i>
+  <div class="section">FanCtrl Plus<br>
+    <span class="$status_color fanctrlplus-status">Status: $status_text</span>
+  </div>
+  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+    <i class="fa fa-fw fa-cog control"></i>
+  </a>
+</td></tr>
+<tr><td>
+  <span class="w26">NAME</span>
+  <span class="w18">TEMP</span>
+  <span class="w18">RPM</span>
+  <span class="w18">STATUS</span>
+</td></tr>
+$fan_rows
+</tbody>
+EOT;
+?>
+<script>
+function updateFanctrlplusTile() {
+  const tile = document.getElementById("fanctrlplus-dashboard");
+  if (!tile) return;
+
+  fetch("/plugins/fanctrlplus/FanctrlDashboard.php")
+    .then(res => res.json())
+    .then(data => {
+      // 更新顶部状态
+      const statusSpan = tile.querySelector(".fanctrlplus-status");
+      if (statusSpan) {
+        statusSpan.textContent = "Status: " + data.status;
+        statusSpan.className = "fanctrlplus-status " + (data.status === "Running" ? "green-text" : "red-text");
+      }
+
+      // 更新每个风扇的 Temp / RPM / 状态
+      data.fans.forEach(f => {
+        const label = f.label;
+        const tempEl = tile.querySelector(`.fanctrlplus-temp[data-label="${label}"]`);
+        const rpmEl = tile.querySelector(`.fanctrlplus-rpm[data-label="${label}"]`);
+        const statusEl = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
+        if (tempEl) tempEl.textContent = f.temp;
+        if (rpmEl) rpmEl.textContent = f.rpm;
+        if (statusEl) statusEl.innerHTML = f.status;
+      });
+    })
+    .catch(() => {
+      const statusSpan = document.querySelector(".fanctrlplus-status");
+      if (statusSpan) statusSpan.textContent = "Status: Loading...";
+    
+      // 清空风扇数据
+      document.querySelectorAll(".fanctrlplus-temp, .fanctrlplus-rpm, .fanctrlplus-fanstatus").forEach(el => {
+        el.textContent = "--";
+      });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(updateFanctrlplusTile, 200);
+  setInterval(updateFanctrlplusTile, 15000);
+});
+</script>
