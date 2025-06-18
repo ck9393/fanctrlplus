@@ -14,7 +14,7 @@ $status_color = $status_text === "Running" ? "green-text" : "red-text";
 $fan_rows = "";
 foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
-  if (($cfg['service'] ?? '0') !== '1') continue;
+  // if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
   $fan_rows .= <<<ROW
 <tr>
