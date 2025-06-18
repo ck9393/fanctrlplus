@@ -5,6 +5,7 @@ cfg_file="$1"
 [[ -f "$cfg_file" ]] || exit 1
 source "$cfg_file
 
+plugin="fanctrlplus"
 custom="${custom:-$(basename "$cfg_file" .cfg)}"
 controller_enable="${controller}_enable"
 
@@ -52,7 +53,7 @@ while true; do
   fi
 
   # ✅ 写入 Dashboard 读取的温度缓存
-  echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${custom}"
+  echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${plugin}_${custom}"
 
   # 只有 PWM 有明显变化时才写入
   if [[ "$prev_pwm" == -1 || $(( pwm_val - prev_pwm >= 5 || prev_pwm - pwm_val >= 5 )) == 1 ]]; then
