@@ -18,7 +18,7 @@ foreach ($cfg_files as $file) {
   $label = $cfg['custom'] ?? basename($file);
   $fan_rows .= <<<ROW
 <tr>
-  <td><span class="w36">$label</span><span class="w26 fanctrlplus-temp" data-label="$label">--</span><span class="w26 fanctrlplus-rpm" data-label="$label">--</span><class="fanctrlplus-fanstatus" data-label="$label">--</span>
+  <td><span class="w36">$label</span><span class="w26 fanctrlplus-temp" data-label="$label">--</span><span class="w26 fanctrlplus-rpm" data-label="$label">--</span><span class="fanctrlplus-fanstatus" data-label="$label">--</span>
 </tr>
 ROW;
 }
