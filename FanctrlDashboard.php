@@ -9,7 +9,6 @@ $fans = [];
 
 foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $cfg = parse_ini_file($file);
-  if (($cfg['service'] ?? '0') !== '1') continue;
 
   $custom = $cfg['custom'] ?? basename($file, '.cfg');
   $label = $custom;
@@ -17,12 +16,11 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   // 读取临时缓存的温度、RPM、状态
   $temp = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
   $rpm = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
-  $status = trim(@file_get_contents("$tmp_path/status_{$plugin}_$custom"));
 
   // 容错处理
   $temp = (is_numeric($temp)) ? "{$temp}°C" : "-";
   $rpm = ($rpm !== "" && is_numeric($rpm)) ? $rpm : "-";
-  $status = in_array($status, ['Running', 'Stopped']) ? $status : "-";
+  $status = ($cfg['service'] ?? '0') === '1' ? 'Active' : 'Inactive';
 
   $fans[] = [
     'label' => $label,
@@ -33,7 +31,7 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
 }
 
 // 总运行状态（用于顶部 status 圆点）
-$daemon_running = file_exists("/var/run/{$plugin}.pid");
+$daemon_running = count(glob("/var/run/{$plugin}_*.pid")) > 0;
 $status_text = $daemon_running ? "Running" : "Stopped";
 
 header("Content-Type: application/json");
