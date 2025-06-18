@@ -92,7 +92,7 @@ exit 0
 </FILE>
 
 <CHANGES>
-Release Notes – ###&version;
+Release Notes – &version;
 
 This version adds Dashboard tile support for Unraid:
 •	Displays each fan’s current temperature, RPM, and status.
