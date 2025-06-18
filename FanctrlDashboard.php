@@ -23,11 +23,11 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
 
     $temp = (is_numeric($temp)) ? "{$temp}°C" : "-";
     $rpm  = ($rpm !== "" && is_numeric($rpm)) ? $rpm : "-";
-    $status = "Active";
+    $status = '<span class="green-text">Active</span>';
   } else {
     $temp = "-";
     $rpm = "-";
-    $status = "Inactive";
+    $status = '<span class="red-text">Inactive</span>';
   }
 
   $fans[] = [
