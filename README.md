@@ -1,4 +1,4 @@
-**FanCtrl Plus**
+# **FanCtrl Plus**
 
 FanCtrl Plus is an Unraid plugin that provides automatic fan control based on the temperatures of HDDs, NVMe drives, and Unassigned Devices.  
 You can assign specific fans to specific drives, define low/high temperature thresholds, and adjust PWM values accordingly.
