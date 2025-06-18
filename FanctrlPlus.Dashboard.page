@@ -34,6 +34,7 @@ echo <<<STYLE
   margin-bottom: 6px;
 }
 .w36, .w26 {
+  font-size: 12px;
   display: inline-block;
   vertical-align: top;
 }
