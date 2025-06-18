@@ -7,7 +7,7 @@ $cfg_path = "/boot/config/plugins/$pluginname";
 $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
 // 获取状态
-$status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Stopped";
+$status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Inactive";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
 // 构建风扇行
