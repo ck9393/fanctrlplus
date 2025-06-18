@@ -111,7 +111,7 @@ $width = 300;
 </style>
 
 <div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
-  <span class="fanctrl-label">Active</span>
+  <span class="fanctrl-label">Runing</span>
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
   <div class="fanctrl-dot"></div>
@@ -201,7 +201,7 @@ window.updateFanControlStatus = function(isRunning = null) {
   
   if (isRunning) {
     container.classList.remove('fanctrl-stopped');
-    label.textContent = 'Active';
+    label.textContent = 'Running';
   } else {
     container.classList.add('fanctrl-stopped');
     label.textContent = 'Inactive';
