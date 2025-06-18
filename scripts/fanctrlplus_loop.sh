@@ -3,8 +3,9 @@
 
 cfg_file="$1"
 [[ -f "$cfg_file" ]] || exit 1
-source "$cfg_file"
+source "$cfg_file
 
+custom="${custom:-$(basename "$cfg_file" .cfg)}"
 controller_enable="${controller}_enable"
 
 # 推导 RPM 读取路径
