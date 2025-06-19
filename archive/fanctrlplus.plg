@@ -92,8 +92,8 @@ rm -rf /boot/config/plugins/fanctrlplus
 rm -f /etc/rc.d/rc.fanctrlplus
 
 echo "============================================================"
-echo "⚠️  FanCtrl Plus has been removed."
-echo "👉  To ensure fan control is restored to BIOS or other tools,"
+echo "    FanCtrl Plus has been removed."
+echo "    To ensure fan control is restored to BIOS or other tools,"
 echo "    it is strongly recommended to reboot your Unraid server."
 echo "============================================================"
 exit 0
