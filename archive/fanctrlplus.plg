@@ -32,7 +32,7 @@
 <INLINE>
 #!/bin/bash
 MD5=$(md5sum &txz; 2>/dev/null | grep -Po '^\S+')
-if [[ "$MD5" != "&md5;" ]]; then
+if [[ "$MD5" != "&MD5;" ]]; then
   rm -f &source;*.txz
 fi
 </INLINE>
