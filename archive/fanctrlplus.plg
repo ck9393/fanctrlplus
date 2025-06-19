@@ -5,7 +5,8 @@
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/archive/&name;.plg">
-<!ENTITY source "/boot/config/plugins/&name;/&name;">
+<!ENTITY source "/boot/config/plugins/&name;">
+<!ENTITY txz "&source;/&name;-&version;.txz">
 <!ENTITY MD5 "9287578cedb0d528d89cffa88d793a33">
 ]>
 
@@ -30,7 +31,7 @@
 <FILE Run="/bin/bash">
 <INLINE>
 #!/bin/bash
-MD5=$(md5sum &source;-&version;.txz 2>/dev/null | grep -Po '^\S+')
+MD5=$(md5sum &txz; 2>/dev/null | grep -Po '^\S+')
 if [[ "$MD5" != "&MD5;" ]]; then
   rm -f &source;*.txz
 fi
@@ -38,7 +39,7 @@ fi
 </FILE>
 
 <!-- 下载并安装新的 .txz -->
-<FILE Name="&source;-&version;.txz" Run="upgradepkg --install-new --reinstall">
+<FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
 <URL>https://raw.githubusercontent.com/ck9393/fanctrlplus/main/archive/&name;-&version;.txz</URL>
 <MD5>&MD5;</MD5>
 </FILE>
