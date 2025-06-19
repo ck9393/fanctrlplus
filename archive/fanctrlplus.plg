@@ -21,8 +21,8 @@
 
 - This version adds Dashboard tile support for Unraid:
 - Displays each fan’s current temperature, RPM, and status.
--	Indicates whether the main daemon is running.
--	Supports both enabled and disabled fans (shown as Active or Inactive).
+- Indicates whether the main daemon is running.
+- Supports both enabled and disabled fans (shown as Active or Inactive).
 
 </CHANGES>
 
