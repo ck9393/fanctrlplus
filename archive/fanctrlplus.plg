@@ -6,7 +6,7 @@
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/archive/&name;.plg">
 <!ENTITY source "/boot/config/plugins/&name;">
-<!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">">
+<!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">
 <!ENTITY MD5 "9287578cedb0d528d89cffa88d793a33">
 ]>
 
