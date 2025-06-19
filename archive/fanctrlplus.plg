@@ -40,7 +40,7 @@ fi
 
 <!-- 下载并安装新的 .txz -->
 <FILE Name="&txz;" Run="upgradepkg --install-new --reinstall">
-<URL>https://raw.githubusercontent.com/ck9393/fanctrlplus/main/archive/&name;-&version;.txz</URL>
+<URL>https://github.com/ck9393/fanctrlplus/releases/download/v&version;/&name;-&version;.txz</URL>
 <MD5>&MD5;</MD5>
 </FILE>
 
