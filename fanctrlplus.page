@@ -357,6 +357,7 @@ function updateStatusLightAndButton() {
       },
       error: function(xhr, status, err) {
         console.error("❌ Save error:", status, err);
+        console.warn("❗ Raw response:", xhr.responseText);
         $block.find('.fan-block-status')
           .text("Network Error")
           .css('color', 'red')
