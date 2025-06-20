@@ -242,4 +242,5 @@ switch ($op) {
     ]) . "\n");
   
     json_response(['status' => 'ok', 'message' => "Saved block #$index", 'file' => basename($newfile)]);
+}
 ?>
