@@ -246,6 +246,8 @@ switch ($op) {
       'message' => "Saved block #$index",
       'file' => basename($newfile)
     ]);
-    break;
-  ?>
+    exit;
+
+ default:
+   json_response(['status' => 'error', 'message' => 'Invalid operation']);
   
