@@ -15,6 +15,7 @@ ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/fanctrlplus_error.log');
 error_reporting(E_ALL);
 
+$log = "/tmp/fanctrlplus_debug.log";
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 require_once "$docroot/plugins/$plugin/include/Common.php";
