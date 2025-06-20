@@ -305,6 +305,43 @@ function updateStatusLightAndButton() {
       btn.prop('disabled', false);
     });
   };
+
+  function applyFanBlock(btn) {
+    const $block = $(btn).closest('.fan-block');
+    const formData = new FormData();
+    // ... 添加表单内容逻辑 ...
+    formData.append('op', 'saveblock');
+  
+    // Disable按钮避免重复提交
+    $(btn).prop('disabled', true).text('Saving...');
+  
+    fetch('FanctrlLogic.php', {
+      method: 'POST',
+      body: formData
+    }).then(res => res.json()).then(data => {
+      if (data.status === 'ok') {
+        // ✅ 成功保存后的提示动画
+        $block.find('.fan-block-status')
+          .text("Saved ✓")
+          .css('color', 'green')
+          .fadeIn().delay(1000).fadeOut();
+      } else {
+        // ❌ 显示错误
+        $block.find('.fan-block-status')
+          .text("Error: " + (data.message || "Unknown"))
+          .css('color', 'red')
+          .fadeIn().delay(3000).fadeOut();
+      }
+    }).catch(err => {
+      console.error(err);
+      $block.find('.fan-block-status')
+        .text("Network Error")
+        .css('color', 'red')
+        .fadeIn().delay(3000).fadeOut();
+    }).finally(() => {
+      $(btn).prop('disabled', false).text('APPLY');
+    });
+  }
   
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
