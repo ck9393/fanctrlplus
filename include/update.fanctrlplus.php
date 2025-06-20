@@ -12,6 +12,33 @@ $used_files = [];
 
 header('Content-Type: application/json');
 
+// 识别是否为单独 block Apply
+$target_index = null;
+foreach ($_POST as $key => $val) {
+  if (preg_match('/#applyblock\[(\d+)\]/', $key, $m)) {
+    $target_index = (int)$m[1];
+    break;
+  }
+}
+
+// 如果是单个 Apply，清除其他 block 数据
+if ($target_index !== null && isset($_POST['#file'][$target_index])) {
+  foreach ($_POST['#file'] as $i => $f) {
+    if ((int)$i !== $target_index) {
+      unset($_POST['#file'][$i]);
+      unset($_POST['custom'][$i]);
+      unset($_POST['label'][$i]);
+      unset($_POST['controller'][$i]);
+      unset($_POST['pwm'][$i]);
+      unset($_POST['low'][$i]);
+      unset($_POST['high'][$i]);
+      unset($_POST['interval'][$i]);
+      unset($_POST['service'][$i]);
+      unset($_POST['disks'][$i]);
+    }
+  }
+}
+
 // 校验提交数据结构
 if (!isset($_POST['#file']) || !is_array($_POST['#file'])) {
   ob_clean();
@@ -39,6 +66,13 @@ foreach ($_POST['#file'] as $i => $file) {
     $new_file = $plugin . "_$safe_custom.cfg";
   } else {
     $new_file = $old_file;
+  }
+  
+  // ✅ 无论是否来自 temp，一律校验最终结果
+  if (!preg_match('/^fanctrlplus_[A-Za-z0-9_\-]+\.cfg$/', $new_file)) {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => 'Invalid config file name']);
+    exit;
   }
 
   // 避免命名冲突
@@ -93,6 +127,7 @@ if (is_file($script)) {
   exec("bash $script stop > /dev/null 2>&1");
   sleep(1);
   exec("bash $script start > /dev/null 2>&1");
+  file_put_contents('/tmp/fanctrlplus_debug.log', "[update] Fanctrl restarted\n", FILE_APPEND);
 }
 
 ob_clean();
