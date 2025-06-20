@@ -108,6 +108,11 @@ $width = 300;
   transition: none !important;
 }
 
+.fan-block-status {
+  display: none;
+  font-size: 12px;
+  margin-left: 6px;
+}
 </style>
 
 <div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
@@ -273,6 +278,26 @@ function updateStatusLightAndButton() {
     updateAllFanStatus();
   }, 30000);
 
+  function applyFanBlock(btn) {
+    block.find('.fan-block-status')
+    const formData = block.find(':input').serializeArray();
+    formData.push({ name: 'op', value: 'saveblock' });  // 后端识别用
+  
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', formData, function(resp) {
+      if (resp.status === 'ok') {
+      $block.find('.fan-block-status')
+        .text("Saved ✓")
+        .css('color', 'green')
+        .fadeIn().delay(1000).fadeOut();
+    } else {
+      $block.find('.fan-block-status')
+        .text("Failed ✗")
+        .css('color', 'red')
+        .fadeIn().delay(1000).fadeOut();
+    }
+  }, 'json');
+});
+
   window.toggleDaemon = function() {
     const btn = $('#toggle-daemon');
     btn.prop('disabled', true);
@@ -329,33 +354,6 @@ function updateStatusLightAndButton() {
         console.error("❌ Pause failed:", status, err);
         $btn.text("Pause 30s").prop('disabled', false);
       }
-    });
-  };
-  
-  window.applySingleFan = function(btn) {
-    const block = $(btn).closest('.fan-block');
-    const data = {
-      op: 'saveone',
-      file: block.find('input.cfg-file').val(),
-      custom: block.find('input[name^="custom["]').val().trim(),
-      controller: block.find('select[name^="controller["]').val(),
-      pwm: block.find('input[name^="pwm["]').val(),
-      low: block.find('input[name^="low["]').val(),
-      high: block.find('input[name^="high["]').val(),
-      interval: block.find('input[name^="interval["]').val(),
-      disks: block.find('select[name^="disks["]').val()
-    };
-  
-    if (!data.custom) {
-      alert("Custom Name cannot be empty!");
-      return;
-    }
-  
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', data, function(response) {
-      console.log("✅ Saved:", response);
-      updateAllFanStatus();
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-      alert("❌ Failed to save fan config.");
     });
   };
 
@@ -433,6 +431,5 @@ function updateStatusLightAndButton() {
     <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
     <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
-    <button type="button" class="apply-button" onclick="applySingleFan(this)">💾 Apply</button>
   </div>
 </form>
