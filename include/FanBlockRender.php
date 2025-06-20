@@ -40,14 +40,14 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </div>
       </div> 
 
-      <button type="submit" name="apply[<?=$i?>]" value="1"title="Apply changes for this fan"style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">APPLY</button>
+      <button type="submit" name="apply[<?=$i?>]" value="1"title="Apply changes for this fan"style="position:absolute; bottom:36px; right:0px; transform: translate(2px, 0px);">APPLY</button>
       <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
         <tr>
           <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
           <td>
-            <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
+            <input type="text" maxlength="32" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
           </td>
         </tr>
 
