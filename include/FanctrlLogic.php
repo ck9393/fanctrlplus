@@ -53,9 +53,6 @@ switch ($op) {
     }
     exit;
 
-  default:
-  json_response(['status' => 'error', 'message' => 'Invalid operation']);
-
   case 'pwm':
     $pwm = $_GET['pwm'] ?? '';
     $fan = $_GET['fan'] ?? '';
@@ -205,8 +202,8 @@ switch ($op) {
     break;
 
   case 'saveblock':
-    file_put_contents("/tmp/fanctrlplus_debug.log", "op=$op index=$index\n", FILE_APPEND);
     $index = $_POST['index'] ?? '';
+    file_put_contents("/tmp/fanctrlplus_debug.log", "op=$op index=$index\n", FILE_APPEND);
     if (!is_numeric($index)) {
       json_response(['status' => 'error', 'message' => 'Invalid index']);
     }
