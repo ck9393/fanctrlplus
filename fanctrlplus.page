@@ -351,26 +351,22 @@ function updateStatusLightAndButton() {
       method: "POST",
       body: formData
     })
-    .then(response => response.text())
-    .then(text => {
-      console.log("Raw response:", text);
-      let res;
-      try {
-        res = JSON.parse(text);
-      } catch (e) {
-        alert("❌ Invalid JSON: " + text);
-        applyBtn.text("✔️ Apply").prop('disabled', false);
-        return;
-      }
+    .then(response => {
+      console.log("Fetch response object:", response); // ✅ 新增这行
+      return response.json();
+    })
+    .then(res => {
+      console.log("Parsed JSON:", res);               // ✅ 新增这行
       if (res.status === "ok") {
         applyBtn.text("✔️ Saved");
         setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
       } else {
-        alert("❌ Save failed: " + (res.message ?? text));
+        alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
         applyBtn.text("✔️ Apply").prop('disabled', false);
       }
     })
     .catch(error => {
+      console.log("Fetch error caught:", error);       // ✅ 新增这行
       alert("❌ Fetch error: " + error);
       applyBtn.text("✔️ Apply").prop('disabled', false);
     });
