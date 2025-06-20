@@ -247,4 +247,5 @@ switch ($op) {
       'file' => basename($newfile)
     ]);
     exit;
+  ?>
   
