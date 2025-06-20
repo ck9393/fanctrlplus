@@ -201,42 +201,45 @@ switch ($op) {
     json_response(['status' => 'stopped']);
     break;
 
-  case 'apply':
-  $file = basename($_POST['file'] ?? '');
-  $cfgpath = "/boot/config/plugins/$plugin/$file";
-  if (!is_file($cfgpath)) {
-    json_response(['status' => 'error', 'message' => 'Config file not found']);
-  }
-
-  // 接收数据并保存
-  $custom = trim($_POST['custom'] ?? '');
-  $controller = trim($_POST['controller'] ?? '');
-  $pwm = trim($_POST['pwm'] ?? '');
-  $low = trim($_POST['low'] ?? '');
-  $high = trim($_POST['high'] ?? '');
-  $interval = trim($_POST['interval'] ?? '');
-  $service = isset($_POST['service']) ? '1' : '0';
-  $disks = is_array($_POST['disks'] ?? []) ? implode(',', $_POST['disks']) : '';
-
-  if ($custom === '') {
-    json_response(['status' => 'error', 'message' => 'Custom name is required']);
-  }
-
-  // 重命名正式文件
-  $newfile = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
-  rename($cfgpath, $newfile);
-
-  file_put_contents($newfile, implode("\n", [
-    "custom=\"$custom\"",
-    "service=\"$service\"",
-    "controller=\"$controller\"",
-    "pwm=\"$pwm\"",
-    "low=\"$low\"",
-    "high=\"$high\"",
-    "interval=\"$interval\"",
-    "disks=\"$disks\""
-  ]) . "\n");
-
-  json_response(['status' => 'ok', 'message' => 'Saved', 'file' => basename($newfile)]);
-}
+  case 'saveblock':
+    $index = $_POST['index'] ?? '';
+    if (!is_numeric($index)) {
+      json_response(['status' => 'error', 'message' => 'Invalid index']);
+    }
+  
+    $file = basename($_POST['file'][$index] ?? '');
+    $cfgpath = "/boot/config/plugins/$plugin/$file";
+    if (!is_file($cfgpath)) {
+      json_response(['status' => 'error', 'message' => 'Config file not found']);
+    }
+  
+    $custom    = trim($_POST['custom'][$index] ?? '');
+    $controller= trim($_POST['controller'][$index] ?? '');
+    $pwm       = trim($_POST['pwm'][$index] ?? '');
+    $low       = trim($_POST['low'][$index] ?? '');
+    $high      = trim($_POST['high'][$index] ?? '');
+    $interval  = trim($_POST['interval'][$index] ?? '');
+    $service = in_array($_POST['service'][$index] ?? '0', ['1']) ? '1' : '0';
+    $disks_arr = $_POST['disks'][$index] ?? [];
+    $disks     = is_array($disks_arr) ? implode(',', $disks_arr) : '';
+  
+    if ($custom === '') {
+      json_response(['status' => 'error', 'message' => 'Custom name is required']);
+    }
+  
+    $newfile = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
+    rename($cfgpath, $newfile);
+  
+    file_put_contents($newfile, implode("\n", [
+      "custom=\"$custom\"",
+      "service=\"$service\"",
+      "controller=\"$controller\"",
+      "pwm=\"$pwm\"",
+      "low=\"$low\"",
+      "high=\"$high\"",
+      "interval=\"$interval\"",
+      "disks=\"$disks\""
+    ]) . "\n");
+  
+    json_response(['status' => 'ok', 'message' => "Saved block #$index", 'file' => basename($newfile)]);
 ?>
