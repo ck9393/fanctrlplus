@@ -39,9 +39,14 @@ if ($op === 'saveblock') {
 
   $index = intval($_POST['index'] ?? 0);
   $file  = basename($_POST['file'][$index] ?? '');
+  if (!preg_match('/^fanctrlplus_[A-Za-z0-9_\-]+\.cfg$/', $file)) {
+    file_put_contents($log, "[" . date('Y-m-d H:i:s') . "] [saveblock] Invalid file: $file (index=$index)\n", FILE_APPEND);
+    json_response(['status' => 'error', 'message' => 'Invalid config file name']);
+  }
   if (!$file) json_response(['status' => 'error', 'message' => 'Missing file name']);
 
-  $cfg_path = "/boot/config/plugins/fanctrlplus/$file";
+  $cfg_dir  = "/boot/config/plugins/$plugin";
+  $cfg_path = "$cfg_dir/$file";
 
   // 组装字段
   $custom     = trim($_POST['custom'][$index] ?? '');
@@ -58,7 +63,6 @@ if ($op === 'saveblock') {
 
   $ini = [
     'custom'     => $custom,
-    'label'      => $custom,
     'service'    => $service,
     'controller' => $controller,
     'pwm'        => $pwm,
