@@ -366,7 +366,7 @@ function updateStatusLightAndButton() {
         $(btn).prop('disabled', false).text('APPLY');
       }
     });
-  }
+  };
 
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
