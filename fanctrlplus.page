@@ -324,6 +324,7 @@ function updateStatusLightAndButton() {
     const formData = new FormData();
     formData.append("op", "saveblock");
     formData.append("index", index);
+    formData.append("csrf_token", "<?= $_SESSION['csrf_token'] ?>");
   
     // 收集该 block 中所有表单字段
     block.find('input, select, textarea').each(function () {
@@ -343,7 +344,7 @@ function updateStatusLightAndButton() {
           applyBtn.text("✔️ Saved");
           setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
         } else {
-          alert("❌ Save failed: " + res.message);
+          alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
           applyBtn.text("✔️ Apply").prop('disabled', false);
         }
       },
