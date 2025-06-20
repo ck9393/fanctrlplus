@@ -219,7 +219,7 @@ switch ($op) {
     $low       = trim($_POST['low'][$index] ?? '');
     $high      = trim($_POST['high'][$index] ?? '');
     $interval  = trim($_POST['interval'][$index] ?? '');
-    $service = in_array($_POST['service'][$index] ?? '0', ['1']) ? '1' : '0';
+    $service   = in_array($_POST['service'][$index] ?? '0', ['1']) ? '1' : '0';
     $disks_arr = $_POST['disks'][$index] ?? [];
     $disks     = is_array($disks_arr) ? implode(',', $disks_arr) : '';
   
@@ -241,6 +241,10 @@ switch ($op) {
       "disks=\"$disks\""
     ]) . "\n");
   
-    json_response(['status' => 'ok', 'message' => "Saved block #$index", 'file' => basename($newfile)]);
-}
+    json_response([
+      'status' => 'ok',
+      'message' => "Saved block #$index",
+      'file' => basename($newfile)
+    ]);
+    exit; //
 ?>
