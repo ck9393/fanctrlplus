@@ -216,6 +216,8 @@ switch ($op) {
   case 'saveblock':
     $index = $_POST['index'] ?? '';
     file_put_contents("/tmp/fanctrlplus_debug.log", "op=$op index=$index\n", FILE_APPEND);
+    file_put_contents($log, "[saveblock] called at " . date('c') . "\n", FILE_APPEND);
+    file_put_contents($log, "POST=" . print_r($_POST, true), FILE_APPEND);
     if (!is_numeric($index)) {
       json_response(['status' => 'error', 'message' => 'Invalid index']);
     }
