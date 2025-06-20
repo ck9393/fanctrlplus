@@ -311,6 +311,44 @@ function updateStatusLightAndButton() {
     });
   };
 
+function applyFanBlock(index) {
+  const block = $('.fan-block').eq(index);
+  const applyBtn = $(`#apply-btn-${index}`);
+  applyBtn.prop('disabled', true).text("Saving...");
+
+  const formData = new FormData();
+  formData.append("op", "saveblock");
+  formData.append("index", index);
+
+  // 收集该 block 中所有表单字段
+  block.find('input, select, textarea').each(function () {
+    const name = $(this).attr('name');
+    const value = $(this).val();
+    if (name && !name.startsWith('#')) formData.append(name, value);
+  });
+
+  $.ajax({
+    url: "/plugins/fanctrlplus/include/FanctrlLogic.php",
+    method: "POST",
+    data: formData,
+    processData: false,
+    contentType: false,
+    success: function (res) {
+      if (res.status === "ok") {
+        applyBtn.text("✔️ Saved");
+        setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
+      } else {
+        alert("❌ Save failed: " + res.message);
+        applyBtn.text("✔️ Apply").prop('disabled', false);
+      }
+    },
+    error: function (xhr, status, err) {
+      alert("❌ AJAX Error: " + err);
+      applyBtn.text("✔️ Apply").prop('disabled', false);
+    }
+  });
+}
+
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
   
