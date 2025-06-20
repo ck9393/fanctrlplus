@@ -313,18 +313,19 @@ function updateStatusLightAndButton() {
   
     formData.append('op', 'saveblock');
     formData.append('index', index);
-    formData.append('file[' + index + ']', $block.find('input[name^="#file["]').val());
-    formData.append('custom[' + index + ']', $block.find('input[name^="custom["]').val());
-    formData.append('controller[' + index + ']', $block.find('select[name^="controller["]').val());
-    formData.append('pwm[' + index + ']', $block.find('input[name^="pwm["]').val());
-    formData.append('low[' + index + ']', $block.find('input[name^="low["]').val());
-    formData.append('high[' + index + ']', $block.find('input[name^="high["]').val());
-    formData.append('interval[' + index + ']', $block.find('input[name^="interval["]').val());
-    formData.append('service[' + index + ']', $block.find('select[name^="service["]').val());
   
-    const disks = $block.find('select[name^="disks["]').val();
+    formData.append(`file[${index}]`,     $block.find(`input[name="#file[${index}]"]`).val());
+    formData.append(`custom[${index}]`,   $block.find(`input[name="custom[${index}]"]`).val());
+    formData.append(`controller[${index}]`, $block.find(`select[name="controller[${index}]"]`).val());
+    formData.append(`pwm[${index}]`,      $block.find(`input[name="pwm[${index}]"]`).val());
+    formData.append(`low[${index}]`,      $block.find(`input[name="low[${index}]"]`).val());
+    formData.append(`high[${index}]`,     $block.find(`input[name="high[${index}]"]`).val());
+    formData.append(`interval[${index}]`, $block.find(`input[name="interval[${index}]"]`).val());
+    formData.append(`service[${index}]`,  $block.find(`select[name="service[${index}]"]`).val());
+  
+    const disks = $block.find(`select[name="disks[${index}][]"]`).val();
     if (disks && disks.length) {
-      disks.forEach(d => formData.append('disks[' + index + '][]', d));
+      disks.forEach(d => formData.append(`disks[${index}][]`, d));
     }
   
     $(btn).prop('disabled', true).text('Saving...');
