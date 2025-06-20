@@ -6,9 +6,9 @@ function json_response($data) {
   exit;
 }
 
-while (ob_get_level()) ob_end_clean();
-ob_start();
-header('Content-Type: application/json');
+// while (ob_get_level()) ob_end_clean();
+// ob_start();
+// header('Content-Type: application/json');
 
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
