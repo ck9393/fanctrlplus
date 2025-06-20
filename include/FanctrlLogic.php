@@ -207,27 +207,32 @@ switch ($op) {
       json_response(['status' => 'error', 'message' => 'Invalid index']);
     }
 
-    $file = basename($_POST['file'][$index] ?? '');
-    $cfgpath = "/boot/config/plugins/$plugin/$file";
-    if (!is_file($cfgpath)) {
-      json_response(['status' => 'error', 'message' => 'Config file not found']);
+    // 修正后的键名处理方式
+    $file       = basename($_POST["file[$index]"] ?? '');
+    $custom     = trim($_POST["custom[$index]"] ?? '');
+    $controller = trim($_POST["controller[$index]"] ?? '');
+    $pwm        = trim($_POST["pwm[$index]"] ?? '');
+    $low        = trim($_POST["low[$index]"] ?? '');
+    $high       = trim($_POST["high[$index]"] ?? '');
+    $interval   = trim($_POST["interval[$index]"] ?? '');
+    $service    = in_array($_POST["service[$index]"] ?? '0', ['1']) ? '1' : '0';
+    $disks_arr  = $_POST["disks[$index]"] ?? [];
+    $disks      = is_array($disks_arr) ? implode(',', $disks_arr) : '';
+
+    if ($file === '') {
+      json_response(['status' => 'error', 'message' => 'Missing config file']);
     }
 
-    $custom     = trim($_POST['custom'][$index] ?? '');
-    $controller = trim($_POST['controller'][$index] ?? '');
-    $pwm        = trim($_POST['pwm'][$index] ?? '');
-    $low        = trim($_POST['low'][$index] ?? '');
-    $high       = trim($_POST['high'][$index] ?? '');
-    $interval   = trim($_POST['interval'][$index] ?? '');
-    $service    = in_array($_POST['service'][$index] ?? '0', ['1']) ? '1' : '0';
-    $disks_arr  = $_POST['disks'][$index] ?? [];
-    $disks      = is_array($disks_arr) ? implode(',', $disks_arr) : '';
+    if (!is_file("/boot/config/plugins/$plugin/$file")) {
+      json_response(['status' => 'error', 'message' => 'Config file not found']);
+    }
 
     if ($custom === '') {
       json_response(['status' => 'error', 'message' => 'Custom name is required']);
     }
 
-    $newfile = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
+    $cfgpath  = "/boot/config/plugins/$plugin/$file";
+    $newfile  = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
     rename($cfgpath, $newfile);
 
     file_put_contents($newfile, implode("\n", [
