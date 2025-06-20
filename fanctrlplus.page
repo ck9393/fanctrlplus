@@ -345,8 +345,21 @@ function updateStatusLightAndButton() {
       data: formData,
       processData: false,
       contentType: false,
-      dataType: "json",
-      success: function(data) {
+      // 🚫 不加 dataType，允许接受纯文本
+    
+      success: function(responseText) {
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          console.error("❌ Invalid JSON:", responseText);
+          $block.find('.fan-block-status')
+            .text("Server error (invalid JSON)")
+            .css('color', 'red')
+            .fadeIn().delay(3000).fadeOut();
+          return;
+        }
+    
         if (data.status === 'ok') {
           $block.find('.fan-block-status')
             .text("Saved ✓")
@@ -359,6 +372,7 @@ function updateStatusLightAndButton() {
             .fadeIn().delay(3000).fadeOut();
         }
       },
+    
       error: function(xhr, status, err) {
         console.error("❌ Save error:", status, err);
         console.warn("❗ Raw response:", xhr.responseText);
@@ -367,6 +381,7 @@ function updateStatusLightAndButton() {
           .css('color', 'red')
           .fadeIn().delay(3000).fadeOut();
       },
+    
       complete: function() {
         $(btn).prop('disabled', false).text('APPLY');
       }
