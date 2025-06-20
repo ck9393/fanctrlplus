@@ -313,30 +313,33 @@ function updateStatusLightAndButton() {
   
     formData.append('op', 'saveblock');
     formData.append('index', index);
-
-    const csrf = document.querySelector('input[name="csrf_token"]')?.value || '';
-    formData.append('csrf_token', csrf);
   
-    formData.append(`file[${index}]`,     $block.find(`input[name="#file[${index}]"]`).val());
-    formData.append(`custom[${index}]`,   $block.find(`input[name="custom[${index}]"]`).val());
+    formData.append(`file[${index}]`,       $block.find(`input[name="#file[${index}]"]`).val());
+    formData.append(`custom[${index}]`,     $block.find(`input[name="custom[${index}]"]`).val());
     formData.append(`controller[${index}]`, $block.find(`select[name="controller[${index}]"]`).val());
-    formData.append(`pwm[${index}]`,      $block.find(`input[name="pwm[${index}]"]`).val());
-    formData.append(`low[${index}]`,      $block.find(`input[name="low[${index}]"]`).val());
-    formData.append(`high[${index}]`,     $block.find(`input[name="high[${index}]"]`).val());
-    formData.append(`interval[${index}]`, $block.find(`input[name="interval[${index}]"]`).val());
-    formData.append(`service[${index}]`,  $block.find(`select[name="service[${index}]"]`).val());
+    formData.append(`pwm[${index}]`,        $block.find(`input[name="pwm[${index}]"]`).val());
+    formData.append(`low[${index}]`,        $block.find(`input[name="low[${index}]"]`).val());
+    formData.append(`high[${index}]`,       $block.find(`input[name="high[${index}]"]`).val());
+    formData.append(`interval[${index}]`,   $block.find(`input[name="interval[${index}]"]`).val());
+    formData.append(`service[${index}]`,    $block.find(`select[name="service[${index}]"]`).val());
   
     const disks = $block.find(`select[name="disks[${index}][]"]`).val();
     if (disks && disks.length) {
       disks.forEach(d => formData.append(`disks[${index}][]`, d));
     }
   
+    // ✅ 加入 csrf_token
+    const csrf = document.querySelector('input[name="csrf_token"]')?.value || '';
+    formData.append('csrf_token', csrf);
+  
     $(btn).prop('disabled', true).text('Saving...');
   
-    fetch('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+    fetch(`${window.location.origin}/plugins/fanctrlplus/include/FanctrlLogic.php`, {
       method: 'POST',
       body: formData
-    }).then(res => res.json()).then(data => {
+    })
+    .then(res => res.json())
+    .then(data => {
       if (data.status === 'ok') {
         $block.find('.fan-block-status')
           .text("Saved ✓")
@@ -348,13 +351,15 @@ function updateStatusLightAndButton() {
           .css('color', 'red')
           .fadeIn().delay(3000).fadeOut();
       }
-    }).catch(err => {
-      console.error(err);
+    })
+    .catch(err => {
+      console.error("❌ Save error:", err);
       $block.find('.fan-block-status')
         .text("Network Error")
         .css('color', 'red')
         .fadeIn().delay(3000).fadeOut();
-    }).finally(() => {
+    })
+    .finally(() => {
       $(btn).prop('disabled', false).text('APPLY');
     });
   };
