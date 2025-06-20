@@ -4,6 +4,7 @@ Icon="fanctrlplus.png"
 ---
 
 <?PHP
+global $var;
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
 
