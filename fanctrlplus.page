@@ -331,34 +331,33 @@ function updateStatusLightAndButton() {
     formData.append("index", index);
     formData.append("csrf_token", CSRF_TOKEN);
   
-    // 收集该 block 中所有表单字段
     block.find('input, select, textarea').each(function () {
       const name = $(this).attr('name');
       const value = $(this).val();
-      if (name && !name.startsWith('#')) formData.append(name, value);
-    });
-  
-    $.ajax({
-      url: "/plugins/fanctrlplus/include/FanctrlLogic.php",
-      method: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (res) {
-        if (res.status === "ok") {
-          applyBtn.text("✔️ Saved");
-          setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
-        } else {
-          alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
-          applyBtn.text("✔️ Apply").prop('disabled', false);
-        }
-      },
-      error: function (xhr, status, err) {
-        alert("❌ AJAX Error: " + err);
-        applyBtn.text("✔️ Apply").prop('disabled', false);
+      if (name && !name.startsWith('#')) {
+        formData.append(name, value);
       }
     });
-  }
+  
+    fetch("/plugins/fanctrlplus/include/FanctrlLogic.php", {
+      method: "POST",
+      body: formData
+    })
+    .then(response => response.json())
+    .then(res => {
+      if (res.status === "ok") {
+        applyBtn.text("✔️ Saved");
+        setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
+      } else {
+        alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
+        applyBtn.text("✔️ Apply").prop('disabled', false);
+      }
+    })
+    .catch(error => {
+      alert("❌ Fetch error: " + error);
+      applyBtn.text("✔️ Apply").prop('disabled', false);
+    });
+  };
 
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
