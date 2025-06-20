@@ -1,5 +1,6 @@
 <?php
 session_start();
+file_put_contents("/tmp/fanctrlplus_debug.log", "[EXECUTED FanctrlLogic.php]\n", FILE_APPEND);
 function json_response($data) {
   while (ob_get_level()) ob_end_clean();
   header('Content-Type: application/json');
