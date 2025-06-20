@@ -134,7 +134,7 @@ $width = 300;
 
 <script>
 const DEBUG = false;
-const CSRF_TOKEN = "fanctrlplus-safe";  // ✅ 用固定值传给后端
+let CSRF_TOKEN = document.getElementById("csrf_token")?.value || '';
 
 $(function() {
   CSRF_TOKEN = document.getElementById("csrf_token")?.value || '';
