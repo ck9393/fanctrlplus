@@ -200,5 +200,43 @@ switch ($op) {
     shell_exec("/etc/rc.d/rc.fanctrlplus stop");
     json_response(['status' => 'stopped']);
     break;
+
+  case 'apply':
+  $file = basename($_POST['file'] ?? '');
+  $cfgpath = "/boot/config/plugins/$plugin/$file";
+  if (!is_file($cfgpath)) {
+    json_response(['status' => 'error', 'message' => 'Config file not found']);
+  }
+
+  // 接收数据并保存
+  $custom = trim($_POST['custom'] ?? '');
+  $controller = trim($_POST['controller'] ?? '');
+  $pwm = trim($_POST['pwm'] ?? '');
+  $low = trim($_POST['low'] ?? '');
+  $high = trim($_POST['high'] ?? '');
+  $interval = trim($_POST['interval'] ?? '');
+  $service = isset($_POST['service']) ? '1' : '0';
+  $disks = is_array($_POST['disks'] ?? []) ? implode(',', $_POST['disks']) : '';
+
+  if ($custom === '') {
+    json_response(['status' => 'error', 'message' => 'Custom name is required']);
+  }
+
+  // 重命名正式文件
+  $newfile = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
+  rename($cfgpath, $newfile);
+
+  file_put_contents($newfile, implode("\n", [
+    "custom=\"$custom\"",
+    "service=\"$service\"",
+    "controller=\"$controller\"",
+    "pwm=\"$pwm\"",
+    "low=\"$low\"",
+    "high=\"$high\"",
+    "interval=\"$interval\"",
+    "disks=\"$disks\""
+  ]) . "\n");
+
+  json_response(['status' => 'ok', 'message' => 'Saved', 'file' => basename($newfile)]);
 }
 ?>
