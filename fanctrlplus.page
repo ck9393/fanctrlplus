@@ -335,7 +335,7 @@ function updateStatusLightAndButton() {
   
     $(btn).prop('disabled', true).text('Saving...');
   
-    fetch(`${window.location.origin}/plugins/fanctrlplus/include/FanctrlLogic.php`, {
+    fetch("/plugins/fanctrlplus/include/FanctrlLogic.php", {
       method: 'POST',
       body: formData
     })
