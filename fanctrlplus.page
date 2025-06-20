@@ -316,7 +316,7 @@ function updateStatusLightAndButton() {
     });
   };
 
-  function applyFanBlock(index) {
+  window.applyFanBlock = function(index) {
     const block = $('.fan-block').eq(index);
     const applyBtn = $(`#apply-btn-${index}`);
     applyBtn.prop('disabled', true).text("Saving...");
