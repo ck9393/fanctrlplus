@@ -306,27 +306,39 @@ function updateStatusLightAndButton() {
     });
   };
 
-  window.applyFanBlock(btn) {
+  window.applyFanBlock = function(btn) {
     const $block = $(btn).closest('.fan-block');
+    const index = $('.fan-block').index($block);
     const formData = new FormData();
-    // ... 添加表单内容逻辑 ...
-    formData.append('op', 'saveblock');
   
-    // Disable按钮避免重复提交
+    formData.append('op', 'saveblock');
+    formData.append('index', index);
+    formData.append('file[' + index + ']', $block.find('input[name^="#file["]').val());
+    formData.append('custom[' + index + ']', $block.find('input[name^="custom["]').val());
+    formData.append('controller[' + index + ']', $block.find('select[name^="controller["]').val());
+    formData.append('pwm[' + index + ']', $block.find('input[name^="pwm["]').val());
+    formData.append('low[' + index + ']', $block.find('input[name^="low["]').val());
+    formData.append('high[' + index + ']', $block.find('input[name^="high["]').val());
+    formData.append('interval[' + index + ']', $block.find('input[name^="interval["]').val());
+    formData.append('service[' + index + ']', $block.find('select[name^="service["]').val());
+  
+    const disks = $block.find('select[name^="disks["]').val();
+    if (disks && disks.length) {
+      disks.forEach(d => formData.append('disks[' + index + '][]', d));
+    }
+  
     $(btn).prop('disabled', true).text('Saving...');
   
-    fetch('FanctrlLogic.php', {
+    fetch('/plugins/fanctrlplus/include/FanctrlLogic.php', {
       method: 'POST',
       body: formData
     }).then(res => res.json()).then(data => {
       if (data.status === 'ok') {
-        // ✅ 成功保存后的提示动画
         $block.find('.fan-block-status')
           .text("Saved ✓")
           .css('color', 'green')
           .fadeIn().delay(1000).fadeOut();
       } else {
-        // ❌ 显示错误
         $block.find('.fan-block-status')
           .text("Error: " + (data.message || "Unknown"))
           .css('color', 'red')
@@ -341,7 +353,7 @@ function updateStatusLightAndButton() {
     }).finally(() => {
       $(btn).prop('disabled', false).text('APPLY');
     });
-  }
+  };
   
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
