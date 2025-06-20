@@ -311,83 +311,6 @@ function updateStatusLightAndButton() {
     });
   };
 
-  window.applyFanBlock = function(btn) {
-    const $block = $(btn).closest('.fan-block');
-    const index = $('.fan-block').index($block);
-    const formData = new FormData();
-  
-    formData.append('op', 'saveblock');
-    formData.append('index', index);
-  
-    formData.append(`file[${index}]`,       $block.find(`input[name="file[${index}]"]`).val());
-    formData.append(`custom[${index}]`,     $block.find(`input[name="custom[${index}]"]`).val());
-    formData.append(`controller[${index}]`, $block.find(`select[name="controller[${index}]"]`).val());
-    formData.append(`pwm[${index}]`,        $block.find(`input[name="pwm[${index}]"]`).val());
-    formData.append(`low[${index}]`,        $block.find(`input[name="low[${index}]"]`).val());
-    formData.append(`high[${index}]`,       $block.find(`input[name="high[${index}]"]`).val());
-    formData.append(`interval[${index}]`,   $block.find(`input[name="interval[${index}]"]`).val());
-    formData.append(`service[${index}]`,    $block.find(`select[name="service[${index}]"]`).val());
-  
-    const disks = $block.find(`select[name="disks[${index}][]"]`).val();
-    if (disks && disks.length) {
-      disks.forEach(d => formData.append(`disks[${index}][]`, d));
-    }
-  
-    // ✅ 加入 csrf_token
-    const csrf = document.querySelector('input[name="csrf_token"]')?.value || '';
-    formData.append('csrf_token', csrf);
-  
-    $(btn).prop('disabled', true).text('Saving...');
-  
-    $.ajax({
-      url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
-      method: 'POST',
-      data: formData,
-      processData: false,
-      contentType: false,
-      // 🚫 不加 dataType，允许接受纯文本
-    
-      success: function(responseText) {
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (e) {
-          console.error("❌ Invalid JSON:", responseText);
-          $block.find('.fan-block-status')
-            .text("Server error (invalid JSON)")
-            .css('color', 'red')
-            .fadeIn().delay(3000).fadeOut();
-          return;
-        }
-    
-        if (data.status === 'ok') {
-          $block.find('.fan-block-status')
-            .text("Saved ✓")
-            .css('color', 'green')
-            .fadeIn().delay(1000).fadeOut();
-        } else {
-          $block.find('.fan-block-status')
-            .text("Error: " + (data.message || "Unknown"))
-            .css('color', 'red')
-            .fadeIn().delay(3000).fadeOut();
-        }
-      },
-    
-      error: function(xhr, status, err) {
-        console.error("❌ Save error:", status, err);
-        console.warn("❗ Raw response:", xhr.responseText);
-        $block.find('.fan-block-status')
-          .text("Network Error")
-          .css('color', 'red')
-          .fadeIn().delay(3000).fadeOut();
-      },
-    
-      complete: function() {
-        $(btn).prop('disabled', false).text('APPLY');
-      }
-    });
-  };
-
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
   
@@ -481,7 +404,6 @@ function updateStatusLightAndButton() {
 
 <form method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
-  <input type="hidden" name="csrf_token" value="<?=$_SESSION['csrf_token']?>">
   <div id="fan-area">
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
