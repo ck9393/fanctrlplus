@@ -134,6 +134,7 @@ $width = 300;
 
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
+const CSRF_TOKEN = "<?= $_SESSION['csrf_token'] ?>";
 
 $(function() {
   let dotIndex = 0;
@@ -324,7 +325,7 @@ function updateStatusLightAndButton() {
     const formData = new FormData();
     formData.append("op", "saveblock");
     formData.append("index", index);
-    formData.append("csrf_token", "<?= $_SESSION['csrf_token'] ?>");
+    formData.append("csrf_token", CSRF_TOKEN);
   
     // 收集该 block 中所有表单字段
     block.find('input, select, textarea').each(function () {
