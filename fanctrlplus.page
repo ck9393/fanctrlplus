@@ -278,11 +278,11 @@ function updateStatusLightAndButton() {
     updateAllFanStatus();
   }, 30000);
 
-  function applyFanBlock(btn) {
+  window.applyFanBlock = function(btn) {
     const $block = $(btn).closest('.fan-block');
-    const index = $block.index();  // 与 i 保持一致
-  
+    const index = $block.index();
     const formData = $block.find(':input').serializeArray();
+  
     formData.push({ name: 'op', value: 'saveblock' });
     formData.push({ name: 'index', value: index });
   
@@ -297,7 +297,7 @@ function updateStatusLightAndButton() {
       const statusEl = $block.find('.fan-block-status');
       statusEl.text("Error ✗").css('color', 'orange').fadeIn().delay(1000).fadeOut();
     });
-  }
+  };
 
   window.toggleDaemon = function() {
     const btn = $('#toggle-daemon');
