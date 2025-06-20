@@ -457,6 +457,7 @@ function updateStatusLightAndButton() {
 
 <form method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
+  <input type="hidden" name="csrf_token" value="<?= $var['csrf_token'] ?? '' ?>">
   <div id="fan-area">
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
