@@ -331,6 +331,33 @@ function updateStatusLightAndButton() {
       }
     });
   };
+  
+  window.applySingleFan = function(btn) {
+    const block = $(btn).closest('.fan-block');
+    const data = {
+      op: 'saveone',
+      file: block.find('input.cfg-file').val(),
+      custom: block.find('input[name^="custom["]').val().trim(),
+      controller: block.find('select[name^="controller["]').val(),
+      pwm: block.find('input[name^="pwm["]').val(),
+      low: block.find('input[name^="low["]').val(),
+      high: block.find('input[name^="high["]').val(),
+      interval: block.find('input[name^="interval["]').val(),
+      disks: block.find('select[name^="disks["]').val()
+    };
+  
+    if (!data.custom) {
+      alert("Custom Name cannot be empty!");
+      return;
+    }
+  
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', data, function(response) {
+      console.log("✅ Saved:", response);
+      updateAllFanStatus();
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      alert("❌ Failed to save fan config.");
+    });
+  };
 
   window.removeFan = function(btn) {
     if (!confirm("Are you sure you want to delete this fan configuration?")) return;
