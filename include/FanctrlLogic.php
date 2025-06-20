@@ -1,35 +1,33 @@
 <?php
-// ✅ 强制清除所有输出缓冲，防止 header already sent
-while (ob_get_level()) ob_end_clean();
-ob_start(); // 开启新 buffer，让意外输出不会直接污染响应
+function json_response($data) {
+  while (ob_get_level()) ob_end_clean();
+  header('Content-Type: application/json');
+  echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  exit;
+}
 
-// ✅ 强制设定 JSON 输出头（让浏览器不要误解为 HTML）
+while (ob_get_level()) ob_end_clean();
+ob_start();
 header('Content-Type: application/json');
 
-// ✅ 错误记录写日志，而不是输出
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/fanctrlplus_error.log');
 error_reporting(E_ALL);
 
-session_start();
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$plugin  = 'fanctrlplus';
+$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+require_once "$docroot/plugins/$plugin/include/Common.php";
+
+$op = $_GET['op'] ?? $_POST['op'] ?? '';
+
+// ✅ 只对 saveblock 做 CSRF 校验
+if ($op === 'saveblock') {
+  session_start();
   $token = $_POST['csrf_token'] ?? '';
   if (empty($token) || $token !== ($_SESSION['csrf_token'] ?? '')) {
     json_response(['status' => 'error', 'message' => 'CSRF token invalid or missing']);
   }
-}
-
-$plugin  = 'fanctrlplus';
-$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
-
-require_once "$docroot/plugins/$plugin/include/Common.php";
-
-function json_response($data) {
-  while (ob_get_level()) ob_end_clean(); // ⛔再次清理，确保干净输出
-  header('Content-Type: application/json');
-  echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-  exit;
 }
 
 function scan_dir($dir) {
