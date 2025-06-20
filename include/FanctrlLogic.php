@@ -246,3 +246,5 @@ switch ($op) {
       'message' => "Saved block #$index",
       'file' => basename($newfile)
     ]);
+    exit;
+  
