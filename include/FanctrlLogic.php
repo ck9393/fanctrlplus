@@ -16,6 +16,12 @@ ini_set('error_log', '/tmp/fanctrlplus_error.log');
 error_reporting(E_ALL);
 
 $log = "/tmp/fanctrlplus_debug.log";
+register_shutdown_function(function () {
+  $error = error_get_last();
+  if ($error !== null) {
+    file_put_contents('/tmp/fanctrlplus_error.log', print_r($error, true), FILE_APPEND);
+  }
+});
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 require_once "$docroot/plugins/$plugin/include/Common.php";
@@ -219,6 +225,7 @@ switch ($op) {
     file_put_contents("/tmp/fanctrlplus_debug.log", "op=$op index=$index\n", FILE_APPEND);
     file_put_contents($log, "[saveblock] called at " . date('c') . "\n", FILE_APPEND);
     file_put_contents($log, "POST=" . print_r($_POST, true), FILE_APPEND);
+    echo "<<<BREAK>>>"; exit;
     if (!is_numeric($index)) {
       json_response(['status' => 'error', 'message' => 'Invalid index']);
     }
