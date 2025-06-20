@@ -32,7 +32,8 @@ $op = $_GET['op'] ?? $_POST['op'] ?? '';
 
 // ✅ 只对 saveblock 做 CSRF 校验
 if ($op === 'saveblock') {
-  file_put_contents('/tmp/fanctrlplus_debug.log', "[saveblock entered]\n", FILE_APPEND);
+  file_put_contents($log, "[saveblock entered]\n", FILE_APPEND);
+  file_put_contents($log, "[FULL POST DUMP] " . print_r($_POST, true) . "\n", FILE_APPEND);
   $token = $_POST['csrf_token'] ?? '';
   file_put_contents($log, "[" . date('c') . "] token = $token, session = " . ($_SESSION['csrf_token'] ?? 'null') . "\n", FILE_APPEND);
   file_put_contents($log, "[" . date('Y-m-d H:i:s') . "] [saveblock] raw POST: " . print_r($_POST, true) . "\n", FILE_APPEND);
