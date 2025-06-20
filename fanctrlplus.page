@@ -118,6 +118,11 @@ $width = 300;
   font-size: 12px;
   margin-left: 6px;
 }
+
+.apply-block-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>
 
 <div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
