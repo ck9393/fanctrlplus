@@ -306,7 +306,7 @@ function updateStatusLightAndButton() {
     });
   };
 
-  windows.applyFanBlock(btn) {
+  window.applyFanBlock(btn) {
     const $block = $(btn).closest('.fan-block');
     const formData = new FormData();
     // ... 添加表单内容逻辑 ...
