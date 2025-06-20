@@ -322,6 +322,9 @@ function updateStatusLightAndButton() {
   };
 
   window.applyFanBlock = function(index) {
+    console.log("Block count:", $('.fan-block').length);
+    console.log("Selected block:", $('.fan-block').eq(index));
+  
     const block = $('.fan-block').eq(index);
     const applyBtn = $(`#apply-btn-${index}`);
     applyBtn.prop('disabled', true).text("Saving...");
@@ -339,17 +342,31 @@ function updateStatusLightAndButton() {
       }
     });
   
+    console.log("Sending formData...");
+    for (let pair of formData.entries()) {
+      console.log("KEY:", pair[0], "VAL:", pair[1]);
+    }
+  
     fetch("/plugins/fanctrlplus/include/FanctrlLogic.php", {
       method: "POST",
       body: formData
     })
-    .then(response => response.json())
-    .then(res => {
+    .then(response => response.text())
+    .then(text => {
+      console.log("Raw response:", text);
+      let res;
+      try {
+        res = JSON.parse(text);
+      } catch (e) {
+        alert("❌ Invalid JSON: " + text);
+        applyBtn.text("✔️ Apply").prop('disabled', false);
+        return;
+      }
       if (res.status === "ok") {
         applyBtn.text("✔️ Saved");
         setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
       } else {
-        alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
+        alert("❌ Save failed: " + (res.message ?? text));
         applyBtn.text("✔️ Apply").prop('disabled', false);
       }
     })
