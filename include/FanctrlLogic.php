@@ -35,6 +35,7 @@ if ($op === 'saveblock') {
   file_put_contents('/tmp/fanctrlplus_debug.log', "[saveblock entered]\n", FILE_APPEND);
   $token = $_POST['csrf_token'] ?? '';
   file_put_contents($log, "[" . date('c') . "] token = $token, session = " . ($_SESSION['csrf_token'] ?? 'null') . "\n", FILE_APPEND);
+  file_put_contents($log, "[" . date('Y-m-d H:i:s') . "] [saveblock] raw POST: " . print_r($_POST, true) . "\n", FILE_APPEND);
   if ($token !== ($_SESSION['csrf_token'] ?? '')) {
     json_response(['status' => 'error', 'message' => 'CSRF token invalid']);
   }
