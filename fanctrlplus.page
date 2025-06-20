@@ -133,10 +133,12 @@ $width = 300;
 </div>
 
 <script>
-const DEBUG = false; // ✅ 设置是否开启调试输出
-const CSRF_TOKEN = document.getElementById("csrf_token").value;
+const DEBUG = false;
+let CSRF_TOKEN = null;
 
 $(function() {
+  CSRF_TOKEN = document.getElementById("csrf_token")?.value || '';
+
   let dotIndex = 0;
     const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
 
