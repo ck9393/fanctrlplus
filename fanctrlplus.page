@@ -433,41 +433,6 @@ function updateStatusLightAndButton() {
     <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
     <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
+    <button type="button" class="apply-button" onclick="applySingleFan(this)">💾 Apply</button>
   </div>
 </form>
-
-<?php
-if (version_compare(parse_ini_file('/etc/unraid-version')['version'], '6.12.0-beta5', '>') &&
-    stripos($_SERVER['REQUEST_URI'], 'dashboard') !== false) {
-
-$pluginname = "FanCtrl Plus";
-
-$mytiles[$pluginname]['column2'] = <<<EOT
-error_log("[FanCtrlPlus DEBUG] \$mytiles set with Dashboard tile");
-<tbody id="fanctrlplus-tile" title="FanCtrl Plus">
-  <tr><td>
-    <i class="fa fa-spinner fa-spin"></i>
-    <div class="section">FanCtrl Plus<br>
-      <span id="fanctrlplus-dashboard-status">Loading...</span>
-    </div>
-  </td></tr>
-</tbody>
-EOT;
-?>
-<script>
-function updateFanCtrlPlusDashboard() {
-  fetch('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status')
-    .then(res => res.json())
-    .then(data => {
-      const status = (data.status === 'running') ? '🟢 Running' : '🔴 Stopped';
-      const el = document.getElementById("fanctrlplus-dashboard-status");
-      if (el) el.innerHTML = status;
-    });
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  updateFanCtrlPlusDashboard();
-  setInterval(updateFanCtrlPlusDashboard, 30000);
-});
-</script>
-<?php } ?>
