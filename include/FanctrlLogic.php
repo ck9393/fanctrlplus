@@ -247,7 +247,5 @@ switch ($op) {
       'file' => basename($newfile)
     ]);
     exit;
-
- default:
-   json_response(['status' => 'error', 'message' => 'Invalid operation']);
+}
   
