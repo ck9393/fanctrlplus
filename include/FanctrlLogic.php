@@ -11,7 +11,7 @@ function json_response($data) {
 // ob_start();
 // header('Content-Type: application/json');
 
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/fanctrlplus_error.log');
 error_reporting(E_ALL);
@@ -32,6 +32,7 @@ $op = $_GET['op'] ?? $_POST['op'] ?? '';
 
 // ✅ 只对 saveblock 做 CSRF 校验
 if ($op === 'saveblock') {
+  file_put_contents('/tmp/fanctrlplus_debug.log', "[saveblock entered]\n", FILE_APPEND);
   $token = $_POST['csrf_token'] ?? '';
   file_put_contents($log, "[" . date('c') . "] token = $token, session = " . ($_SESSION['csrf_token'] ?? 'null') . "\n", FILE_APPEND);
   if ($token !== ($_SESSION['csrf_token'] ?? '')) {
