@@ -20,6 +20,7 @@ register_shutdown_function(function () {
   $error = error_get_last();
   if ($error !== null) {
     file_put_contents('/tmp/fanctrlplus_error.log', print_r($error, true), FILE_APPEND);
+    json_response(['status' => 'error', 'message' => 'PHP Fatal error']);
   }
 });
 $plugin  = 'fanctrlplus';
