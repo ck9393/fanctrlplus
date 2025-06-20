@@ -124,6 +124,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
           </td>
         </tr>
       </table>
+      <div class="fan-block-status"></div>
     </fieldset>
   </div>
   <?php
