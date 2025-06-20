@@ -1,4 +1,5 @@
 <?php
+session_start();
 function json_response($data) {
   while (ob_get_level()) ob_end_clean();
   header('Content-Type: application/json');
@@ -33,7 +34,7 @@ $op = $_GET['op'] ?? $_POST['op'] ?? '';
 if ($op === 'saveblock') {
   $token = $_POST['csrf_token'] ?? '';
   file_put_contents($log, "[" . date('c') . "] token = $token, session = " . ($_SESSION['csrf_token'] ?? 'null') . "\n", FILE_APPEND);
-  if ($token !== 'fanctrlplus-safe') {
+  if ($token !== ($_SESSION['csrf_token'] ?? '')) {
     json_response(['status' => 'error', 'message' => 'CSRF token invalid']);
   }
 
