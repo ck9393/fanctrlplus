@@ -33,6 +33,7 @@ $op = $_GET['op'] ?? $_POST['op'] ?? '';
 if ($op === 'saveblock') {
   session_start();
   $token = $_POST['csrf_token'] ?? '';
+  file_put_contents($log, "[" . date('c') . "] token = $token, session = " . ($_SESSION['csrf_token'] ?? 'null') . "\n", FILE_APPEND);
   if (empty($token) || $token !== ($_SESSION['csrf_token'] ?? '')) {
     json_response(['status' => 'error', 'message' => 'CSRF token invalid or missing']);
   }
