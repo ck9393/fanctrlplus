@@ -83,7 +83,9 @@ if ($op === 'saveblock') {
   if (!file_put_contents($cfg_path, implode("\n", $lines))) {
     json_response(['status' => 'error', 'message' => "Failed to write config"]);
   }
-
+  
+  file_put_contents($log, "[" . date('Y-m-d H:i:s') . "] [saveblock] Saved: $cfg_path\n", FILE_APPEND);
+  
   json_response(['status' => 'ok']);
 }
 
