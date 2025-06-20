@@ -27,7 +27,6 @@ if ($target_index !== null && isset($_POST['#file'][$target_index])) {
     if ((int)$i !== $target_index) {
       unset($_POST['#file'][$i]);
       unset($_POST['custom'][$i]);
-      unset($_POST['label'][$i]);
       unset($_POST['controller'][$i]);
       unset($_POST['pwm'][$i]);
       unset($_POST['low'][$i]);
@@ -89,7 +88,6 @@ foreach ($_POST['#file'] as $i => $file) {
   // 拼接配置内容
   $cfg = [
     'custom'     => $custom,
-    'label'      => $custom,
     'service'    => $_POST['service'][$i] ?? '0',
     'controller' => $controller,
     'pwm'        => $_POST['pwm'][$i] ?? '',
