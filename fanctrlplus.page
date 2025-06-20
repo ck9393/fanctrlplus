@@ -319,7 +319,7 @@ function updateStatusLightAndButton() {
     formData.append('op', 'saveblock');
     formData.append('index', index);
   
-    formData.append(`file[${index}]`,       $block.find(`input[name="#file[${index}]"]`).val());
+    formData.append(`file[${index}]`,       $block.find(`input[name="file[${index}]"]`).val());
     formData.append(`custom[${index}]`,     $block.find(`input[name="custom[${index}]"]`).val());
     formData.append(`controller[${index}]`, $block.find(`select[name="controller[${index}]"]`).val());
     formData.append(`pwm[${index}]`,        $block.find(`input[name="pwm[${index}]"]`).val());
