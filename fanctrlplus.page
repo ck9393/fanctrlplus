@@ -279,24 +279,25 @@ function updateStatusLightAndButton() {
   }, 30000);
 
   function applyFanBlock(btn) {
-    block.find('.fan-block-status')
-    const formData = block.find(':input').serializeArray();
-    formData.push({ name: 'op', value: 'saveblock' });  // 后端识别用
+    const $block = $(btn).closest('.fan-block');
+    const index = $block.index();  // 与 i 保持一致
+  
+    const formData = $block.find(':input').serializeArray();
+    formData.push({ name: 'op', value: 'saveblock' });
+    formData.push({ name: 'index', value: index });
   
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', formData, function(resp) {
+      const statusEl = $block.find('.fan-block-status');
       if (resp.status === 'ok') {
-      $block.find('.fan-block-status')
-        .text("Saved ✓")
-        .css('color', 'green')
-        .fadeIn().delay(1000).fadeOut();
-    } else {
-      $block.find('.fan-block-status')
-        .text("Failed ✗")
-        .css('color', 'red')
-        .fadeIn().delay(1000).fadeOut();
-    }
-  }, 'json');
-});
+        statusEl.text("Saved ✓").css('color', 'green').fadeIn().delay(1000).fadeOut();
+      } else {
+        statusEl.text("Failed ✗").css('color', 'red').fadeIn().delay(1000).fadeOut();
+      }
+    }, 'json').fail(function(xhr, status, err) {
+      const statusEl = $block.find('.fan-block-status');
+      statusEl.text("Error ✗").css('color', 'orange').fadeIn().delay(1000).fadeOut();
+    });
+  }
 
   window.toggleDaemon = function() {
     const btn = $('#toggle-daemon');
