@@ -36,6 +36,49 @@ if ($op === 'saveblock') {
   if (empty($token) || $token !== ($_SESSION['csrf_token'] ?? '')) {
     json_response(['status' => 'error', 'message' => 'CSRF token invalid or missing']);
   }
+
+  $index = intval($_POST['index'] ?? 0);
+  $file  = basename($_POST['file'][$index] ?? '');
+  if (!$file) json_response(['status' => 'error', 'message' => 'Missing file name']);
+
+  $cfg_path = "/boot/config/plugins/fanctrlplus/$file";
+
+  // 组装字段
+  $custom     = trim($_POST['custom'][$index] ?? '');
+  $controller = trim($_POST['controller'][$index] ?? '');
+  $pwm        = trim($_POST['pwm'][$index] ?? '');
+  $low        = trim($_POST['low'][$index] ?? '');
+  $high       = trim($_POST['high'][$index] ?? '');
+  $interval   = trim($_POST['interval'][$index] ?? '');
+  $service    = trim($_POST['service'][$index] ?? '');
+  $disks_arr  = $_POST["disks"][$index] ?? [];
+  $disks      = implode(',', array_map('trim', (array)$disks_arr));
+
+  if ($custom === '') json_response(['status' => 'error', 'message' => 'Custom name is required']);
+
+  $ini = [
+    'custom'     => $custom,
+    'label'      => $custom,
+    'service'    => $service,
+    'controller' => $controller,
+    'pwm'        => $pwm,
+    'low'        => $low,
+    'high'       => $high,
+    'interval'   => $interval,
+    'disks'      => $disks
+  ];
+
+  // 生成 ini 内容
+  $lines = [];
+  foreach ($ini as $k => $v) {
+    $lines[] = $k . '="' . str_replace('"', '\"', $v) . '"';
+  }
+
+  if (!file_put_contents($cfg_path, implode("\n", $lines))) {
+    json_response(['status' => 'error', 'message' => "Failed to write config"]);
+  }
+
+  json_response(['status' => 'ok']);
 }
 
 function scan_dir($dir) {
@@ -220,56 +263,5 @@ switch ($op) {
     shell_exec("/etc/rc.d/rc.fanctrlplus stop");
     json_response(['status' => 'stopped']);
     break;
-  
-  case 'saveblock':
-    $index = $_POST['index'] ?? '';
-    file_put_contents("/tmp/fanctrlplus_debug.log", "op=$op index=$index\n", FILE_APPEND);
-    file_put_contents($log, "[saveblock] called at " . date('c') . "\n", FILE_APPEND);
-    file_put_contents($log, "POST=" . print_r($_POST, true), FILE_APPEND);
-    echo "<<<BREAK>>>"; exit;
-    if (!is_numeric($index)) {
-      json_response(['status' => 'error', 'message' => 'Invalid index']);
-    }
-  
-    $file = basename($_POST['file'][$index] ?? '');
-    $cfgpath = "/boot/config/plugins/$plugin/$file";
-    if (!is_file($cfgpath)) {
-      json_response(['status' => 'error', 'message' => "Config not found: $file"]);
-    }
-  
-    $custom     = trim($_POST["custom"][$index] ?? '');
-    $controller = trim($_POST["controller"][$index] ?? '');
-    $pwm        = trim($_POST["pwm"][$index] ?? '');
-    $low        = trim($_POST["low"][$index] ?? '');
-    $high       = trim($_POST["high"][$index] ?? '');
-    $interval   = trim($_POST["interval"][$index] ?? '');
-    $service    = in_array($_POST["service"][$index] ?? '0', ['1']) ? '1' : '0';
-    $disks_arr  = $_POST["disks"][$index] ?? [];
-    $disks      = is_array($disks_arr) ? implode(',', $disks_arr) : '';
-  
-    if ($custom === '') {
-      json_response(['status' => 'error', 'message' => 'Custom name is required']);
-    }
-  
-    $newfile = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
-    $result = file_put_contents($newfile, implode("\n", [
-      "custom=\"$custom\"",
-      "label=\"$custom\"",
-      "service=\"$service\"",
-      "controller=\"$controller\"",
-      "pwm=\"$pwm\"",
-      "low=\"$low\"",
-      "high=\"$high\"",
-      "interval=\"$interval\"",
-      "disks=\"$disks\""
-    ]) . "\n");
-  
-    json_response([
-      'status' => 'ok',
-      'message' => "Saved block #$index ($custom)",
-      'file' => basename($newfile),
-      'bytes_written' => $result
-    ]);
-    exit;
 }
   
