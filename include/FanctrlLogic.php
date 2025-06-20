@@ -206,30 +206,30 @@ switch ($op) {
     if (!is_numeric($index)) {
       json_response(['status' => 'error', 'message' => 'Invalid index']);
     }
-  
+
     $file = basename($_POST['file'][$index] ?? '');
     $cfgpath = "/boot/config/plugins/$plugin/$file";
     if (!is_file($cfgpath)) {
       json_response(['status' => 'error', 'message' => 'Config file not found']);
     }
-  
-    $custom    = trim($_POST['custom'][$index] ?? '');
-    $controller= trim($_POST['controller'][$index] ?? '');
-    $pwm       = trim($_POST['pwm'][$index] ?? '');
-    $low       = trim($_POST['low'][$index] ?? '');
-    $high      = trim($_POST['high'][$index] ?? '');
-    $interval  = trim($_POST['interval'][$index] ?? '');
-    $service   = in_array($_POST['service'][$index] ?? '0', ['1']) ? '1' : '0';
-    $disks_arr = $_POST['disks'][$index] ?? [];
-    $disks     = is_array($disks_arr) ? implode(',', $disks_arr) : '';
-  
+
+    $custom     = trim($_POST['custom'][$index] ?? '');
+    $controller = trim($_POST['controller'][$index] ?? '');
+    $pwm        = trim($_POST['pwm'][$index] ?? '');
+    $low        = trim($_POST['low'][$index] ?? '');
+    $high       = trim($_POST['high'][$index] ?? '');
+    $interval   = trim($_POST['interval'][$index] ?? '');
+    $service    = in_array($_POST['service'][$index] ?? '0', ['1']) ? '1' : '0';
+    $disks_arr  = $_POST['disks'][$index] ?? [];
+    $disks      = is_array($disks_arr) ? implode(',', $disks_arr) : '';
+
     if ($custom === '') {
       json_response(['status' => 'error', 'message' => 'Custom name is required']);
     }
-  
+
     $newfile = "/boot/config/plugins/$plugin/{$plugin}_{$custom}.cfg";
     rename($cfgpath, $newfile);
-  
+
     file_put_contents($newfile, implode("\n", [
       "custom=\"$custom\"",
       "service=\"$service\"",
@@ -240,11 +240,9 @@ switch ($op) {
       "interval=\"$interval\"",
       "disks=\"$disks\""
     ]) . "\n");
-  
+
     json_response([
       'status' => 'ok',
       'message' => "Saved block #$index",
       'file' => basename($newfile)
     ]);
-    exit; //
-?>
