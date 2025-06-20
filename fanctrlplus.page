@@ -313,6 +313,9 @@ function updateStatusLightAndButton() {
   
     formData.append('op', 'saveblock');
     formData.append('index', index);
+
+    const csrf = document.querySelector('input[name="csrf_token"]')?.value || '';
+    formData.append('csrf_token', csrf);
   
     formData.append(`file[${index}]`,     $block.find(`input[name="#file[${index}]"]`).val());
     formData.append(`custom[${index}]`,   $block.find(`input[name="custom[${index}]"]`).val());
