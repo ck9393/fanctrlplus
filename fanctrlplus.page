@@ -335,36 +335,38 @@ function updateStatusLightAndButton() {
   
     $(btn).prop('disabled', true).text('Saving...');
   
-    fetch("/plugins/fanctrlplus/include/FanctrlLogic.php", {
+    $.ajax({
+      url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
       method: 'POST',
-      body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.status === 'ok') {
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(data) {
+        if (data.status === 'ok') {
+          $block.find('.fan-block-status')
+            .text("Saved ✓")
+            .css('color', 'green')
+            .fadeIn().delay(1000).fadeOut();
+        } else {
+          $block.find('.fan-block-status')
+            .text("Error: " + (data.message || "Unknown"))
+            .css('color', 'red')
+            .fadeIn().delay(3000).fadeOut();
+        }
+      },
+      error: function(xhr, status, err) {
+        console.error("❌ Save error:", status, err);
         $block.find('.fan-block-status')
-          .text("Saved ✓")
-          .css('color', 'green')
-          .fadeIn().delay(1000).fadeOut();
-      } else {
-        $block.find('.fan-block-status')
-          .text("Error: " + (data.message || "Unknown"))
+          .text("Network Error")
           .css('color', 'red')
           .fadeIn().delay(3000).fadeOut();
+      },
+      complete: function() {
+        $(btn).prop('disabled', false).text('APPLY');
       }
-    })
-    .catch(err => {
-      console.error("❌ Save error:", err);
-      $block.find('.fan-block-status')
-        .text("Network Error")
-        .css('color', 'red')
-        .fadeIn().delay(3000).fadeOut();
-    })
-    .finally(() => {
-      $(btn).prop('disabled', false).text('APPLY');
     });
-  };
-  
+  }
+
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
   
