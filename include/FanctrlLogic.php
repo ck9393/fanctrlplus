@@ -12,6 +12,14 @@ ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/fanctrlplus_error.log');
 error_reporting(E_ALL);
 
+session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $token = $_POST['csrf_token'] ?? '';
+  if (empty($token) || $token !== ($_SESSION['csrf_token'] ?? '')) {
+    json_response(['status' => 'error', 'message' => 'CSRF token invalid or missing']);
+  }
+}
+
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 
@@ -206,7 +214,7 @@ switch ($op) {
     shell_exec("/etc/rc.d/rc.fanctrlplus stop");
     json_response(['status' => 'stopped']);
     break;
-
+  
   case 'saveblock':
     $index = $_POST['index'] ?? '';
     file_put_contents("/tmp/fanctrlplus_debug.log", "op=$op index=$index\n", FILE_APPEND);
