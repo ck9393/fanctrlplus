@@ -352,11 +352,23 @@ function updateStatusLightAndButton() {
       body: formData
     })
     .then(response => {
-      console.log("Fetch response object:", response); // ✅ 新增这行
-      return response.json();
+      console.log("Fetch response object:", response);
+      return response.text(); // ❗改成 text() 强行打印内容
     })
-    .then(res => {
-      console.log("Parsed JSON:", res);               // ✅ 新增这行
+    .then(resText => {
+      console.log("Raw response text:", resText); // ✅ 打印响应内容，判断是 JSON 还是 HTML
+    
+      let res;
+      try {
+        res = JSON.parse(resText);
+        console.log("Parsed JSON:", res);
+      } catch (e) {
+        console.error("❌ JSON parse error:", e);
+        alert("❌ Server did not return valid JSON. Response:\n" + resText);
+        applyBtn.text("✔️ Apply").prop('disabled', false);
+        return;
+      }
+    
       if (res.status === "ok") {
         applyBtn.text("✔️ Saved");
         setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
@@ -366,7 +378,7 @@ function updateStatusLightAndButton() {
       }
     })
     .catch(error => {
-      console.log("Fetch error caught:", error);       // ✅ 新增这行
+      console.log("Fetch error caught:", error);
       alert("❌ Fetch error: " + error);
       applyBtn.text("✔️ Apply").prop('disabled', false);
     });
