@@ -40,7 +40,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </div>
       </div> 
 
-      <button type="submit" name="apply[<?=$i?>]" value="1"title="Apply changes for this fan"style="position:absolute; bottom:36px; right:0px; transform: translate(2px, 0px);">APPLY</button>
+      <button type="button" onclick="applyFanBlock(this)">APPLY</button>
       <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
