@@ -41,6 +41,7 @@ if ($op === 'saveblock') {
 
   $index = intval($_POST['index'] ?? 0);
   $file  = basename($_POST['file'][$index] ?? '');
+  file_put_contents($log, "[" . date('Y-m-d H:i:s') . "] [saveblock] Raw file: $file\n", FILE_APPEND);
   if (!preg_match('/^fanctrlplus_[A-Za-z0-9_\-]+\.cfg$/', $file)) {
     file_put_contents($log, "[" . date('Y-m-d H:i:s') . "] [saveblock] Invalid file: $file (index=$index)\n", FILE_APPEND);
     json_response(['status' => 'error', 'message' => 'Invalid config file name']);
