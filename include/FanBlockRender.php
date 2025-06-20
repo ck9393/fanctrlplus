@@ -4,7 +4,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
   ob_start();
   ?>
   <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
-    <input type="hidden" name="#file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>" class="cfg-file">
+    <input type="hidden" name="file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>" class="cfg-file">
 
     <fieldset style="margin:10px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
       <div style="position:absolute; top:10px; right:10px; width:36px; height:36px;">
