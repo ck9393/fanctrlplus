@@ -4,6 +4,10 @@ Icon="fanctrlplus.png"
 ---
 
 <?PHP
+session_start();
+if (empty($_SESSION['csrf_token'])) {
+  $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
+}
 global $var;
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
