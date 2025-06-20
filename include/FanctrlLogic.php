@@ -1,18 +1,24 @@
 <?php
+// ✅ 强制清除所有输出缓冲，防止 header already sent
+while (ob_get_level()) ob_end_clean();
+ob_start(); // 开启新 buffer，让意外输出不会直接污染响应
+
+// ✅ 强制设定 JSON 输出头（让浏览器不要误解为 HTML）
+header('Content-Type: application/json');
+
+// ✅ 错误记录写日志，而不是输出
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', '/tmp/fanctrlplus_error.log');
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 
 require_once "$docroot/plugins/$plugin/include/Common.php";
 
-header('Content-Type: application/json');
-
 function json_response($data) {
-  while (ob_get_level()) {
-    ob_end_clean(); // 安全清除所有输出缓冲区，避免 notice 错误
-  }
+  while (ob_get_level()) ob_end_clean(); // ⛔再次清理，确保干净输出
   header('Content-Type: application/json');
   echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   exit;
