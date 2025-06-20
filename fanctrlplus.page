@@ -135,10 +135,11 @@ $width = 300;
 
 <script>
 const DEBUG = false;
-let CSRF_TOKEN = document.getElementById("csrf_token")?.value || '';
+let CSRF_TOKEN = null;
 
 $(function() {
   CSRF_TOKEN = document.getElementById("csrf_token")?.value || '';
+  console.log("CSRF token ready:", CSRF_TOKEN);
 
   let dotIndex = 0;
     const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
