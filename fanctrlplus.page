@@ -322,6 +322,7 @@ function updateStatusLightAndButton() {
   };
 
   window.applyFanBlock = function(index) {
+    console.log('正在提交 fan block:', data);
     console.log("[Apply Fan Block] index =", index);
     console.log("Block count:", $('.fan-block').length);
     console.log("Selected block:", $('.fan-block').eq(index));
