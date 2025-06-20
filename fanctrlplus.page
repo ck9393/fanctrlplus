@@ -278,27 +278,6 @@ function updateStatusLightAndButton() {
     updateAllFanStatus();
   }, 30000);
 
-  window.applyFanBlock = function(btn) {
-    const $block = $(btn).closest('.fan-block');
-    const index = $block.index();
-    const formData = $block.find(':input').serializeArray();
-  
-    formData.push({ name: 'op', value: 'saveblock' });
-    formData.push({ name: 'index', value: index });
-  
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', formData, function(resp) {
-      const statusEl = $block.find('.fan-block-status');
-      if (resp.status === 'ok') {
-        statusEl.text("Saved ✓").css('color', 'green').fadeIn().delay(1000).fadeOut();
-      } else {
-        statusEl.text("Failed ✗").css('color', 'red').fadeIn().delay(1000).fadeOut();
-      }
-    }, 'json').fail(function(xhr, status, err) {
-      const statusEl = $block.find('.fan-block-status');
-      statusEl.text("Error ✗").css('color', 'orange').fadeIn().delay(1000).fadeOut();
-    });
-  };
-
   window.toggleDaemon = function() {
     const btn = $('#toggle-daemon');
     btn.prop('disabled', true);
