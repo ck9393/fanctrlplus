@@ -36,7 +36,7 @@ require_once "$docroot/plugins/$plugin/include/Common.php";
 $op = $_GET['op'] ?? $_POST['op'] ?? '';
 
 // ✅ 只对 saveblock 做 CSRF 校验
-if ($op === 'saveblock') {
+case 'saveblock'
   file_put_contents($log, "[verify] FanctrlLogic.php executing from: " . __FILE__ . "\n", FILE_APPEND);
   file_put_contents($log, "[saveblock entered]\n", FILE_APPEND);
   file_put_contents($log, "[FULL POST DUMP] " . print_r($_POST, true) . "\n", FILE_APPEND);
