@@ -1,9 +1,13 @@
 <?php
-session_start();
-file_put_contents("/tmp/fanctrlplus_debug.log", "[EXECUTED FanctrlLogic.php]\n", FILE_APPEND);
 function json_response($data) {
-  while (ob_get_level()) ob_end_clean();
-  header('Content-Type: application/json');
+  while (ob_get_level()) ob_end_clean(); // 清所有 buffer
+
+  if (!headers_sent()) {
+    header_remove(); // 清掉所有 header（尤其是多次重复 set）
+    header('Content-Type: application/json');
+    http_response_code(200); // 明确给个 200
+  }
+
   echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
   exit;
 }
