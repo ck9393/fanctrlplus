@@ -41,6 +41,19 @@ $width = 300;
 <input type="hidden" id="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
 <style>
+#fan-area {
+  font-size: 0; /* 去除 inline-block 间距 */
+}
+
+.fan-block {
+  display: inline-block;
+  vertical-align: top;
+  width: 48%;
+  margin: 6px 1%;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
 :root {
   --frame-color: #000000;
   --hub-color: #666666;
@@ -343,6 +356,8 @@ function updateStatusLightAndButton() {
       data: formData,
       processData: false,
       contentType: false,
+      headers: {
+        'X-CSRF-TOKEN': CSRF_TOKEN
       success: function (data) {
         // 省略已写好的 JSON 解析与提示逻辑
       },
