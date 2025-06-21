@@ -46,7 +46,6 @@ $width = 300;
   font-size: 0; /* 消除 inline-block 间隙 */
   text-align: left;
 }
-
 .fan-block {
   display: inline-block;
   vertical-align: top;
@@ -57,7 +56,7 @@ $width = 300;
   border: 1px solid #ccc;
   border-radius: 6px;
   padding: 16px 12px 16px 16px;
-  font-size: 14px; /* 恢复文字大小 */
+  font-size: 14px;
   word-wrap: break-word;
   overflow: hidden;
   position: relative;
@@ -104,16 +103,13 @@ $width = 300;
   height: 26px;
 }
 
-.fan-block button {
+.fan-block button, .fan-block input[type="submit"] {
   padding: 4px 12px;
   margin-top: 8px;
   margin-right: 4px;
   font-size: 13px;
   cursor: pointer;
-}
-
-.fan-block .delete-btn,
-.fan-block .apply-block-btn {
+  z-index: 2;
   position: absolute;
   right: 8px;
 }
@@ -124,6 +120,17 @@ $width = 300;
 
 .fan-block .delete-btn {
   bottom: 16px;
+}
+
+/* 解决 Include Disk(s) dropdown 宽度问题 */
+.fan-block .ui-dropdownchecklist-selector-wrapper,
+.fan-block .ui-dropdownchecklist-selector,
+.fan-block .ui-dropdownchecklist-text {
+  max-width: 200px !important;
+  width: 200px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 :root {
