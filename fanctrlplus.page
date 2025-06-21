@@ -361,6 +361,7 @@ function updateStatusLightAndButton() {
       contentType: false,
       headers: {
         'X-CSRF-TOKEN': CSRF_TOKEN
+      },
       success: function (data) {
         // 省略已写好的 JSON 解析与提示逻辑
       },
