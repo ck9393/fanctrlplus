@@ -361,19 +361,22 @@ function updateStatusLightAndButton() {
       contentType: false,
       success: function (data) {
         console.log("✅ Apply Success:", data);
-    
+        // ↓↓↓ 这里之前用 then 处理的 JSON parse，改回 success 内部处理
+        let res;
         try {
-          const res = typeof data === "string" ? JSON.parse(data) : data;
-    
-          if (res.status === "ok") {
-            applyBtn.text("✔️ Saved").prop("disabled", false);
-          } else {
-            console.error("⚠️ Unexpected response:", res);
-            applyBtn.text("Apply ❌").prop("disabled", false);
-          }
+          res = typeof data === "string" ? JSON.parse(data) : data;
+          console.log("Parsed JSON:", res);
         } catch (e) {
           console.error("❌ JSON parse error:", e, data);
           alert("⚠️ Invalid JSON:\n" + data);
+          applyBtn.text("Apply ❌").prop("disabled", false);
+          return;
+        }
+    
+        if (res.status === "ok") {
+          applyBtn.text("✔️ Saved").prop("disabled", false);
+        } else {
+          console.error("❌ Unexpected response:", res);
           applyBtn.text("Apply ❌").prop("disabled", false);
         }
       },
