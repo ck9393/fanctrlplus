@@ -359,12 +359,19 @@ function updateStatusLightAndButton() {
       data: formData,
       processData: false,
       contentType: false,
-      success: function (data) {
+      success: function(data) {
         console.log("✅ Apply Success:", data);
-        // 继续处理响应
+        // 如果返回的是 JSON 对象就直接使用：
+        if (data.status === "ok") {
+          applyBtn.text("✔️ Saved").prop('disabled', false);
+        } else {
+          console.error("⚠️ Unexpected response:", data);
+          applyBtn.text("Apply ❌").prop('disabled', false);
+        }
       },
-      error: function (xhr, status, err) {
+      error: function(xhr, status, err) {
         console.error("❌ Apply Failed:", status, err);
+        applyBtn.text("Apply ❌").prop('disabled', false);
       }
     });
     .then(response => {
