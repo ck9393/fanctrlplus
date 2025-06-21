@@ -51,7 +51,6 @@ $width = 300;
   display: inline-block;
   vertical-align: top;
   width: 48%;
-  min-height: 540px;
   margin: 10px 1%;
   box-sizing: border-box;
   background: #fff;
