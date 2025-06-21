@@ -45,25 +45,40 @@ $width = 300;
   background: #fff;
   font-size: 0; /* 消除 inline-block 间隙 */
   text-align: left;
+  padding: 8px 0;
 }
+
+/* 两列并排，自适应，移动端单列 */
 .fan-block {
   display: inline-block;
   vertical-align: top;
   width: 48%;
+  min-width: 320px;
+  max-width: 700px;
   margin: 10px 1%;
   box-sizing: border-box;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 16px 12px 16px 16px;
+  padding: 30px 18px 20px 18px;
   font-size: 14px;
   word-wrap: break-word;
   overflow: hidden;
   position: relative;
 }
 
+@media (max-width: 1000px) {
+  .fan-block {
+    width: 98%;
+    min-width: 0;
+    max-width: none;
+    margin: 10px 1%;
+    display: block;
+  }
+}
+
 .fan-block .fan-field {
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 
 .fan-block label {
@@ -71,6 +86,7 @@ $width = 300;
   width: auto;
   font-weight: bold;
   margin-bottom: 4px;
+  vertical-align: middle;
 }
 
 .fan-block input,
@@ -82,47 +98,76 @@ $width = 300;
   margin-bottom: 8px;
 }
 
-.fan-block fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
 .fan-block input[type="text"],
-.fan-block select {
+.fan-block select,
+.fan-block input[type="number"] {
   width: 100%;
-  box-sizing: border-box;
   margin-bottom: 8px;
+  box-sizing: border-box;
 }
 
 .fan-block .fan-svg-container {
   position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 26px;
-  height: 26px;
+  top: 8px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  z-index: 5;
+  /* 鼠标悬停时高亮SVG */
+}
+.fan-block .fan-svg-container:hover svg {
+  filter: drop-shadow(0 0 3px #ff8000);
 }
 
-.fan-block button, .fan-block input[type="submit"] {
+/* PWM 横排区域 */
+.fan-block .fan-pwm-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.fan-block .fan-pwm-row select {
+  flex: 1 1 auto;
+  min-width: 120px;
+  max-width: 180px;
+}
+.fan-block .fan-pwm-row .pause-btn {
+  flex: 0 0 auto;
+  margin-left: 5px;
+  padding: 3px 10px;
+}
+
+/* 按钮通用样式 */
+.fan-block button,
+.fan-block input[type="submit"] {
   padding: 4px 12px;
-  margin-top: 8px;
-  margin-right: 4px;
   font-size: 13px;
   cursor: pointer;
-  z-index: 2;
-  position: absolute;
-  right: 8px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  background: #f8f8f8;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
+.fan-block button:hover {
+  background: #ffe8b3;
+  box-shadow: 0 2px 8px 0 rgba(180,150,60,0.09);
+}
+
+/* 右下角按钮定位 */
 .fan-block .apply-block-btn {
-  bottom: 48px;
+  position: absolute;
+  right: 16px;
+  bottom: 54px;
+  z-index: 10;
 }
-
-.fan-block .delete-btn {
+.fan-block .delete-block-btn {
+  position: absolute;
+  right: 16px;
   bottom: 16px;
+  z-index: 10;
 }
 
-/* 解决 Include Disk(s) dropdown 宽度问题 */
+/* 下拉选择器（Include Disk(s)）宽度修正 */
 .fan-block .ui-dropdownchecklist-selector-wrapper,
 .fan-block .ui-dropdownchecklist-selector,
 .fan-block .ui-dropdownchecklist-text {
@@ -132,6 +177,23 @@ $width = 300;
   white-space: nowrap;
   overflow: visible;
   text-overflow: ellipsis;
+}
+
+/* fan-block-status 占位 */
+.fan-block .fan-block-status {
+  min-height: 18px;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #a88;
+  /* 可加 loading 动画等 */
+}
+
+/* 隐藏原 fieldset */
+.fan-block fieldset {
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: none !important;
 }
 
 :root {
