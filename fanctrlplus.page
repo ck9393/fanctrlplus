@@ -42,7 +42,8 @@ $width = 300;
 
 <style>
 #fan-area {
-  font-size: 0;
+  font-size: 0; /* 消除 inline-block 间隙 */
+  text-align: left;
 }
 
 .fan-block {
@@ -51,21 +52,53 @@ $width = 300;
   width: 48%;
   margin: 10px 1%;
   box-sizing: border-box;
-  font-size: 14px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 16px 12px 16px 16px;
+  font-size: 14px; /* 恢复文字大小 */
+  position: relative;
 }
 
 .fan-block fieldset {
-  margin: 10px 0;
-  padding: 36px 16px 12px 16px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  position: relative;
-  background-color: #fefefe;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
-.fan-block table {
+.fan-block input[type="text"],
+.fan-block select {
   width: 100%;
-  border-collapse: collapse;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.fan-block .fan-svg-container {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+}
+
+.fan-block button {
+  padding: 4px 12px;
+  margin-top: 8px;
+  margin-right: 4px;
+}
+
+.fan-block .delete-btn,
+.fan-block .apply-block-btn {
+  position: absolute;
+  right: 8px;
+}
+
+.fan-block .apply-block-btn {
+  bottom: 48px;
+}
+
+.fan-block .delete-btn {
+  bottom: 16px;
 }
 
 :root {
