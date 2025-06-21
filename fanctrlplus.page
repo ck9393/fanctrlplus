@@ -353,7 +353,7 @@ function updateStatusLightAndButton() {
     for (let pair of formData.entries()) {
       console.log("  ", pair[0], "→", pair[1]);
     }
-    fetch("/plugins/fanctrlplus/include/FanctrlSaveBlock.php", {
+    fetch(`${window.location.origin}/plugins/fanctrlplus/include/FanctrlSaveBlock.php`, {
       method: "POST",
       body: formData
     })
