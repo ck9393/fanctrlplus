@@ -42,16 +42,19 @@ $width = 300;
 
 <style>
 #fan-area {
-  font-size: 0; /* 去除 inline-block 间距 */
+  font-size: 0; /* 去掉 inline-block 间距 */
 }
 
 .fan-block {
   display: inline-block;
   vertical-align: top;
   width: 48%;
-  margin: 6px 1%;
-  font-size: 14px;
+  margin: 10px 1%;
   box-sizing: border-box;
+  font-size: 14px; /* ✅ 关键补救，恢复子项文字显示 */
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
 
 :root {
