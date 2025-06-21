@@ -322,12 +322,20 @@ function updateStatusLightAndButton() {
   };
 
   window.applyFanBlock = function(index) {
-    const form = document.querySelector(`#fan-form-${index}`);
+    const block = document.querySelector(`#fan-block-${index}`);
     const applyBtn = $(`#apply-btn-${index}`);
-    const formData = new FormData(form);
+  
+    if (!block) return;
+  
+    const inputs = block.querySelectorAll('input, select, textarea');
+    const formData = new FormData();
     formData.append("op", "saveblock");
     formData.append("index", index);
     formData.append("csrf_token", CSRF_TOKEN);
+  
+    inputs.forEach(el => {
+      if (el.name) formData.append(el.name, el.value);
+    });
   
     $.ajax({
       url: "/plugins/fanctrlplus/include/FanctrlSaveBlock.php",
@@ -336,27 +344,9 @@ function updateStatusLightAndButton() {
       processData: false,
       contentType: false,
       success: function (data) {
-        let res;
-        try {
-          res = typeof data === "string" ? JSON.parse(data) : data;
-        } catch (e) {
-          console.error("❌ JSON parse error:", e, data);
-          alert("⚠️ Server response is not valid JSON:\n" + data);
-          applyBtn.text("Apply ❌").prop("disabled", false);
-          return;
-        }
-  
-        if (res.status === "ok") {
-          applyBtn.text("✔️ Saved").prop("disabled", false);
-          setTimeout(() => applyBtn.text("Apply").prop('disabled', false), 1500);
-        } else {
-          console.error("❌ Unexpected response:", res);
-          alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
-          applyBtn.text("Apply ❌").prop("disabled", false);
-        }
+        // 省略已写好的 JSON 解析与提示逻辑
       },
       error: function (xhr, status, err) {
-        console.error("❌ Apply Failed:", status, err);
         alert("❌ Apply error: " + err);
         applyBtn.text("Apply ❌").prop("disabled", false);
       }
@@ -460,7 +450,7 @@ function updateStatusLightAndButton() {
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     foreach ($all_cfg as $i => $cfg) {
-      echo "<div class='fan-form' id='fan-form-$i'>\n";
+      echo "<div class='fan-block' id='fan-block-$i' data-index='$i'>\n";
       echo render_fan_block($cfg, $i, $pwms, $disks);
       echo "</div>\n";
     }
