@@ -43,88 +43,72 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
       <input type="submit" name="#applyblock[<?=$i?>]" value="Apply" title="Apply this fan block only" style="position:absolute; bottom:42px; right:0px; transform: translate(2px, 0px);">
       <button type="button" id="apply-btn-<?=$i?>" onclick="applyFanBlock(<?=$i?>)" class="apply-block-btn" style="position:absolute; bottom:42px; right:0px; transform: translate(2px, 0px);">Apply</button>
       <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
-
-      <table style="width:100%;">
-        <tr>
-          <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
-          <td>
-            <input type="text" maxlength="32" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="Enable or disable this fan controller">Fan Control:</td>
-          <td>
-            <select name="service[<?=$i?>]">
-              <option value="0" <?=($cfg['service'] ?? '') == '0' ? 'selected' : ''?>>Disabled</option>
-              <option value="1" <?=($cfg['service'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
-            </select>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="Select the PWM controller for this fan">PWM Controller:</td>
-          <td>
-            <select name="controller[<?=$i?>]">
-              <?php foreach ($pwms as $pwm): ?>
-                <option value="<?=$pwm['sensor']?>" <?=($cfg['controller'] ?? '') == $pwm['sensor'] ? 'selected' : ''?>>
-                  <?=$pwm['chip']?> - <?=$pwm['name']?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-            <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="Set the minimum PWM value (0–255)">Min PWM:</td>
-          <td>
-            <input type="number" name="pwm[<?=$i?>]" value="<?=htmlspecialchars($cfg['pwm'] ?? '')?>">
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="At or below this temperature, fan will run at the configured minimum PWM">Low Temp (°C):</td>
-          <td>
-            <input type="number" name="low[<?=$i?>]" value="<?=htmlspecialchars($cfg['low'] ?? '')?>">
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="At or above this temperature, fan will run at the configured maximum PWM">High Temp (°C):</td>
-          <td>
-            <input type="number" name="high[<?=$i?>]" value="<?=htmlspecialchars($cfg['high'] ?? '')?>">
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
-          <td>
-            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>">
-          </td>
-        </tr>
-
-        <tr>
-          <td style="cursor: help;" title="Select disk(s) to monitor for temperature control.">Include Disk(s):</td>
-          <td>
-            <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:400px;">
-              <?php
-              $selected = explode(',', $cfg['disks'] ?? '');
-              $disk_groups = list_valid_disks_by_id();
-              foreach ($disk_groups as $group => $entries):
+      
+      <div class="fan-field">
+        <label title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</label>
+        <input type="text" maxlength="32" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
+      </div>
+      
+      <div class="fan-field">
+        <label title="Enable or disable this fan controller">Fan Control:</label>
+        <select name="service[<?=$i?>]">
+          <option value="0" <?=($cfg['service'] ?? '') == '0' ? 'selected' : ''?>>Disabled</option>
+          <option value="1" <?=($cfg['service'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
+        </select>
+      </div>
+      
+      <div class="fan-field">
+        <label title="Select the PWM controller for this fan">PWM Controller:</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select name="controller[<?=$i?>]">
+            <?php foreach ($pwms as $pwm): ?>
+              <option value="<?=$pwm['sensor']?>" <?=($cfg['controller'] ?? '') == $pwm['sensor'] ? 'selected' : ''?>>
+                <?=$pwm['chip']?> - <?=$pwm['name']?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button>
+        </div>
+      </div>
+      
+      <div class="fan-field">
+        <label title="Set the minimum PWM value (0–255)">Min PWM:</label>
+        <input type="number" name="pwm[<?=$i?>]" value="<?=htmlspecialchars($cfg['pwm'] ?? '')?>">
+      </div>
+      
+      <div class="fan-field">
+        <label title="At or below this temperature, fan will run at the configured minimum PWM">Low Temp (°C):</label>
+        <input type="number" name="low[<?=$i?>]" value="<?=htmlspecialchars($cfg['low'] ?? '')?>">
+      </div>
+      
+      <div class="fan-field">
+        <label title="At or above this temperature, fan will run at the configured maximum PWM">High Temp (°C):</label>
+        <input type="number" name="high[<?=$i?>]" value="<?=htmlspecialchars($cfg['high'] ?? '')?>">
+      </div>
+      
+      <div class="fan-field">
+        <label title="Check temperature and adjust fan speed every X minutes.">Interval (min):</label>
+        <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>">
+      </div>
+      
+      <div class="fan-field">
+        <label title="Select disk(s) to monitor for temperature control.">Include Disk(s):</label>
+        <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width: 100%;">
+          <?php
+          $selected = explode(',', $cfg['disks'] ?? '');
+          $disk_groups = list_valid_disks_by_id();
+          foreach ($disk_groups as $group => $entries):
+          ?>
+            <optgroup label="<?=htmlspecialchars($group)?>">
+              <?php foreach ($entries as $disk):
+                $sel = in_array($disk['id'], $selected) ? 'selected' : '';
               ?>
-                <optgroup label="<?=htmlspecialchars($group)?>">
-                  <?php foreach ($entries as $disk):
-                    $sel = in_array($disk['id'], $selected) ? 'selected' : '';
-                  ?>
-                    <option value="<?=$disk['id']?>" <?=$sel?> title="<?=$disk['id']?>&#10;<?=$disk['dev']?>"><?=htmlspecialchars($disk['label'])?></option>
-                  <?php endforeach; ?>
-                </optgroup>
+                <option value="<?=$disk['id']?>" <?=$sel?> title="<?=$disk['id']?>&#10;<?=$disk['dev']?>"><?=htmlspecialchars($disk['label'])?></option>
               <?php endforeach; ?>
-            </select>
-          </td>
-        </tr>
-      </table>
+            </optgroup>
+          <?php endforeach; ?>
+        </select>
+      </div>
       <div class="fan-block-status"></div>
     </fieldset>
   </div>
