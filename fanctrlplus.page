@@ -42,7 +42,7 @@ $width = 300;
 
 <style>
 #fan-area {
-  font-size: 0; /* 去掉 inline-block 间距 */
+  font-size: 0;
 }
 
 .fan-block {
@@ -51,10 +51,21 @@ $width = 300;
   width: 48%;
   margin: 10px 1%;
   box-sizing: border-box;
-  font-size: 14px; /* ✅ 关键补救，恢复子项文字显示 */
-  background-color: #f9f9f9;
-  border-radius: 6px;
+  font-size: 14px;
+}
+
+.fan-block fieldset {
+  margin: 10px 0;
+  padding: 36px 16px 12px 16px;
   border: 1px solid #ccc;
+  border-radius: 6px;
+  position: relative;
+  background-color: #fefefe;
+}
+
+.fan-block table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
 :root {
@@ -347,7 +358,6 @@ function updateStatusLightAndButton() {
     const formData = new FormData();
     formData.append("op", "saveblock");
     formData.append("index", index);
-    formData.append("csrf_token", CSRF_TOKEN);
   
     inputs.forEach(el => {
       if (el.name) formData.append(el.name, el.value);
