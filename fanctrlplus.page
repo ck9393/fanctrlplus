@@ -353,6 +353,8 @@ function updateStatusLightAndButton() {
     for (let pair of formData.entries()) {
       console.log("  ", pair[0], "→", pair[1]);
     }
+
+    const applyBtn = $(`#apply-btn-${index}`);
     $.ajax({
       url: "/plugins/fanctrlplus/include/FanctrlSaveBlock.php",
       method: "POST",
