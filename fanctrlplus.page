@@ -460,9 +460,9 @@ function updateStatusLightAndButton() {
     <?php
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     foreach ($all_cfg as $i => $cfg) {
-      echo "<form id='fan-form-$i' class='fan-form'>\n";
+      echo "<div class='fan-form' id='fan-form-$i'>\n";
       echo render_fan_block($cfg, $i, $pwms, $disks);
-      echo "</form>\n";
+      echo "</div>\n";
     }
     ?>
   </div>
