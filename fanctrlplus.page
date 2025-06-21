@@ -60,6 +60,22 @@ $width = 300;
   position: relative;
 }
 
+.fan-block label {
+  display: inline-block;
+  width: auto;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.fan-block input,
+.fan-block select,
+.fan-block textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
 .fan-block fieldset {
   border: none;
   padding: 0;
