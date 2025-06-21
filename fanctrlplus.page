@@ -126,10 +126,11 @@ $width = 300;
 .fan-block .ui-dropdownchecklist-selector-wrapper,
 .fan-block .ui-dropdownchecklist-selector,
 .fan-block .ui-dropdownchecklist-text {
-  max-width: 200px !important;
-  width: 200px !important;
+  min-width: 300px !important;
+  width: 300px !important;
+  max-width: 400px !important;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
 }
 
@@ -534,6 +535,15 @@ function updateStatusLightAndButton() {
       }
     });
     return valid;
+  });
+});
+    
+  // 修正 dropdown 弹出层宽度
+  $(document).on('click', '.ui-dropdownchecklist-selector', function() {
+    setTimeout(function(){
+      $('.ui-dropdownchecklist-dropcontainer-wrapper').css('width', '350px');
+      $('.ui-dropdownchecklist-dropcontainer').css('width', '350px');
+    }, 30);
   });
 });
 </script>
