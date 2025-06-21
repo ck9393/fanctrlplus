@@ -322,105 +322,44 @@ function updateStatusLightAndButton() {
   };
 
   window.applyFanBlock = function(index) {
-    console.log('正在提交 fan block:');
-    console.log("[Apply Fan Block] index =", index);
-    console.log("Block count:", $('.fan-block').length);
-    console.log("Selected block:", $('.fan-block').eq(index));
-  
-    const block = $('.fan-block').eq(index);
+    const form = document.querySelector(`#fan-form-${index}`);
     const applyBtn = $(`#apply-btn-${index}`);
-    applyBtn.prop('disabled', true).text("Saving...");
-  
-    const formData = new FormData();
+    const formData = new FormData(form);
     formData.append("op", "saveblock");
     formData.append("index", index);
     formData.append("csrf_token", CSRF_TOKEN);
   
-    block.find('input, select, textarea').each(function () {
-      const name = $(this).attr('name');
-      const value = $(this).val();
-      if (name && !name.startsWith('#')) {
-        formData.append(name, value);
-      }
-    });
+    $.ajax({
+      url: "/plugins/fanctrlplus/include/FanctrlSaveBlock.php",
+      method: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (data) {
+        let res;
+        try {
+          res = typeof data === "string" ? JSON.parse(data) : data;
+        } catch (e) {
+          console.error("❌ JSON parse error:", e, data);
+          alert("⚠️ Server response is not valid JSON:\n" + data);
+          applyBtn.text("Apply ❌").prop("disabled", false);
+          return;
+        }
   
-    console.log("Sending formData...");
-    for (let pair of formData.entries()) {
-      console.log("KEY:", pair[0], "VAL:", pair[1]);
-    }
-
-    console.log("Sending saveblock request with formData:");
-    for (let pair of formData.entries()) {
-      console.log("  ", pair[0], "→", pair[1]);
-    }
-
-    function applyFanBlock(index) {
-      const form = document.querySelector(`#fan-form-${index}`);
-      const applyBtn = $(`#apply-btn-${index}`);
-      const formData = new FormData(form);
-    
-      $.ajax({
-        url: "/plugins/fanctrlplus/include/FanctrlSaveBlock.php",
-        method: "POST",
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function (data) {
-          console.log("✅ Apply Success:", data);
-    
-          let res;
-          try {
-            res = typeof data === "string" ? JSON.parse(data) : data;
-          } catch (e) {
-            console.error("❌ JSON parse error:", e, data);
-            alert("⚠️ Server response is not valid JSON:\n" + data);
-            applyBtn.text("Apply ❌").prop("disabled", false);
-            return;
-          }
-    
-          if (res.status === "ok") {
-            applyBtn.text("✔️ Saved").prop("disabled", false);
-          } else {
-            console.error("❌ Unexpected response:", res);
-            applyBtn.text("Apply ❌").prop("disabled", false);
-          }
-        },
-        error: function (xhr, status, err) {
-          console.error("❌ Apply Failed:", status, err);
+        if (res.status === "ok") {
+          applyBtn.text("✔️ Saved").prop("disabled", false);
+          setTimeout(() => applyBtn.text("Apply").prop('disabled', false), 1500);
+        } else {
+          console.error("❌ Unexpected response:", res);
+          alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
           applyBtn.text("Apply ❌").prop("disabled", false);
         }
-      });
-    }
-    .then(response => {
-      console.log("Fetch response object:", response);
-      return response.text(); // ❗改成 text() 强行打印内容
-    })
-    .then(resText => {
-      console.log("Raw response text:", resText); // ✅ 打印响应内容，判断是 JSON 还是 HTML
-    
-      let res;
-      try {
-        res = JSON.parse(resText);
-        console.log("Parsed JSON:", res);
-      } catch (e) {
-        console.error("❌ JSON parse error:", e);
-        alert("❌ Server did not return valid JSON. Response:\n" + resText);
-        applyBtn.text("✔️ Apply").prop('disabled', false);
-        return;
+      },
+      error: function (xhr, status, err) {
+        console.error("❌ Apply Failed:", status, err);
+        alert("❌ Apply error: " + err);
+        applyBtn.text("Apply ❌").prop("disabled", false);
       }
-    
-      if (res.status === "ok") {
-        applyBtn.text("✔️ Saved");
-        setTimeout(() => applyBtn.text("✔️ Apply").prop('disabled', false), 1500);
-      } else {
-        alert("❌ Save failed: " + (res.message ?? JSON.stringify(res)));
-        applyBtn.text("✔️ Apply").prop('disabled', false);
-      }
-    })
-    .catch(error => {
-      console.log("Fetch error caught:", error);
-      alert("❌ Fetch error: " + error);
-      applyBtn.text("✔️ Apply").prop('disabled', false);
     });
   };
 
