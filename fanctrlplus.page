@@ -354,39 +354,43 @@ function updateStatusLightAndButton() {
       console.log("  ", pair[0], "→", pair[1]);
     }
 
-    const applyBtn = $(`#apply-btn-${index}`);
-    $.ajax({
-      url: "/plugins/fanctrlplus/include/FanctrlSaveBlock.php",
-      method: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (data) {
-        console.log("✅ Apply Success:", data);
-        // ↓↓↓ 这里之前用 then 处理的 JSON parse，改回 success 内部处理
-        let res;
-        try {
-          res = typeof data === "string" ? JSON.parse(data) : data;
-          console.log("Parsed JSON:", res);
-        } catch (e) {
-          console.error("❌ JSON parse error:", e, data);
-          alert("⚠️ Invalid JSON:\n" + data);
-          applyBtn.text("Apply ❌").prop("disabled", false);
-          return;
-        }
+    function applyFanBlock(index) {
+      const form = document.querySelector(`#fan-form-${index}`);
+      const applyBtn = $(`#apply-btn-${index}`);
+      const formData = new FormData(form);
     
-        if (res.status === "ok") {
-          applyBtn.text("✔️ Saved").prop("disabled", false);
-        } else {
-          console.error("❌ Unexpected response:", res);
+      $.ajax({
+        url: "/plugins/fanctrlplus/include/FanctrlSaveBlock.php",
+        method: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (data) {
+          console.log("✅ Apply Success:", data);
+    
+          let res;
+          try {
+            res = typeof data === "string" ? JSON.parse(data) : data;
+          } catch (e) {
+            console.error("❌ JSON parse error:", e, data);
+            alert("⚠️ Server response is not valid JSON:\n" + data);
+            applyBtn.text("Apply ❌").prop("disabled", false);
+            return;
+          }
+    
+          if (res.status === "ok") {
+            applyBtn.text("✔️ Saved").prop("disabled", false);
+          } else {
+            console.error("❌ Unexpected response:", res);
+            applyBtn.text("Apply ❌").prop("disabled", false);
+          }
+        },
+        error: function (xhr, status, err) {
+          console.error("❌ Apply Failed:", status, err);
           applyBtn.text("Apply ❌").prop("disabled", false);
         }
-      },
-      error: function (xhr, status, err) {
-        console.error("❌ Apply Failed:", status, err);
-        applyBtn.text("Apply ❌").prop("disabled", false);
-      }
-    });
+      });
+    }
     .then(response => {
       console.log("Fetch response object:", response);
       return response.text(); // ❗改成 text() 强行打印内容
