@@ -9,6 +9,12 @@ require_once "$docroot/plugins/$plugin/include/Common.php";
 
 header('Content-Type: application/json');
 
+if ($_GET['op'] === 'refresh_single' && !empty($_GET['custom'])) {
+  $custom = escapeshellarg($_GET['custom']);
+  shell_exec("/usr/local/emhttp/plugins/fanctrlplus/scripts/fanctrlplus_refresh_single.sh $custom > /dev/null 2>&1 &");
+  exit('OK');
+}
+
 function json_response($data) {
   while (ob_get_level()) {
     ob_end_clean(); // 安全清除所有输出缓冲区，避免 notice 错误

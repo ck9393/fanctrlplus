@@ -14,11 +14,21 @@ $status_color = $status_text === "Running" ? "green-text" : "red-text";
 $fan_rows = "";
 foreach ($cfg_files as $file) {
   $cfg = parse_ini_file($file);
-  // if (($cfg['service'] ?? '0') !== '1') continue;
   $label = $cfg['custom'] ?? basename($file);
   $fan_rows .= <<<ROW
 <tr>
-  <td><span class="w26">$label</span><span class="w18 fanctrlplus-temp" data-label="$label">--</span><span class="w18 fanctrlplus-rpm" data-label="$label">--</span><span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
+  <td>
+    <span class="w26">$label</span>
+    <span class="w18 fanctrlplus-temp" data-label="$label">--</span>
+    <span class="w18 fanctrlplus-rpm" data-label="$label">--</span>
+    <span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
+    <span class="w18">
+      <span class="fa fa-refresh fanctrlplus-refresh"
+        data-label="$label"
+        style="cursor:pointer;font-size:13px;color:var(--blue-800);vertical-align:middle;"
+        title="Force update: Read current temperature and set fan speed immediately"></span>
+    </span>
+  </td>
 </tr>
 ROW;
 }
@@ -33,38 +43,42 @@ echo <<<STYLE
   display: inline-block;
   margin-bottom: 6px;
 }
-.w18, .w26 {
-  font-size: 12px;
-  line-height: 1.4;
-  display: inline-block;
-  vertical-align: top;
-}
 </style>
 STYLE;
 
 // 输出 tile
 $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr><td>
-  <i class="icon-fanctrlplus f32"></i>
-  <div class="section">FanCtrl Plus<br>
-    <span class="$status_color fanctrlplus-status">Status: $status_text</span>
-  </div>
-  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
-    <i class="fa fa-fw fa-cog control"></i>
-  </a>
-</td></tr>
-<tr><td>
-  <span class="w26">NAME</span>
-  <span class="w18">TEMP</span>
-  <span class="w18">RPM</span>
-  <span class="w18">STATUS</span>
-</td></tr>
+<tr>
+  <td>
+    <i class="icon-fanctrlplus f32"></i>
+    <div class="section">FanCtrl Plus<br>
+      <span class="$status_color fanctrlplus-status">Status: $status_text</span>
+    </div>
+    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+      <i class="fa fa-fw fa-cog control"></i>
+    </a>
+  </td>
+</tr>
+<tr class="header">
+  <td>
+    <span class="w26">NAME</span>
+    <span class="w18">TEMP</span>
+    <span class="w18">RPM</span>
+    <span class="w18">STATUS</span>
+    <span class="w18">UPDATE</span>
+  </td>
+</tr>
 $fan_rows
 </tbody>
 EOT;
 ?>
 <script>
+function refreshSingleFan(custom) {
+  fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(custom)}`)
+    .then(() => setTimeout(updateFanctrlplusTile, 2000)); // 2秒后刷新界面
+}
+
 function updateFanctrlplusTile() {
   const tile = document.getElementById("fanctrlplus-dashboard");
   if (!tile) return;
@@ -100,6 +114,29 @@ function updateFanctrlplusTile() {
       });
     });
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(updateFanctrlplusTile, 200);
+  setInterval(updateFanctrlplusTile, 5000);
+
+  // 用事件代理监听所有刷新按钮
+  document.getElementById("fanctrlplus-dashboard")?.addEventListener("click", function(e) {
+    const btn = e.target.closest('.fanctrlplus-refresh');
+    if (!btn) return;
+
+    const label = btn.getAttribute('data-label');
+    btn.style.color = '#aaa';
+    btn.classList.add('fa-spin');
+    refreshSingleFan(label);
+    setTimeout(() => {
+      btn.style.color = 'var(--blue-800)';
+      btn.classList.remove('fa-spin');
+    }, 1800);
+
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
 
 document.addEventListener("DOMContentLoaded", function () {
   setTimeout(updateFanctrlplusTile, 200);
