@@ -103,6 +103,6 @@ function updateFanctrlplusTile() {
 
 document.addEventListener("DOMContentLoaded", function () {
   setTimeout(updateFanctrlplusTile, 200);
-  setInterval(updateFanctrlplusTile, 15000);
+  setInterval(updateFanctrlplusTile, 5000);
 });
 </script>
