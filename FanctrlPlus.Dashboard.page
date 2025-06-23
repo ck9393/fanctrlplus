@@ -26,7 +26,7 @@ foreach ($cfg_files as $file) {
       <span class="fa fa-refresh fanctrlplus-refresh"
         data-label="$label"
         style="cursor:pointer;font-size:13px;color:var(--blue-800);vertical-align:middle;"
-        title="Force update: Read current temperature and set fan speed immediately"></span>
+        title="Manual Run: Read current temperature and set fan speed immediately"></span>
     </span>
   </td>
 </tr>
@@ -66,7 +66,7 @@ $mytiles[$pluginname]['column2'] = <<<EOT
     <span class="w18">TEMP</span>
     <span class="w18">RPM</span>
     <span class="w18">STATUS</span>
-    <span class="w18">UPDATE</span>
+    <span class="w18">RUN</span>
   </td>
 </tr>
 $fan_rows

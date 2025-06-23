@@ -53,6 +53,6 @@ else
 fi
 
 label="[${custom}]"
-logger -t fanctrlplus "Manual refresh $label Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
+logger -t fanctrlplus "Manual run $label Temp=${max_temp}°C → PWM=$pwm_val → RPM=$rpm"
 
 echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${plugin}_${custom}"
