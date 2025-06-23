@@ -98,7 +98,13 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         <tr>
           <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
           <td>
-            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>">
+            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>" style="width:225px;display:inline-block;margin-right:4px;">
+            <span class="fanctrlplus-interval-refresh"
+                  style="cursor:pointer;font-size:13px;color:var(--blue-800);margin-left:1px;vertical-align:middle;"
+                  title="Manual Run: Read current temperature and set fan speed immediately"
+                  data-label="<?=htmlspecialchars($cfg['custom'] ?? '')?>">
+              <span class="fa fa-refresh"></span> Run Now    
+            </span>
           </td>
         </tr>
 

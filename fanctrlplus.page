@@ -390,6 +390,40 @@ function updateStatusLightAndButton() {
     return valid;
   });
 });
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.body.addEventListener('click', function(e) {
+    const btn = e.target.closest('.fanctrlplus-interval-refresh');
+    if (!btn) return;
+    const icon = btn.querySelector('.fa');
+    btn.style.color = '#aaa';
+    if (icon) icon.classList.add('fa-spin');
+    const label = btn.getAttribute('data-label');
+    if (!label) {
+      alert("Custom Name is not configured, cannot refresh!");
+      return;
+    }
+    btn.style.pointerEvents = 'none';
+    fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(label)}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Request failed");
+        return res.text();
+      })
+      .then(() => setTimeout(() => {
+        if (icon) icon.classList.remove('fa-spin');
+        btn.style.color = 'var(--blue-800)';
+        btn.style.pointerEvents = '';
+      }, 1800))
+      .catch(err => {
+        btn.style.color = 'var(--blue-800)';
+        if (icon) icon.classList.remove('fa-spin');
+        btn.style.pointerEvents = '';
+        alert("Manual Run failed: " + err.message);
+      });
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
 </script>
 
 <form method="POST" action="/update.php" target="progressFrame">
@@ -409,38 +443,3 @@ function updateStatusLightAndButton() {
   </div>
 </form>
 
-<?php
-if (version_compare(parse_ini_file('/etc/unraid-version')['version'], '6.12.0-beta5', '>') &&
-    stripos($_SERVER['REQUEST_URI'], 'dashboard') !== false) {
-
-$pluginname = "FanCtrl Plus";
-
-$mytiles[$pluginname]['column2'] = <<<EOT
-error_log("[FanCtrlPlus DEBUG] \$mytiles set with Dashboard tile");
-<tbody id="fanctrlplus-tile" title="FanCtrl Plus">
-  <tr><td>
-    <i class="fa fa-spinner fa-spin"></i>
-    <div class="section">FanCtrl Plus<br>
-      <span id="fanctrlplus-dashboard-status">Loading...</span>
-    </div>
-  </td></tr>
-</tbody>
-EOT;
-?>
-<script>
-function updateFanCtrlPlusDashboard() {
-  fetch('/plugins/fanctrlplus/include/FanctrlLogic.php?op=status')
-    .then(res => res.json())
-    .then(data => {
-      const status = (data.status === 'running') ? '🟢 Running' : '🔴 Stopped';
-      const el = document.getElementById("fanctrlplus-dashboard-status");
-      if (el) el.innerHTML = status;
-    });
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  updateFanCtrlPlusDashboard();
-  setInterval(updateFanCtrlPlusDashboard, 30000);
-});
-</script>
-<?php } ?>
