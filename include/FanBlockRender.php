@@ -3,10 +3,10 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
 
   ob_start();
   ?>
-  <div class="fan-block" style="display:inline-block; width:48%; vertical-align:top;">
+  <div class="fan-block" data-index="<?=$i?>" data-file="<?=htmlspecialchars($cfg['file'])?>">
     <input type="hidden" name="#file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>" class="cfg-file">
 
-    <fieldset style="margin:10px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
+    <fieldset style="margin:8px 0; padding:34px 16px 12px 16px; border:1px solid #ccc; border-radius:6px; position:relative;">
       <div style="position:absolute; top:10px; right:10px; width:36px; height:36px;">
         <div class="fan-svg-container" style="position:absolute; top:0; left:0; width:100%; height:100%;">
           <div style="position:absolute; top:0; left:0; width:100%; height:100%; cursor:help; z-index:1;"></div>
@@ -40,7 +40,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </div>
       </div> 
       
-      <button type="button" onclick="removeFan(this)" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
+      <button type="button" class="delete-btn" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
         <tr>

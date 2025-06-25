@@ -6,21 +6,60 @@ Icon="fanctrlplus.png"
 <?PHP
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
+$order_file = "$cfg_dir/order.json";
 
 require_once "$docroot/plugins/$plugin/include/Common.php";
 
-// 初始化配置
+// 初始化目录
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
 }
 
-$all_cfg = [];
-foreach (glob("$cfg_dir/{$plugin}_*.cfg") as $file) {
-  $cfg = parse_ini_file($file);
-  $cfg['file'] = basename($file);
-  $all_cfg[] = $cfg;
+$cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
+
+$order_file = "$cfg_dir/order.cfg";
+$order = [];
+
+if (file_exists($order_file)) {
+  $ini = parse_ini_file($order_file);
+  $order = array_values($ini);  // 提取 order1=xxx 的值
+  $order = array_filter($order, function($f) {
+    return strpos($f, '_temp_') === false;
+  });
 }
 
+// 1. 按 order.cfg 顺序加载
+foreach ($order as $file) {
+  $path = "$cfg_dir/$file";
+  if (is_file($path)) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $file;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 2. 加载未出现在 order.cfg 的正式 cfg
+$seen = array_flip($order);
+foreach ($cfg_files as $path) {
+  $basename = basename($path);
+  if (!isset($seen[$basename]) && strpos($basename, '_temp_') === false) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $basename;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 3. 加载 temp_x.cfg
+foreach ($cfg_files as $path) {
+  $basename = basename($path);
+  if (strpos($basename, '_temp_') !== false) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $basename;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 若仍为空（没有 cfg），就生成第一个 temp
 if (empty($all_cfg)) {
   $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
   if (!file_exists($temp_file)) {
@@ -63,14 +102,17 @@ $width = 300;
     transition: fill 0.3s ease;
 }
 
+.fanctrl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0px 70px 0 8px;
+}
+
 .fanctrl-indicator-container {
   display: flex;
   align-items: center;
   gap: 8px;
-  position: absolute;
-  top: 75px; /* 你可以微调 */
-  left: 10px;
-  z-index: 999;
 }
 
 .fanctrl-label {
@@ -108,56 +150,82 @@ $width = 300;
   transition: none !important;
 }
 
+.fanctrl-sort-toggle {
+  font-size: 13px;
+  background: transparent !important;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+  /* 可适当加粗一点更醒目 */
+}
+
+#fan-area {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0px 16px;
+}
+.fan-block {
+  flex: 1 1 48%;
+  min-width: 340px;
+  max-width: 48%;
+  margin-bottom: 0;
+  vertical-align: top;
+  box-sizing: border-box;
+}
+.fan-block.draggable { cursor: move !important; }
+.fan-block.ui-sortable-helper { cursor: grabbing !important; }
 </style>
 
-<div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
-  <span class="fanctrl-label">Runing</span>
-  <div class="fanctrl-dot"></div>
-  <div class="fanctrl-dot"></div>
-  <div class="fanctrl-dot"></div>
+<div class="fanctrl-header">
+  <div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
+    <span class="fanctrl-label">Running</span>
+    <div class="fanctrl-dot"></div>
+    <div class="fanctrl-dot"></div>
+    <div class="fanctrl-dot"></div>
+  </div>
+  <b id="fanctrlplus-sort-toggle"
+     class="system icon-u-lock green-text fanctrl-sort-toggle"
+     title="Unlock to rearrange fans"></b>
 </div>
 
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
 $(function() {
+  // 跳动绿点动画
   let dotIndex = 0;
-    const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
-
+  const dotEls = document.querySelectorAll('#fanctrl-indicator .fanctrl-dot');
+  dotEls.forEach(dot => dot.classList.remove('visible'));
+  dotEls[dotIndex].classList.add('visible');
+  function animateDots() {
+    const container = document.getElementById('fanctrl-indicator');
+    if (!container || container.classList.contains('fanctrl-stopped')) return;
     dotEls.forEach(dot => dot.classList.remove('visible'));
+    dotIndex = (dotIndex + 1) % dotEls.length;
     dotEls[dotIndex].classList.add('visible');
-  
-    function animateDots() {
-      const container = document.getElementById('fanctrl-indicator');
-      if (!container || container.classList.contains('fanctrl-stopped')) return;
-  
-      dotEls.forEach(dot => dot.classList.remove('visible'));
-  
-      dotIndex = (dotIndex + 1) % dotEls.length;
-      dotEls[dotIndex].classList.add('visible');
-    }
-  
-    setInterval(animateDots, 2000); // 每 2 秒亮一颗：1s 亮起 + 1s 熄灭
+  }
+  setInterval(animateDots, 2000);
 
+  // 初始化 SVG 风扇转动
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
     updateRotorById(id, true);
   });
-  
+
   function updateRotorById(fanId, isRunning = true) {
     const fanIcon = document.getElementById(fanId);
     if (!fanIcon) return;
-
     const rotor = fanIcon.querySelector('.rotor');
     if (rotor) rotor.classList.toggle('rotating', isRunning);
 
-    // 🔍 背景颜色检测 + 明暗判断（不依赖 prefers-color-scheme）
     const bg = getComputedStyle(document.body).backgroundColor;
     const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
     const isDark = brightness < 128;
 
-    // ✅ 根据运行状态决定颜色
     let frameColor, hubColor;
     if (isRunning) {
       frameColor = isDark ? '#ffffff' : '#000000';
@@ -166,108 +234,81 @@ $(function() {
       frameColor = '#cc0000';
       hubColor   = '#ff6666';
     }
-
     const frame = fanIcon.querySelector('.frame');
     const hub   = fanIcon.querySelector('.hub');
-
-    if (DEBUG) {
-      console.log("🌀 FanCtrlPlus:", {
-        isRunning, bgColor: bg, brightness, isDark,
-        frameColor, hubColor,
-        frameExists: !!frame, hubExists: !!hub
-      });
-    }
-
     if (!frame || !hub) {
-      console.warn("🕒 frame or hub not ready, retrying...");
       setTimeout(() => updateRotorById(fanId, isRunning), 100);
       return;
     }
-
     frame.setAttribute('fill', frameColor);
     hub.setAttribute('fill', hubColor);
   }
 
-window.updateFanControlStatus = function(isRunning = null) {
-  if (isRunning === null) {
-    fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
-      .then(res => res.text())
-      .then(status => updateFanControlStatus(status.trim() === "running"));
-    return;
-  }
-
-  const container = document.getElementById('fanctrl-indicator');
-  const label = container.querySelector('.fanctrl-label');
-  
-  if (isRunning) {
-    container.classList.remove('fanctrl-stopped');
-    label.textContent = 'Running';
-  } else {
-    container.classList.add('fanctrl-stopped');
-    label.textContent = 'Inactive';
-  }
-};
-
-function updateStatusLightAndButton() {
-  $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
-    const isRunning = statusObj.status === 'running';
-    updateFanControlStatus(isRunning); // ✅ 改为传值，不重复 fetch
-
-    const btn = $('#toggle-daemon');
-    btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
-    btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.'); 
-    btn.prop('disabled', false);
-  }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error("❌ Failed to load status:", textStatus, errorThrown);
-  });
-}
-    function updateAllFanStatus() {
-      $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
-        $('.fan-block').each(function(index) {
-          const block = $(this);
-          const input = block.find('input[name^="custom["]');
-          if (!input.length) return;
-          const name = input.val().trim();
-    
-          const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
-          const status = matchedKey ? statusMap[matchedKey] : 'stopped';
-          const isRunning = status === 'running';
-    
-          // 控制 SVG 风扇旋转与颜色
-          const fanSvg = document.getElementById(`fan-icon-${index}`);
-          if (!fanSvg) return;
-    
-          const rotor = fanSvg.querySelector('.rotor');
-          const frame = fanSvg.querySelector('.frame');
-          const hub   = fanSvg.querySelector('.hub');
-    
-          if (rotor) rotor.classList.toggle('rotating', isRunning);
-    
-          // 背景亮度判断
-          const bg = getComputedStyle(document.body).backgroundColor;
-          const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-          const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
-          const isDark = brightness < 128;
-    
-          const frameColor = isRunning ? (isDark ? '#ffffff' : '#000000') : '#cc0000';
-          const hubColor   = isRunning ? (isDark ? '#cccccc' : '#666666') : '#ff6666';
-    
-          if (frame) frame.setAttribute('fill', frameColor);
-          if (hub)   hub.setAttribute('fill', hubColor);
-    
-          // 🆕 设置鼠标悬停 title 状态
-          const container = fanSvg.closest('.fan-svg-container');
-          if (container) {
-            container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
-          }
-        });
-      }).fail(function(jqXHR, textStatus, errorThrown) {
-        console.error("❌ Failed to load status_all:", textStatus, errorThrown);
-      });
+  window.updateFanControlStatus = function(isRunning = null) {
+    if (isRunning === null) {
+      fetch("/plugins/fanctrlplus/include/FanctrlLogic.php?op=status")
+        .then(res => res.text())
+        .then(status => updateFanControlStatus(status.trim() === "running"));
+      return;
     }
+    const container = document.getElementById('fanctrl-indicator');
+    const label = container.querySelector('.fanctrl-label');
+    if (isRunning) {
+      container.classList.remove('fanctrl-stopped');
+      label.textContent = 'Running';
+    } else {
+      container.classList.add('fanctrl-stopped');
+      label.textContent = 'Inactive';
+    }
+  };
+
+  function updateStatusLightAndButton() {
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status'}, function(statusObj) {
+      const isRunning = statusObj.status === 'running';
+      updateFanControlStatus(isRunning);
+      const btn = $('#toggle-daemon');
+      btn.text(isRunning ? '⏹️ Stop' : '▶️ Start');
+      btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.');
+      btn.prop('disabled', false);
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Failed to load status:", textStatus, errorThrown);
+    });
+  }
+  function updateAllFanStatus() {
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
+      $('.fan-block').each(function(index) {
+        const block = $(this);
+        const input = block.find('input[name^="custom["]');
+        if (!input.length) return;
+        const name = input.val().trim();
+        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
+        const status = matchedKey ? statusMap[matchedKey] : 'stopped';
+        const isRunning = status === 'running';
+        const fanSvg = document.getElementById(`fan-icon-${index}`);
+        if (!fanSvg) return;
+        const rotor = fanSvg.querySelector('.rotor');
+        const frame = fanSvg.querySelector('.frame');
+        const hub   = fanSvg.querySelector('.hub');
+        if (rotor) rotor.classList.toggle('rotating', isRunning);
+        const bg = getComputedStyle(document.body).backgroundColor;
+        const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
+        const isDark = brightness < 128;
+        const frameColor = isRunning ? (isDark ? '#ffffff' : '#000000') : '#cc0000';
+        const hubColor   = isRunning ? (isDark ? '#cccccc' : '#666666') : '#ff6666';
+        if (frame) frame.setAttribute('fill', frameColor);
+        if (hub)   hub.setAttribute('fill', hubColor);
+        const container = fanSvg.closest('.fan-svg-container');
+        if (container) {
+          container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
+        }
+      });
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error("❌ Failed to load status_all:", textStatus, errorThrown);
+    });
+  }
   updateStatusLightAndButton();
   updateAllFanStatus();
-
   setInterval(function() {
     updateStatusLightAndButton();
     updateAllFanStatus();
@@ -277,7 +318,6 @@ function updateStatusLightAndButton() {
     const btn = $('#toggle-daemon');
     btn.prop('disabled', true);
     const action = btn.text().includes('Stop') ? 'stop' : 'start';
-
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: action}, function() {
       let tries = 0, maxTries = 10;
       const check = () => {
@@ -300,13 +340,11 @@ function updateStatusLightAndButton() {
       btn.prop('disabled', false);
     });
   };
-  
+
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
-  
     const $btn = $(btn);
     $btn.prop('disabled', true).text("Pausing...");
-  
     $.ajax({
       url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
       method: 'GET',
@@ -332,20 +370,6 @@ function updateStatusLightAndButton() {
     });
   };
 
-  window.removeFan = function(btn) {
-    if (!confirm("Are you sure you want to delete this fan configuration?")) return;
-    const block = $(btn).closest('.fan-block');
-    const file = block.find('input.cfg-file').val();
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
-      .done(function(result) {
-        block.remove();
-        setTimeout(() => updateAllFanStatus(), 500);
-      })
-      .fail(function(jqXHR, textStatus, errorThrown) {
-        alert("Failed to delete fan.");
-      });
-  };
-
   window.addFan = function() {
     const index = $('.fan-block').length;
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(html) {
@@ -356,6 +380,10 @@ function updateStatusLightAndButton() {
         width: <?=$width?>,
         explicitClose:'...close'
       });
+
+      // ✅ 延迟 300ms 再保存顺序，避免 null 写入
+      setTimeout(() => collectAndSaveFanOrder(), 300);
+
     }, 'html').fail(function(jqXHR, textStatus, errorThrown) {
       alert("Failed to add fan.");
     });
@@ -373,25 +401,84 @@ function updateStatusLightAndButton() {
     $('input[name="#apply"]').prop('disabled', false);
   });
 
-  $(document).ready(function() {
-    $('input[name="#apply"]').prop('disabled', true);
-  });
+  function initOriginalForBlock($block) {
+    const original = {
+      custom: $block.find('input[name^="custom["]').val(),
+      controller: $block.find('select[name^="controller["]').val(),
+      pwm: $block.find('input[name^="pwm["]').val(),
+      low: $block.find('input[name^="low["]').val(),
+      high: $block.find('input[name^="high["]').val(),
+      interval: $block.find('input[name^="interval["]').val(),
+      disks: $block.find('select[name^="disks["]').val()
+    };
+    $block.data('original', original);
+  }
 
-  $('form').on('submit', function() {
-    let valid = true;
-    $('input[name^="custom["]').each(function() {
-      if ($(this).val().trim() === '') {
-        alert("Custom Name cannot be empty!");
-        $(this).focus();
-        valid = false;
-        return false;
+  function setApplyAllButtonState() {
+    let dirty = false;
+
+    $('.fan-block').each(function () {
+      const $block = $(this);
+      const original = $block.data('original');
+      const current = {
+        custom: $block.find('input[name^="custom["]').val(),
+        controller: $block.find('select[name^="controller["]').val(),
+        pwm: $block.find('input[name^="pwm["]').val(),
+        low: $block.find('input[name^="low["]').val(),
+        high: $block.find('input[name^="high["]').val(),
+        interval: $block.find('input[name^="interval["]').val(),
+        disks: $block.find('select[name^="disks["]').val()
+      };
+      if (JSON.stringify(original) !== JSON.stringify(current)) {
+        dirty = true;
       }
     });
-    return valid;
-  });
-});
 
-document.addEventListener("DOMContentLoaded", function() {
+    $('input[name="#apply"]').prop('disabled', !dirty);
+  }
+
+  // ✅ 页面加载完成后初始化
+  $(document).ready(function () {
+    $('.fan-block').each(function () {
+      initOriginalForBlock($(this));
+    });
+
+    $('input, select').on('input change', function () {
+      setApplyAllButtonState();
+    });
+
+    setApplyAllButtonState();
+  });
+
+  
+  $(document).on('click', '.delete-btn', function () {
+    const block = $(this).closest('.fan-block');
+    const file = block.data('file') || block.find('input.cfg-file').val();
+    const custom = block.find('input[name^="custom["]').val() || '';
+    const msg = custom
+      ? `Are you sure you want to delete "${custom}"?`
+      : `Are you sure you want to delete this fan configuration?`;
+    if (!confirm(msg)) return;
+    const isTemp = file.includes('_temp_');
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
+      .done(function(result) {
+        block.remove();
+        if (!isTemp) {
+          // 加入延迟：300ms 后再执行 saveFanOrder()
+          setTimeout(() => {
+            let order = [];
+            $('.fan-block').each(function() {
+              const val = $(this).find('input.cfg-file').val();
+              if (val && !val.includes('_temp_')) order.push(val);
+            });
+            saveFanOrder(order);
+          }, 300);  // 延迟 300ms，确保 block.remove() 完全生效
+        }
+        setTimeout(() => updateAllFanStatus(), 500);
+      });
+  });
+
+  // 手动刷新单独风扇的事件（用原生方式也能放进来）
   document.body.addEventListener('click', function(e) {
     const btn = e.target.closest('.fanctrlplus-interval-refresh');
     if (!btn) return;
@@ -423,7 +510,75 @@ document.addEventListener("DOMContentLoaded", function() {
     e.preventDefault();
     e.stopPropagation();
   });
-});
+
+  // 风扇排序
+  let sortableUnlocked = false;
+
+  $(function () {
+    // 初始化 sortable 区域，只做一次
+    $("#fan-area").sortable({
+      items: ".fan-block",
+      opacity: 0.6,
+      disabled: true,
+      tolerance: "pointer",
+      helper: "original"
+    });
+  });
+
+  // 切换解锁按钮逻辑
+  $('#fanctrlplus-sort-toggle').on('click', function () {
+    sortableUnlocked = !sortableUnlocked;
+    $("#fan-area").sortable("option", "disabled", !sortableUnlocked);
+
+    if (sortableUnlocked) {
+      // 解锁：启用拖动
+      $('.fan-block').addClass('draggable');
+      $(this)
+        .removeClass('icon-u-lock green-text')
+        .addClass('icon-u-lock-open red-text')
+        .attr('title', 'Lock sortable fans');
+    } else {
+      // 锁回：禁用拖动 + 保存排序
+      $('.fan-block').removeClass('draggable');
+      $(this)
+        .removeClass('icon-u-lock-open red-text')
+        .addClass('icon-u-lock green-text')
+        .attr('title', 'Unlock sortable fans');
+
+      // 等 DOM 顺序更新完，执行保存
+      setTimeout(() => {
+        saveFanOrder();
+      }, 300);
+    }
+  });
+
+  // 保存排序的函数（用于锁回时调用）
+  function saveFanOrder() {
+    const order = [];
+
+    $('.fan-block').each(function () {
+      const val = $(this).find('input.cfg-file').val();
+      if (typeof val === 'string' && val.trim() !== '' && !val.includes('_temp_')) {
+        order.push(val.trim());
+      }
+    });
+
+    console.log("saveFanOrder triggered, final order:", order);
+
+    if (order.length > 0) {
+      $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+        op: 'saveorder',
+        order: order
+      }).done(function () {
+        console.log("POST /saveorder success");
+      }).fail(function (jqXHR, textStatus, errorThrown) {
+        console.warn("Failed to save order.cfg:", textStatus, errorThrown);
+      });
+    } else {
+      console.warn("No valid .cfg-file found, nothing to save");
+    }
+  }
+});  
 </script>
 
 <form method="POST" action="/update.php" target="progressFrame">

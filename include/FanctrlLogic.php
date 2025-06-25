@@ -4,12 +4,16 @@ ini_set('display_errors', 1);
 
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+$cfg_dir = "/boot/config/plugins/$plugin";
+$order_file = "$cfg_dir/order.json";
 
 require_once "$docroot/plugins/$plugin/include/Common.php";
 
 header('Content-Type: application/json');
 
-if ($_GET['op'] === 'refresh_single' && !empty($_GET['custom'])) {
+$op = $_GET['op'] ?? $_POST['op'] ?? '';
+
+if ($op === 'refresh_single' && !empty($_GET['custom'])) {
   $custom = escapeshellarg($_GET['custom']);
   shell_exec("/usr/local/emhttp/plugins/fanctrlplus/scripts/fanctrlplus_refresh_single.sh $custom > /dev/null 2>&1 &");
   exit('OK');
@@ -124,29 +128,52 @@ switch ($op) {
     break;
   
   case 'newtemp':
-    $index = $_REQUEST['index'] ?? 0;
     $cfg_dir = "/boot/config/plugins/$plugin";
-    $temp_file = "$cfg_dir/{$plugin}_temp_$index.cfg";
-  
-    if (!file_exists($temp_file)) {
-      file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+
+    // 找 temp_X.cfg 文件名，不重复
+    $index_cfg = 0;
+    while (file_exists("$cfg_dir/{$plugin}_temp_$index_cfg.cfg")) {
+      $index_cfg++;
     }
-  
+
+    $temp_file = "$cfg_dir/{$plugin}_temp_$index_cfg.cfg";
+    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
-  
-    $cfg = parse_ini_file($temp_file);             // ✅ 加载 temp 配置
-    $cfg['file'] = basename($temp_file);           // ✅ 加入 file 字段
+    $cfg = parse_ini_file($temp_file);
+    $cfg['file'] = basename($temp_file);
+
+    // ✅ 页面传来的 index 决定 <input name="x[INDEX]"> 的值
+    $page_index = $_REQUEST['index'] ?? 99;  // fallback 防止 crash
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
-  
-    echo render_fan_block($cfg, $index, $pwms, $disks);  // ✅ 改为传完整 $cfg
+
+    echo render_fan_block($cfg, $page_index, $pwms, $disks);
     exit;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
     $cfgpath = "/boot/config/plugins/$plugin/$file";
+
     if (is_file($cfgpath)) {
       unlink($cfgpath);
+
+      // ===== 重建 order.cfg（排除 _temp_）=====
+      $cfgdir = "/boot/config/plugins/$plugin";
+      $cfgs = [];
+      foreach (glob("$cfgdir/{$plugin}_*.cfg") as $f) {
+        $b = basename($f);
+        if (strpos($b, '_temp_') === false) {
+          $cfgs[] = $b;
+        }
+      }
+
+      $order_cfg = "";
+      foreach ($cfgs as $i => $cfg_file) {
+        $order_cfg .= 'order' . ($i+1) . '="' . $cfg_file . "\"\n";
+      }
+      file_put_contents("$cfgdir/order.cfg", $order_cfg);
+
       json_response(['status' => 'deleted', 'file' => $file]);
     } else {
       json_response(['status' => 'not_found', 'file' => $file]);
@@ -196,7 +223,38 @@ switch ($op) {
   
     json_response($result);
     break;
-  
+
+  case 'saveorder':
+    error_log("[fanctrlplus] 🔥 saveorder triggered");
+
+    $order_raw = $_POST['order'] ?? [];
+    if (!is_array($order_raw)) {
+      error_log("[fanctrlplus] ⚠️ order is not array: ".print_r($order_raw, true));
+      json_response(['status' => 'error', 'message' => 'Order not array']);
+    }
+
+    file_put_contents("/tmp/fanctrlplus_post_order_raw.log", print_r($order_raw, true));
+
+    $valid = array_values(array_filter($order_raw, function ($f) use ($cfg_dir) {
+      return is_string($f)
+          && trim($f) !== ''
+          && strpos($f, '_temp_') === false
+          && is_file("$cfg_dir/$f");
+    }));
+
+    if (count($valid) > 0) {
+      $output = "";
+      foreach ($valid as $i => $file) {
+        $output .= "order" . ($i + 1) . "=\"$file\"\n";
+      }
+      file_put_contents("$cfg_dir/order.cfg", $output);
+      json_response(['status' => 'ok']);
+    } else {
+      error_log("[fanctrlplus] ❌ Blocked invalid saveorder: ".print_r($order_raw, true));
+      json_response(['status' => 'error', 'message' => 'Invalid order']);
+    }
+    break;
+    
   case 'start':
     shell_exec("/etc/rc.d/rc.fanctrlplus start");
     json_response(['status' => 'started']);

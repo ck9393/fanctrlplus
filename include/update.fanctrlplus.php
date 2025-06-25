@@ -31,12 +31,16 @@ foreach ($_POST['#file'] as $i => $file) {
     exit;
   }
 
-  // 安全 Custom Name → 用作配置文件名
-  $safe_custom = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $custom));
+  // 校验 Custom Name 合法性（仅允许 A-Z a-z 0-9 和 _）
+  if (!preg_match('/^[A-Za-z0-9_]+$/', $custom)) {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => "Custom Name can only contain letters, numbers, and underscores."]);
+    exit;
+  }
 
   // 如为临时文件则重命名
   if (strpos($old_file, 'temp') !== false && !empty($controller)) {
-    $new_file = $plugin . "_$safe_custom.cfg";
+    $new_file = $plugin . "_$custom.cfg";
   } else {
     $new_file = $old_file;
   }
@@ -67,7 +71,7 @@ foreach ($_POST['#file'] as $i => $file) {
 
   $content = '';
   foreach ($cfg as $k => $v) {
-    $v = str_replace('"', '', $v); // 移除双引号
+    $v = str_replace('"', '', $v);
     $content .= "$k=\"$v\"\n";
   }
 
@@ -86,6 +90,15 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
     @unlink($cfgfile);
   }
 }
+
+// === 写入 order.cfg 排序顺序（排除 temp）===
+$order_cfg = "";
+foreach ($used_files as $i => $cfgfile) {
+  if (strpos($cfgfile, '_temp_') === false) {
+    $order_cfg .= 'order' . ($i+1) . '="' . $cfgfile . "\"\n";
+  }
+}
+file_put_contents("$cfgpath/order.cfg", $order_cfg);
 
 // 重启 fanctrlplus 守护进程
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.fanctrlplus";
