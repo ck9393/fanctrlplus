@@ -157,42 +157,33 @@ switch ($op) {
 
     if (is_file($cfgpath)) {
       unlink($cfgpath);
+    }
 
-      // ===== 重建 order.cfg（排除 _temp_）=====
-      $cfgdir = "/boot/config/plugins/$plugin";
-      $cfgs = [];
-      foreach (glob("$cfgdir/{$plugin}_*.cfg") as $f) {
-        $b = basename($f);
-        if (strpos($b, '_temp_') === false) {
-          $cfgs[] = $b;
+    // ✅ 同步从 order.cfg 中移除该项（无论 temp 与否）
+    $order_file = "/boot/config/plugins/$plugin/order.cfg";
+    if (is_file($order_file)) {
+      $lines = file($order_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+      $lines = array_filter($lines, function ($line) use ($file) {
+        return strpos($line, "\"$file\"") === false;
+      });
+      file_put_contents($order_file, implode("\n", $lines) . "\n");
+    }
+
+    json_response(['status' => 'ok', 'message' => "Deleted $file"]);
+    break;
+    case 'status':
+      $pid_files = glob("/var/run/fanctrlplus_*.pid");
+      $running = false;
+      foreach ($pid_files as $pidfile) {
+        $pid = trim(@file_get_contents($pidfile));
+        if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
+          $running = true;
+          break;
         }
       }
-
-      $order_cfg = "";
-      foreach ($cfgs as $i => $cfg_file) {
-        $order_cfg .= 'order' . ($i+1) . '="' . $cfg_file . "\"\n";
-      }
-      file_put_contents("$cfgdir/order.cfg", $order_cfg);
-
-      json_response(['status' => 'deleted', 'file' => $file]);
-    } else {
-      json_response(['status' => 'not_found', 'file' => $file]);
-    }
-    break;
-
-  case 'status':
-    $pid_files = glob("/var/run/fanctrlplus_*.pid");
-    $running = false;
-    foreach ($pid_files as $pidfile) {
-      $pid = trim(@file_get_contents($pidfile));
-      if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
-        $running = true;
-        break;
-      }
-    }
-  
-    json_response(['status' => $running ? 'running' : 'stopped']);
-    break;
+    
+      json_response(['status' => $running ? 'running' : 'stopped']);
+      break;
 
   case 'status_all':
     $cfg_dir = "/boot/config/plugins/$plugin";
@@ -238,7 +229,7 @@ switch ($op) {
     $valid = array_values(array_filter($order_raw, function ($f) use ($cfg_dir) {
       return is_string($f)
           && trim($f) !== ''
-          && strpos($f, '_temp_') === false
+
           && is_file("$cfg_dir/$f");
     }));
 
