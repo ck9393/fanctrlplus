@@ -6,15 +6,50 @@ $pluginname = "fanctrlplus";
 $cfg_path = "/boot/config/plugins/$pluginname";
 $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
+$order_file = "$cfg_path/order.cfg";
+$order = [];
+$all_cfg = [];
+
 // 获取状态
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Inactive";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇行
+// 先读取 order.cfg 顺序
+if (file_exists($order_file)) {
+  $ini = parse_ini_file($order_file);
+  $order = array_values($ini);
+}
+
+// 1. 先按 order.cfg 顺序添加（只要实际存在）
+foreach ($order as $file) {
+  $path = "$cfg_path/$file";
+  if (is_file($path)) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $file;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 2. 把未出现在 order.cfg 的 cfg 文件（包含 _temp_）加进去
+$seen = array_flip($order);
+foreach ($cfg_files as $path) {
+  $basename = basename($path);
+  if (!isset($seen[$basename])) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $basename;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 3. 构建 HTML row
 $fan_rows = "";
-foreach ($cfg_files as $file) {
-  $cfg = parse_ini_file($file);
-  $label = $cfg['custom'] ?? basename($file);
+foreach ($all_cfg as $cfg) {
+  $file = $cfg['file'];
+  $label = $cfg['custom'] ?? $file;
+
+  // ✅ 跳过未命名的风扇（custom 名为空）
+  if (empty($cfg['custom'])) continue;
+
   $fan_rows .= <<<ROW
 <tr>
   <td>

@@ -381,9 +381,6 @@ $(function() {
         explicitClose:'...close'
       });
 
-      // ✅ 延迟 300ms 再保存顺序，避免 null 写入
-      setTimeout(() => collectAndSaveFanOrder(), 300);
-
     }, 'html').fail(function(jqXHR, textStatus, errorThrown) {
       alert("Failed to add fan.");
     });
@@ -527,6 +524,15 @@ $(function() {
 
   // 切换解锁按钮逻辑
   $('#fanctrlplus-sort-toggle').on('click', function () {
+    // 如果当前是锁定状态，准备解锁
+    if (!sortableUnlocked) {
+      if ($('.fan-block[data-file*="_temp_"]').length > 0) {
+        alert("Temporary fan configurations found. Please name them or delete before unlocking.");
+        return;
+      }
+    }
+
+    // 切换排序状态
     sortableUnlocked = !sortableUnlocked;
     $("#fan-area").sortable("option", "disabled", !sortableUnlocked);
 
@@ -536,14 +542,14 @@ $(function() {
       $(this)
         .removeClass('icon-u-lock green-text')
         .addClass('icon-u-lock-open red-text')
-        .attr('title', 'Lock sortable fans');
+        .attr('title', 'Lock sorting fan configurations');
     } else {
       // 锁回：禁用拖动 + 保存排序
       $('.fan-block').removeClass('draggable');
       $(this)
         .removeClass('icon-u-lock-open red-text')
         .addClass('icon-u-lock green-text')
-        .attr('title', 'Unlock sortable fans');
+        .attr('title', 'Unlock sorting fan configurations');
 
       // 等 DOM 顺序更新完，执行保存
       setTimeout(() => {
@@ -592,7 +598,7 @@ $(function() {
     ?>
   </div>
   <div style="clear:both; margin-top:15px; text-align: left;">
-    <button type="button" onclick="addFan()" title="Add a new fan controller block">➕ Add Fan</button>
+    <button type="button" onclick="addFan()" title="Add a new fan configuration">➕ Add Fan</button>
     <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
