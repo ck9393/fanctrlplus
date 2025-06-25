@@ -46,7 +46,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         <tr>
           <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
           <td>
-            <input type="text" name="custom[<?=$i?>]" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
+            <input type="text" name="custom[<?=$i?>]" class="custom-name-input" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
           </td>
         </tr>
 
@@ -98,7 +98,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         <tr>
           <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
           <td>
-            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>" style="width:225px;display:inline-block;margin-right:4px;">
+            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>" placeholder="1 or more" min="1" required style="width:225px;display:inline-block;margin-right:4px;">
             <span class="fanctrlplus-interval-refresh"
                   style="cursor:pointer;font-size:13px;color:var(--blue-800);margin-left:1px;vertical-align:middle;"
                   title="Manual Run: Read current temperature and set fan speed immediately"

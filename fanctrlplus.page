@@ -475,6 +475,31 @@ $(function() {
       });
   });
 
+  $('#fan-form').on('submit', function(e) {
+    let valid = true;
+    let errorMsg = '';
+
+    $('.custom-name-input').each(function() {
+      const name = $(this).val().trim();
+      if (name === '') {
+        valid = false;
+        errorMsg = 'Custom Name is required.';
+        return false;
+      }
+      if (!/^[A-Za-z0-9_]+$/.test(name)) {
+        valid = false;
+        errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
+        return false;
+      }
+    });
+
+    if (!valid) {
+      alert(errorMsg);
+      e.preventDefault(); // 拦截提交
+      return false;
+    }
+  });
+
   // 手动刷新单独风扇的事件（用原生方式也能放进来）
   document.body.addEventListener('click', function(e) {
     const btn = e.target.closest('.fanctrlplus-interval-refresh');
@@ -587,7 +612,7 @@ $(function() {
 });  
 </script>
 
-<form method="POST" action="/update.php" target="progressFrame">
+<form id="fan-form" method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
   <div id="fan-area">
     <?php
