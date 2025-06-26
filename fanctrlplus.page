@@ -154,7 +154,7 @@ $width = 300;
 }
 
 .fanctrl-sort-toggle {
-  flex: 1 1 48%;
+  position: relative;
   text-align: right;
   font-size: 13px;
   background: transparent !important;
@@ -163,6 +163,28 @@ $width = 300;
   cursor: pointer;
   padding: 0;
   box-shadow: none;
+  transition: all 0.25s ease-in-out;
+}
+.fanctrl-sort-toggle:hover {
+  transform: scale(1.1);
+}
+
+.fanctrl-sort-toggle::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;  /* 与锁头稍微拉开距离 */
+  left: 50%;
+  margin-left: -14px;
+  width: 28px;
+  height: 2px;
+  background-color: transparent;
+  border-radius: 4px;
+  transition: all 0.25s ease-in-out;
+  pointer-events: none;
+}
+
+.fanctrl-sort-toggle:hover::after {
+  background-color: var(--orange-800);  /* 或直接写 #f60 */
 }
 
 #fan-area {
