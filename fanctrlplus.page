@@ -104,9 +104,12 @@ $width = 300;
 
 .fanctrl-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 0px 70px 0 8px;
+  align-items: flex-start;
+  margin-bottom: 0px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 8px;
 }
 
 .fanctrl-indicator-container {
@@ -151,6 +154,8 @@ $width = 300;
 }
 
 .fanctrl-sort-toggle {
+  flex: 1 1 48%;
+  text-align: right;
   font-size: 13px;
   background: transparent !important;
   border: none;
@@ -158,21 +163,18 @@ $width = 300;
   cursor: pointer;
   padding: 0;
   box-shadow: none;
-  /* 可适当加粗一点更醒目 */
 }
 
 #fan-area {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
   gap: 0px 16px;
 }
+
 .fan-block {
-  flex: 1 1 48%;
+  flex: 1 1 calc(50% - 8px); /* 两个 block + 16px gap = 100% */
+  max-width: calc(50% - 8px);
   min-width: 340px;
-  max-width: 48%;
-  margin-bottom: 0;
-  vertical-align: top;
   box-sizing: border-box;
 }
 .fan-block.draggable { cursor: move !important; }
