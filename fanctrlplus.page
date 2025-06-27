@@ -6,68 +6,85 @@ Icon="fanctrlplus.png"
 <?PHP
 $plugin = "fanctrlplus";
 $cfg_dir = "/boot/config/plugins/$plugin";
-$order_file = "$cfg_dir/order.json";
 
+// 包含公用函数
 require_once "$docroot/plugins/$plugin/include/Common.php";
+require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
 
-// 初始化目录
+
+
+// 初始化配置目录
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
 }
 
+// === 第一步：读取所有 fanctrlplus_*.cfg 文件 ===
 $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
 
-$order_file = "$cfg_dir/order.cfg";
-$order = [];
+// === 第二步：从 order.cfg 读取左右栏顺序 ===
+$order_left = [];
+$order_right = [];
 
-if (file_exists($order_file)) {
+$order_file = "$cfg_dir/order.cfg";
+if (is_file($order_file)) {
   $ini = parse_ini_file($order_file);
-  $order = array_values($ini);  // 提取 order1=xxx 的值
-  $order = array_filter($order, function($f) {
-    return strpos($f, '_temp_') === false;
-  });
+  foreach ($ini as $k => $v) {
+    if (strpos($k, 'left') === 0)  $order_left[] = $v;
+    if (strpos($k, 'right') === 0) $order_right[] = $v;
+  }
 }
 
-// 1. 按 order.cfg 顺序加载
-foreach ($order as $file) {
+// === 第三步：已出现在 order.cfg 的 cfg 列表，避免重复加载 ===
+$seen = array_flip(array_merge($order_left, $order_right));
+
+// === 第四步：准备 fan block 渲染数组（含左右栏 + 其他）===
+$fan_column_left  = [];
+$fan_column_right = [];
+$all_cfg = [];  // ← 仍保留所有 cfg 给 JS 层用
+
+// 左栏渲染
+foreach ($order_left as $file) {
   $path = "$cfg_dir/$file";
   if (is_file($path)) {
     $cfg = parse_ini_file($path);
     $cfg['file'] = $file;
+    $fan_column_left[] = $cfg;
     $all_cfg[] = $cfg;
   }
 }
 
-// 2. 加载未出现在 order.cfg 的正式 cfg
-$seen = array_flip($order);
+// 右栏渲染
+foreach ($order_right as $file) {
+  $path = "$cfg_dir/$file";
+  if (is_file($path)) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $file;
+    $fan_column_right[] = $cfg;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// === 第五步：加载未在 order.cfg 出现的正式 cfg（默认塞入右栏）===
 foreach ($cfg_files as $path) {
   $basename = basename($path);
   if (!isset($seen[$basename]) && strpos($basename, '_temp_') === false) {
     $cfg = parse_ini_file($path);
     $cfg['file'] = $basename;
+    $fan_column_right[] = $cfg;
     $all_cfg[] = $cfg;
   }
 }
 
-// 3. 加载 temp_x.cfg
+// === 第六步：加载所有 temp_x.cfg，默认加入右栏 ===
 foreach ($cfg_files as $path) {
   $basename = basename($path);
   if (strpos($basename, '_temp_') !== false) {
     $cfg = parse_ini_file($path);
     $cfg['file'] = $basename;
+    $fan_column_right[] = $cfg;
     $all_cfg[] = $cfg;
   }
 }
-
-// 若仍为空（没有 cfg），就生成第一个 temp
-if (empty($all_cfg)) {
-  $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
-  if (!file_exists($temp_file)) {
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
-  }
-  $all_cfg[] = parse_ini_file($temp_file) + ['file' => basename($temp_file)];
-}
-
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
 $width = 300;
@@ -102,6 +119,25 @@ $width = 300;
     transition: fill 0.3s ease;
 }
 
+/* 控制下拉关闭状态时主框宽度 */
+.ui-dropdownchecklist-selector-wrapper {
+  max-width: 300px !important;
+  width: 300px !important;
+  box-sizing: border-box;
+  padding-right: 24px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* 控制显示文字部分不爆边 */
+.ui-dropdownchecklist-text {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .fanctrl-header {
   display: flex;
   justify-content: space-between;
@@ -109,7 +145,7 @@ $width = 300;
   margin-bottom: 0px;
   width: 100%;
   box-sizing: border-box;
-  padding: 0 8px;
+  padding: 0 24px;
 }
 
 .fanctrl-indicator-container {
@@ -183,21 +219,60 @@ $width = 300;
   pointer-events: none;
 }
 
+.sortable-placeholder {  /* 用于Drag Fan Here */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #bbb;
+  margin: 10px;
+  border-radius: 6px;
+  text-align: center;
+  color: #999;
+  font-size: 16px;
+  background-color: #f9f9f9;
+}
+
+.fan-placeholder {   /* 用于拉动时显示Placeholder */
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  width: 98%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  min-height: 180px; /* 可改为与 .fan-block 高度一致 */
+}
+
 .fanctrl-sort-toggle:hover::after {
   background-color: var(--orange-800);  /* 或直接写 #f60 */
 }
 
 #fan-area {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0px 16px;
+  gap: 16px;                /* 左右间距 */
+  align-items: flex-start;
+  padding: 8px;            /* 外边框内距（防止贴边） */
+}
+
+.fan-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;                /* 上下间距 */
+  flex: 1;
+  min-width: 340px;
 }
 
 .fan-block {
-  flex: 1 1 calc(50% - 8px); /* 两个 block + 16px gap = 100% */
-  max-width: calc(50% - 8px);
-  min-width: 340px;
+  width: 100%;              /* 保持块满列宽，统一由 column gap 控制上下间距 */
   box-sizing: border-box;
+  margin: 0;                /* 不加额外间距 */
+}
+
+.fan-fieldset {
+  margin: 0;                /* 移除默认 fieldset 外距 */
+  padding: 32px 16px 12px;  /* 内距：上=32, 侧=16, 下=12，可微调 */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  position: relative;
 }
 .fan-block.draggable { cursor: move !important; }
 .fan-block.ui-sortable-helper { cursor: grabbing !important; }
@@ -232,7 +307,7 @@ $(function() {
     dotEls[dotIndex].classList.add('visible');
   }
   setInterval(animateDots, 2000);
-
+});
   // 初始化 SVG 风扇转动
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
@@ -298,36 +373,43 @@ $(function() {
       console.error("❌ Failed to load status:", textStatus, errorThrown);
     });
   }
+  
+  let sortableUnlocked = false;
+  
   function updateAllFanStatus() {
-    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', {op: 'status_all'}, function(statusMap) {
-      $('.fan-block').each(function(index) {
+    $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
+      $('.fan-block').each(function () {
         const block = $(this);
-        const input = block.find('input[name^="custom["]');
-        if (!input.length) return;
-        const name = input.val().trim();
-        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === name.toLowerCase());
+        const cfgFile = block.data('file');  // 从 data-file 读取配置文件名
+        if (!cfgFile) return;
+        const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === cfgFile.toLowerCase());
         const status = matchedKey ? statusMap[matchedKey] : 'stopped';
         const isRunning = status === 'running';
-        const fanSvg = document.getElementById(`fan-icon-${index}`);
+
+        const fanSvg = block.find('svg')[0];  // 寻找 block 内的 <svg>，不再用 index
         if (!fanSvg) return;
+
         const rotor = fanSvg.querySelector('.rotor');
         const frame = fanSvg.querySelector('.frame');
         const hub   = fanSvg.querySelector('.hub');
         if (rotor) rotor.classList.toggle('rotating', isRunning);
+
         const bg = getComputedStyle(document.body).backgroundColor;
         const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
         const brightness = match ? (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3 : 255;
         const isDark = brightness < 128;
+
         const frameColor = isRunning ? (isDark ? '#ffffff' : '#000000') : '#cc0000';
         const hubColor   = isRunning ? (isDark ? '#cccccc' : '#666666') : '#ff6666';
         if (frame) frame.setAttribute('fill', frameColor);
         if (hub)   hub.setAttribute('fill', hubColor);
+
         const container = fanSvg.closest('.fan-svg-container');
         if (container) {
           container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
         }
       });
-    }).fail(function(jqXHR, textStatus, errorThrown) {
+    }).fail(function (jqXHR, textStatus, errorThrown) {
       console.error("❌ Failed to load status_all:", textStatus, errorThrown);
     });
   }
@@ -394,19 +476,33 @@ $(function() {
     });
   };
 
-  window.addFan = function() {
+  window.addFan = function () {
     const index = $('.fan-block').length;
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'newtemp', index: index}, function(html) {
-      $('#fan-area').append(html);
-      updateAllFanStatus();
-      $('.disk-select').last().dropdownchecklist({
-        emptyText:'(None)',
-        width: <?=$width?>,
-        explicitClose:'...close'
+
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'newtemp', index: index }, function (html) {
+      const leftCount = $('#fan-column-left .fan-block').length;
+      const rightCount = $('#fan-column-right .fan-block').length;
+      const targetColumn = (leftCount <= rightCount) ? '#fan-column-left' : '#fan-column-right';
+
+      const $html = $(html);
+      $(targetColumn).append($html);
+
+      // ✅ 初始化原始值（防止误亮 Apply All）
+      initOriginalForBlock($html);
+
+      // ✅ 初始化新 block 的下拉
+      $html.find('.disk-select').dropdownchecklist({
+        emptyText: '(None)',
+        width: '',
+        explicitClose: '...close'
       });
 
-    }, 'html').fail(function(jqXHR, textStatus, errorThrown) {
-      alert("Failed to add fan.");
+      updateAllFanStatus();
+      ensureColumnDroppable();
+
+      setTimeout(() => {
+        updateAllFanStatus();
+      }, 100);
     });
   };
 
@@ -421,6 +517,7 @@ $(function() {
   $('form').on('ui:changed', function() {
     $('input[name="#apply"]').prop('disabled', false);
   });
+  
 
   function initOriginalForBlock($block) {
     const original = {
@@ -455,22 +552,77 @@ $(function() {
       }
     });
 
-    $('input[name="#apply"]').prop('disabled', !dirty);
+    $('#apply-btn').prop('disabled', !dirty);
+  }
+
+  function ensureColumnDroppable() {
+    ['#fan-column-left', '#fan-column-right'].forEach(function (selector) {
+      const $col = $(selector);
+
+      // ✅ 如果没有真正 fan-block 且尚未插入占位
+      if (
+        $col.children('.fan-block:not(.sortable-placeholder)').length === 0 &&
+        $col.find('.sortable-placeholder').length === 0
+      ) {
+        $col.append(`<div class="fan-block sortable-placeholder">Drag Fan Configuration Here</div>`);
+      }
+
+      // ✅ 如果已经有真正 fan-block，则移除占位
+      if ($col.children('.fan-block:not(.sortable-placeholder)').length > 0) {
+        $col.find('.sortable-placeholder').remove();
+      }
+      const blockHeight = $('.fan-block:not(.sortable-placeholder):first').outerHeight();
+      $('.sortable-placeholder').css('min-height', blockHeight + 'px');
+    });
   }
 
   // ✅ 页面加载完成后初始化
   $(document).ready(function () {
+    $('.disk-select').dropdownchecklist({
+      emptyText: '(None)',
+      width: 300,
+      explicitClose: '...close'
+    });
+
+    // 其他已有初始化逻辑保持
     $('.fan-block').each(function () {
       initOriginalForBlock($(this));
     });
 
-    $('input, select').on('input change', function () {
+    $('#fan-area').on('input change', 'input, select', function () {
       setApplyAllButtonState();
     });
 
     setApplyAllButtonState();
-  });
+    ensureColumnDroppable();
 
+    $(document).on('click', '#apply-btn', function (e) {
+
+      let valid = true;
+      let errorMsg = '';
+
+      $('.custom-name-input').each(function() {
+        const name = $(this).val().trim();
+        if (name === '') {
+          valid = false;
+          errorMsg = 'Custom Name is required.';
+          return false;
+        }
+        if (!/^[A-Za-z0-9_]+$/.test(name)) {
+          valid = false;
+          errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
+          return false;
+        }
+      });
+
+      if (!valid) {
+        alert(errorMsg);
+        return;
+      }
+
+      $('#fan-form')[0].submit();
+    });
+  });  
   
   $(document).on('click', '.delete-btn', function () {
     const block = $(this).closest('.fan-block');
@@ -496,159 +648,244 @@ $(function() {
           }, 300);  // 延迟 300ms，确保 block.remove() 完全生效
         }
         setTimeout(() => updateAllFanStatus(), 500);
+
+        ensureColumnDroppable();
       });
-  });
-
-  $('#fan-form').on('submit', function(e) {
-    let valid = true;
-    let errorMsg = '';
-
-    $('.custom-name-input').each(function() {
-      const name = $(this).val().trim();
-      if (name === '') {
-        valid = false;
-        errorMsg = 'Custom Name is required.';
-        return false;
-      }
-      if (!/^[A-Za-z0-9_]+$/.test(name)) {
-        valid = false;
-        errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
-        return false;
-      }
-    });
-
-    if (!valid) {
-      alert(errorMsg);
-      e.preventDefault(); // 拦截提交
-      return false;
-    }
   });
 
   // 手动刷新单独风扇的事件（用原生方式也能放进来）
   document.body.addEventListener('click', function(e) {
     const btn = e.target.closest('.fanctrlplus-interval-refresh');
     if (!btn) return;
+
     const icon = btn.querySelector('.fa');
     btn.style.color = '#aaa';
     if (icon) icon.classList.add('fa-spin');
+
     const label = btn.getAttribute('data-label');
     if (!label) {
       alert("Custom Name is not configured, cannot refresh!");
       return;
     }
+
     btn.style.pointerEvents = 'none';
+
     fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(label)}`)
       .then(res => {
-        if (!res.ok) throw new Error("Request failed");
+        if (!res.ok) {
+          throw new Error("Request failed");
+        }
         return res.text();
       })
-      .then(() => setTimeout(() => {
-        if (icon) icon.classList.remove('fa-spin');
-        btn.style.color = 'var(--blue-800)';
-        btn.style.pointerEvents = '';
-      }, 1800))
+      .then(() => {
+        setTimeout(() => {
+          if (icon) icon.classList.remove('fa-spin');
+          btn.style.color = 'var(--blue-800)';
+          btn.style.pointerEvents = '';
+        }, 1800);
+      })
       .catch(err => {
         btn.style.color = 'var(--blue-800)';
         if (icon) icon.classList.remove('fa-spin');
         btn.style.pointerEvents = '';
         alert("Manual Run failed: " + err.message);
       });
+
     e.preventDefault();
     e.stopPropagation();
   });
 
-  // 风扇排序
-  let sortableUnlocked = false;
-
+  // 风扇排序逻辑
   $(function () {
-    // 初始化 sortable 区域，只做一次
-    $("#fan-area").sortable({
+    $("#fan-column-left, #fan-column-right").sortable({
       items: ".fan-block",
+      connectWith: ".fan-column",   // 双栏可以互拖
       opacity: 0.6,
-      disabled: true,
       tolerance: "pointer",
-      helper: "original"
-    });
-  });
+      helper: "original",
+      disabled: true,               // 初始锁定
+      placeholder: "fan-placeholder",   // 👈 拖动时使用灰色占位块
+      start: function (event, ui) {
+        // 设置 placeholder 高度与原元素一致
+        ui.placeholder.height(ui.item.outerHeight());
+      },
 
-  // 切换解锁按钮逻辑
-  $('#fanctrlplus-sort-toggle').on('click', function () {
-    // 如果当前是锁定状态，准备解锁
-    if (!sortableUnlocked) {
-      if ($('.fan-block[data-file*="_temp_"]').length > 0) {
-        alert("Temporary fan configurations found. Please name them or delete before unlocking.");
-        return;
-      }
-    }
+       // ✅ 拖进某个 column 时，立刻移除已有的 "Drag fan here"
+      over: function (event, ui) {
+        $(this).find('.sortable-placeholder').remove();
+      },
 
-    // 切换排序状态
-    sortableUnlocked = !sortableUnlocked;
-    $("#fan-area").sortable("option", "disabled", !sortableUnlocked);
-
-    if (sortableUnlocked) {
-      // 解锁：启用拖动
-      $('.fan-block').addClass('draggable');
-      $(this)
-        .removeClass('icon-u-lock green-text')
-        .addClass('icon-u-lock-open red-text')
-        .attr('title', 'Lock sorting fan configurations');
-    } else {
-      // 锁回：禁用拖动 + 保存排序
-      $('.fan-block').removeClass('draggable');
-      $(this)
-        .removeClass('icon-u-lock-open red-text')
-        .addClass('icon-u-lock green-text')
-        .attr('title', 'Unlock sorting fan configurations');
-
-      // 等 DOM 顺序更新完，执行保存
-      setTimeout(() => {
+      out: function (event, ui) {
+        const $col = $(this);
+        const realBlocks = $col.children('.fan-block:not(.sortable-placeholder)');
+        if (realBlocks.length === 0 && $col.find('.sortable-placeholder').length === 0) {
+          const blockHeight = $('.fan-block:not(.sortable-placeholder):first').outerHeight() || 100;
+          const $placeholder = $(`<div class="fan-block sortable-placeholder">Drag Fan Configuration Here</div>`);
+          $placeholder.css('min-height', blockHeight + 'px');
+          $col.append($placeholder);
+        }
+      },
+      update: function () {
+        ensureColumnDroppable();
         saveFanOrder();
-      }, 300);
-    }
-  });
-
-  // 保存排序的函数（用于锁回时调用）
-  function saveFanOrder() {
-    const order = [];
-
-    $('.fan-block').each(function () {
-      const val = $(this).find('input.cfg-file').val();
-      if (typeof val === 'string' && val.trim() !== '') {
-        order.push(val.trim());
       }
     });
 
-    console.log("saveFanOrder triggered, final order:", order);
+    // 切换解锁按钮逻辑
+    $('#fanctrlplus-sort-toggle').on('click', function () {
+      if (!sortableUnlocked) {
+        // 解锁前检查是否有 temp_x.cfg，禁止拖动
+        if ($('.fan-block[data-file*="_temp_"]').length > 0) {
+          alert("Temporary fan configurations found. Please name them or delete before unlocking.");
+          return;
+        }
+      }
 
-    if (order.length > 0) {
-      $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
-        op: 'saveorder',
-        order: order
-      }).done(function () {
-        console.log("POST /saveorder success");
-      }).fail(function (jqXHR, textStatus, errorThrown) {
-        console.warn("Failed to save order.cfg:", textStatus, errorThrown);
+      sortableUnlocked = !sortableUnlocked;
+
+      // 启用或禁用 sortable
+      $("#fan-column-left, #fan-column-right").sortable("option", "disabled", !sortableUnlocked);
+
+      if (sortableUnlocked) {
+        // 解锁状态
+        $('.fan-block').addClass('draggable');
+        $(this)
+          .removeClass('icon-u-lock green-text')
+          .addClass('icon-u-lock-open red-text')
+          .attr('title', 'Lock sorting fan configurations');
+      } else {
+        // 锁回状态
+        $('.fan-block').removeClass('draggable');
+        $(this)
+          .removeClass('icon-u-lock-open red-text')
+          .addClass('icon-u-lock green-text')
+          .attr('title', 'Unlock sorting fan configurations');
+
+        // 延迟保存排序
+        setTimeout(() => {
+          saveFanOrder();
+        }, 300);
+      }
+    });
+
+    // 保存排序的函数
+    function saveFanOrder() {
+      const order = {
+        left: [],
+        right: []
+      };
+
+      // 清空旧的隐藏 input
+      $('input[name^="order_left"]').remove();
+      $('input[name^="order_right"]').remove();
+
+      $('#fan-column-left .fan-block').each(function (i) {
+        const val = $(this).find('input.cfg-file').val();
+        if (typeof val === 'string' && val.trim() !== '') {
+          order.left.push(val.trim());
+          $('#fan-form').append(`<input type="hidden" name="order_left[${i}]" value="${val.trim()}">`);
+        }
       });
-    } else {
-      console.warn("No valid .cfg-file found, nothing to save");
+
+      $('#fan-column-right .fan-block').each(function (i) {
+        const val = $(this).find('input.cfg-file').val();
+        if (typeof val === 'string' && val.trim() !== '') {
+          order.right.push(val.trim());
+          $('#fan-form').append(`<input type="hidden" name="order_right[${i}]" value="${val.trim()}">`);
+        }
+      });
+
+      console.log("saveFanOrder triggered, final order:", order);
+
+      // 提交 AJAX（用于立即保存至 /plugins/fanctrlplus/order.cfg）
+      if (order.left.length > 0 || order.right.length > 0) {
+        $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+          op: 'saveorder',
+          order: order
+        }).done(function () {
+          console.log("POST /saveorder success");
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          console.warn("Failed to save order.cfg:", textStatus, errorThrown);
+        });
+      } else {
+        console.warn("No valid .cfg-file found, nothing to save");
+      }
     }
-  }
 });  
 </script>
 
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
+
   <div id="fan-area">
+    <div id="fan-column-left" class="fan-column">
+      <?php $i = 0;
+      // 左栏渲染 left 排序的 fan block
+      foreach ($order_left as $file) {
+        $path = "$cfg_dir/$file";
+        if (is_file($path)) {
+          $cfg = parse_ini_file($path);
+          $cfg['file'] = $file;
+          $all_cfg[] = $cfg;  // 加入已见列表
+          echo render_fan_block($cfg, $i++, $pwms, $disks);
+        }
+      }
+      ?>
+    </div>
+
+    <div id="fan-column-right" class="fan-column">
+      <?php
+      // 右栏渲染 right 排序的 fan block
+      foreach ($order_right as $file) {
+        $path = "$cfg_dir/$file";
+        if (is_file($path)) {
+          $cfg = parse_ini_file($path);
+          $cfg['file'] = $file;
+          $all_cfg[] = $cfg;
+          echo render_fan_block($cfg, $i++, $pwms, $disks);
+        }
+      }
+      ?>
+    </div>
+
     <?php
-    require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
-    foreach ($all_cfg as $i => $cfg) {
-      echo render_fan_block($cfg, $i, $pwms, $disks);
+    // 渲染未出现在 order.cfg 的 cfg（包括 temp_*），平均插入 fan-column 较少的一边
+    $seen = array_flip(array_merge($order_left, $order_right));
+    $count_left = count($order_left);
+    $count_right = count($order_right);
+
+    // 找出所有未出现在 order.cfg 的 .cfg 文件，包括 temp_*
+    $unsorted_cfgs = array_filter($cfg_files, function ($path) use ($seen) {
+      $basename = basename($path);
+      return !isset($seen[$basename]);
+    });
+
+    // 逐个渲染，动态分配左右栏
+    foreach ($unsorted_cfgs as $path) {
+      $basename = basename($path);
+      $cfg = parse_ini_file($path);
+      $cfg['file'] = $basename;
+      $all_cfg[] = $cfg;
+
+      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks));
+
+      if ($count_left <= $count_right) {
+        $target = '#fan-column-left';
+        $count_left++;
+      } else {
+        $target = '#fan-column-right';
+        $count_right++;
+      }
+
+      echo "<script>document.querySelector('$target').insertAdjacentHTML('beforeend', `$html`);</script>";
+      $i++;
     }
     ?>
   </div>
+
   <div style="clear:both; margin-top:15px; text-align: left;">
     <button type="button" onclick="addFan()" title="Add a new fan configuration">➕ Add Fan</button>
-    <input type="submit" name="#apply" value="Apply All" title="Save all fan configurations">
+    <button type="button" id="apply-btn" title="Save all fan configurations">Apply All</button>
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
 </form>

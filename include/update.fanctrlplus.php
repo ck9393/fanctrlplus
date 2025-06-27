@@ -92,13 +92,18 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
 }
 
 // === 写入 order.cfg 排序顺序（排除 temp）===
-$order_cfg = "";
-foreach ($used_files as $i => $cfgfile) {
-  if (strpos($cfgfile, '_temp_') === false) {
-    $order_cfg .= 'order' . ($i+1) . '="' . $cfgfile . "\"\n";
-  }
+$order_left = $_POST['order_left'] ?? [];
+$order_right = $_POST['order_right'] ?? [];
+
+$order_lines = [];
+foreach ($order_left as $i => $f) {
+  $order_lines[] = 'left' . $i . '="' . basename($f) . '"';
 }
-file_put_contents("$cfgpath/order.cfg", $order_cfg);
+foreach ($order_right as $i => $f) {
+  $order_lines[] = 'right' . $i . '="' . basename($f) . '"';
+}
+
+file_put_contents("$cfgpath/order.cfg", implode("\n", $order_lines) . "\n");
 
 // 重启 fanctrlplus 守护进程
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.fanctrlplus";

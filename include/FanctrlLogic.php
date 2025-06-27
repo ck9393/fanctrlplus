@@ -144,10 +144,11 @@ switch ($op) {
     $cfg['file'] = basename($temp_file);
 
     // ✅ 页面传来的 index 决定 <input name="x[INDEX]"> 的值
-    $page_index = $_REQUEST['index'] ?? 99;  // fallback 防止 crash
+    $page_index = intval($_REQUEST['index'] ?? 99);
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
 
+    header('Content-Type: text/html; charset=utf-8');
     echo render_fan_block($cfg, $page_index, $pwms, $disks);
     exit;
 
@@ -208,7 +209,7 @@ switch ($op) {
       }
 
       if ($name !== '') {
-        $result[$name] = $running ? 'running' : 'stopped';
+        $result[basename($file)] = $running ? 'running' : 'stopped';
       }
     }
   
@@ -219,29 +220,33 @@ switch ($op) {
     error_log("[fanctrlplus] 🔥 saveorder triggered");
 
     $order_raw = $_POST['order'] ?? [];
+
     if (!is_array($order_raw)) {
-      error_log("[fanctrlplus] ⚠️ order is not array: ".print_r($order_raw, true));
+      error_log("[fanctrlplus] ⚠️ order is not array: " . print_r($order_raw, true));
       json_response(['status' => 'error', 'message' => 'Order not array']);
     }
 
     file_put_contents("/tmp/fanctrlplus_post_order_raw.log", print_r($order_raw, true));
 
-    $valid = array_values(array_filter($order_raw, function ($f) use ($cfg_dir) {
-      return is_string($f)
-          && trim($f) !== ''
+    $output = "";
 
-          && is_file("$cfg_dir/$f");
-    }));
+    foreach (['left', 'right'] as $side) {
+      if (!isset($order_raw[$side]) || !is_array($order_raw[$side])) continue;
 
-    if (count($valid) > 0) {
-      $output = "";
+      $valid = array_values(array_filter($order_raw[$side], function ($f) use ($cfg_dir) {
+        return is_string($f) && trim($f) !== '' && is_file("$cfg_dir/$f");
+      }));
+
       foreach ($valid as $i => $file) {
-        $output .= "order" . ($i + 1) . "=\"$file\"\n";
+        $output .= "{$side}{$i}=\"$file\"\n";
       }
+    }
+
+    if ($output !== "") {
       file_put_contents("$cfg_dir/order.cfg", $output);
       json_response(['status' => 'ok']);
     } else {
-      error_log("[fanctrlplus] ❌ Blocked invalid saveorder: ".print_r($order_raw, true));
+      error_log("[fanctrlplus] ❌ Blocked invalid saveorder: " . print_r($order_raw, true));
       json_response(['status' => 'error', 'message' => 'Invalid order']);
     }
     break;
