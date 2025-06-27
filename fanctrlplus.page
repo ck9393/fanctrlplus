@@ -581,7 +581,24 @@ $(function() {
     $('.disk-select').dropdownchecklist({
       emptyText: '(None)',
       width: 300,
-      explicitClose: '...close'
+      explicitClose: '...close',
+      textFormatFunction: function (options) {
+        const selected = options.filter(':selected');
+        const count = selected.length;
+
+        // 构建 tooltip 内容
+        const tooltip = selected.map(function () {
+          return $(this).text();
+        }).get().join('\n') || '(None)';
+
+        // 设置 title 到对应的 .ui-dropdownchecklist-text
+        setTimeout(() => {
+          // 找到最近的 wrapper，再找 .ui-dropdownchecklist-text
+          options.closest('td').find('.ui-dropdownchecklist-text').attr('title', tooltip);
+        }, 10);
+
+        return count === 0 ? '(None)' : `Selected ${count} Disk${count > 1 ? 's' : ''}`;
+      }
     });
 
     // 其他已有初始化逻辑保持
