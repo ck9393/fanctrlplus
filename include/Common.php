@@ -62,7 +62,7 @@ function list_valid_disks_by_id() {
 
     $id = basename($dev);
     $label = preg_replace('/^(nvme|ata)-/', '', $id);
-    $title = "$id\n$real";
+    $title = "$id → $real";
     $group = 'Others';
 
     if (preg_match('#/dev/([a-zA-Z0-9]+)[p]?[0-9]*$#', $real, $m)) {

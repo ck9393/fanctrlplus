@@ -44,5 +44,5 @@ while true; do
     fi
   done
 
-  sleep 15  # dashboard 刷新频率，不影响风扇控制逻辑
+  sleep 5  # dashboard 刷新频率，不影响风扇控制逻辑
 done

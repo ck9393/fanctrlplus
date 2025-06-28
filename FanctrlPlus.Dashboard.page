@@ -6,19 +6,64 @@ $pluginname = "fanctrlplus";
 $cfg_path = "/boot/config/plugins/$pluginname";
 $cfg_files = glob("$cfg_path/{$pluginname}_*.cfg");
 
+$order_file = "$cfg_path/order.cfg";
+$order = [];
+$all_cfg = [];
+
 // 获取状态
 $status_text = file_exists("/var/run/{$pluginname}.pid") ? "Running" : "Inactive";
 $status_color = $status_text === "Running" ? "green-text" : "red-text";
 
-// 构建风扇行
+// 先读取 order.cfg 顺序
+if (file_exists($order_file)) {
+  $ini = parse_ini_file($order_file);
+  $order = array_values($ini);
+}
+
+// 1. 先按 order.cfg 顺序添加（只要实际存在）
+foreach ($order as $file) {
+  $path = "$cfg_path/$file";
+  if (is_file($path)) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $file;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 2. 把未出现在 order.cfg 的 cfg 文件（包含 _temp_）加进去
+$seen = array_flip($order);
+foreach ($cfg_files as $path) {
+  $basename = basename($path);
+  if (!isset($seen[$basename])) {
+    $cfg = parse_ini_file($path);
+    $cfg['file'] = $basename;
+    $all_cfg[] = $cfg;
+  }
+}
+
+// 3. 构建 HTML row
 $fan_rows = "";
-foreach ($cfg_files as $file) {
-  $cfg = parse_ini_file($file);
-  // if (($cfg['service'] ?? '0') !== '1') continue;
-  $label = $cfg['custom'] ?? basename($file);
+foreach ($all_cfg as $cfg) {
+  $file = $cfg['file'];
+  $label = $cfg['custom'] ?? $file;
+
+  // ✅ 跳过未命名的风扇（custom 名为空）
+  if (empty($cfg['custom'])) continue;
+
   $fan_rows .= <<<ROW
 <tr>
-  <td><span class="w26">$label</span><span class="w18 fanctrlplus-temp" data-label="$label">--</span><span class="w18 fanctrlplus-rpm" data-label="$label">--</span><span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
+  <td>
+    <span class="w26">$label</span>
+    <span class="w18 fanctrlplus-temp" data-label="$label">--</span>
+    <span class="w18 fanctrlplus-rpm" data-label="$label">--</span>
+    <span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
+    <span class="w18">
+      <span class="fa fa-refresh fanctrlplus-refresh"
+        data-label="$label"
+        style="cursor:pointer;font-size:13px;color:var(--blue-800);vertical-align:middle;"
+        title="Manual Run: Read current temperature and set fan speed immediately"></span>
+    </span>
+  </td>
 </tr>
 ROW;
 }
@@ -33,38 +78,42 @@ echo <<<STYLE
   display: inline-block;
   margin-bottom: 6px;
 }
-.w18, .w26 {
-  font-size: 12px;
-  line-height: 1.4;
-  display: inline-block;
-  vertical-align: top;
-}
 </style>
 STYLE;
 
 // 输出 tile
 $mytiles[$pluginname]['column2'] = <<<EOT
 <tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr><td>
-  <i class="icon-fanctrlplus f32"></i>
-  <div class="section">FanCtrl Plus<br>
-    <span class="$status_color fanctrlplus-status">Status: $status_text</span>
-  </div>
-  <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
-    <i class="fa fa-fw fa-cog control"></i>
-  </a>
-</td></tr>
-<tr><td>
-  <span class="w26">NAME</span>
-  <span class="w18">TEMP</span>
-  <span class="w18">RPM</span>
-  <span class="w18">STATUS</span>
-</td></tr>
+<tr>
+  <td>
+    <i class="icon-fanctrlplus f32"></i>
+    <div class="section">FanCtrl Plus<br>
+      <span class="$status_color fanctrlplus-status">Status: $status_text</span>
+    </div>
+    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+      <i class="fa fa-fw fa-cog control"></i>
+    </a>
+  </td>
+</tr>
+<tr class="header">
+  <td>
+    <span class="w26">NAME</span>
+    <span class="w18">TEMP</span>
+    <span class="w18">RPM</span>
+    <span class="w18">STATUS</span>
+    <span class="w18">RUN</span>
+  </td>
+</tr>
 $fan_rows
 </tbody>
 EOT;
 ?>
 <script>
+function refreshSingleFan(custom) {
+  fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(custom)}`)
+    .then(() => setTimeout(updateFanctrlplusTile, 2000)); // 2秒后刷新界面
+}
+
 function updateFanctrlplusTile() {
   const tile = document.getElementById("fanctrlplus-dashboard");
   if (!tile) return;
@@ -103,6 +152,29 @@ function updateFanctrlplusTile() {
 
 document.addEventListener("DOMContentLoaded", function () {
   setTimeout(updateFanctrlplusTile, 200);
-  setInterval(updateFanctrlplusTile, 15000);
+  setInterval(updateFanctrlplusTile, 5000);
+
+  // 用事件代理监听所有刷新按钮
+  document.getElementById("fanctrlplus-dashboard")?.addEventListener("click", function(e) {
+    const btn = e.target.closest('.fanctrlplus-refresh');
+    if (!btn) return;
+
+    const label = btn.getAttribute('data-label');
+    btn.style.color = '#aaa';
+    btn.classList.add('fa-spin');
+    refreshSingleFan(label);
+    setTimeout(() => {
+      btn.style.color = 'var(--blue-800)';
+      btn.classList.remove('fa-spin');
+    }, 1800);
+
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(updateFanctrlplusTile, 200);
+  setInterval(updateFanctrlplusTile, 5000);
 });
 </script>
