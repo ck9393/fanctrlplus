@@ -226,8 +226,6 @@ switch ($op) {
       json_response(['status' => 'error', 'message' => 'Order not array']);
     }
 
-    file_put_contents("/tmp/fanctrlplus_post_order_raw.log", print_r($order_raw, true));
-
     $output = "";
 
     foreach (['left', 'right'] as $side) {

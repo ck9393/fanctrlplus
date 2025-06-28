@@ -40,7 +40,7 @@ $seen = array_flip(array_merge($order_left, $order_right));
 // === 第四步：准备 fan block 渲染数组（含左右栏 + 其他）===
 $fan_column_left  = [];
 $fan_column_right = [];
-$all_cfg = [];  // ← 仍保留所有 cfg 给 JS 层用
+$all_cfg = [];
 
 // 左栏渲染
 foreach ($order_left as $file) {
@@ -239,37 +239,37 @@ $width = 300;
   width: 98%;
   box-sizing: border-box;
   margin: 0 auto;
-  min-height: 180px; /* 可改为与 .fan-block 高度一致 */
+  min-height: 180px;
 }
 
 .fanctrl-sort-toggle:hover::after {
-  background-color: var(--orange-800);  /* 或直接写 #f60 */
+  background-color: var(--orange-800);
 }
 
 #fan-area {
   display: flex;
-  gap: 16px;                /* 左右间距 */
+  gap: 16px;
   align-items: flex-start;
-  padding: 8px;            /* 外边框内距（防止贴边） */
+  padding: 8px;
 }
 
 .fan-column {
   display: flex;
   flex-direction: column;
-  gap: 16px;                /* 上下间距 */
+  gap: 16px;
   flex: 1;
   min-width: 340px;
 }
 
 .fan-block {
-  width: 100%;              /* 保持块满列宽，统一由 column gap 控制上下间距 */
+  width: 100%;
   box-sizing: border-box;
-  margin: 0;                /* 不加额外间距 */
+  margin: 0;
 }
 
 .fan-fieldset {
-  margin: 0;                /* 移除默认 fieldset 外距 */
-  padding: 32px 16px 12px;  /* 内距：上=32, 侧=16, 下=12，可微调 */
+  margin: 0;
+  padding: 32px 16px 12px;  /* 内距：上=32, 侧=16, 下=12, */
   border: 1px solid #ccc;
   border-radius: 6px;
   position: relative;
@@ -370,7 +370,6 @@ $(function() {
       btn.attr('title', isRunning ? 'Stop fan control.' : 'Start fan control.');
       btn.prop('disabled', false);
     }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Failed to load status:", textStatus, errorThrown);
     });
   }
   
@@ -380,13 +379,13 @@ $(function() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
       $('.fan-block').each(function () {
         const block = $(this);
-        const cfgFile = block.data('file');  // 从 data-file 读取配置文件名
+        const cfgFile = block.data('file');
         if (!cfgFile) return;
         const matchedKey = Object.keys(statusMap).find(k => k.toLowerCase() === cfgFile.toLowerCase());
         const status = matchedKey ? statusMap[matchedKey] : 'stopped';
         const isRunning = status === 'running';
 
-        const fanSvg = block.find('svg')[0];  // 寻找 block 内的 <svg>，不再用 index
+        const fanSvg = block.find('svg')[0];
         if (!fanSvg) return;
 
         const rotor = fanSvg.querySelector('.rotor');
@@ -410,7 +409,6 @@ $(function() {
         }
       });
     }).fail(function (jqXHR, textStatus, errorThrown) {
-      console.error("❌ Failed to load status_all:", textStatus, errorThrown);
     });
   }
   updateStatusLightAndButton();
@@ -442,7 +440,6 @@ $(function() {
       };
       check();
     }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error("❌ Toggle daemon failed:", textStatus, errorThrown);
       btn.prop('disabled', false);
     });
   };
@@ -457,7 +454,6 @@ $(function() {
       data: {op: 'pause', pwm: pwm},
       timeout: 1000,
       success: function(data) {
-        console.log("✅ Pause response:", data);
         let seconds = 30;
         const interval = setInterval(() => {
           if (seconds <= 0) {
@@ -470,7 +466,6 @@ $(function() {
         }, 1000);
       },
       error: function(xhr, status, err) {
-        console.error("❌ Pause failed:", status, err);
         $btn.text("Pause 30s").prop('disabled', false);
       }
     });
@@ -487,10 +482,8 @@ $(function() {
       const $html = $(html);
       $(targetColumn).append($html);
 
-      // ✅ 初始化原始值（防止误亮 Apply All）
       initOriginalForBlock($html);
 
-      // ✅ 初始化新 block 的下拉
       $html.find('.disk-select').dropdownchecklist({
         emptyText: '(None)',
         width: '',
@@ -559,7 +552,6 @@ $(function() {
     ['#fan-column-left', '#fan-column-right'].forEach(function (selector) {
       const $col = $(selector);
 
-      // ✅ 如果没有真正 fan-block 且尚未插入占位
       if (
         $col.children('.fan-block:not(.sortable-placeholder)').length === 0 &&
         $col.find('.sortable-placeholder').length === 0
@@ -567,7 +559,6 @@ $(function() {
         $col.append(`<div class="fan-block sortable-placeholder">Drag Fan Configuration Here</div>`);
       }
 
-      // ✅ 如果已经有真正 fan-block，则移除占位
       if ($col.children('.fan-block:not(.sortable-placeholder)').length > 0) {
         $col.find('.sortable-placeholder').remove();
       }
@@ -586,14 +577,12 @@ $(function() {
         const selected = options.filter(':selected');
         const count = selected.length;
 
-        // 构建 tooltip 内容
         const tooltip = selected.map(function () {
           return $(this).text();
         }).get().join('\n') || '(None)';
 
         // 设置 title 到对应的 .ui-dropdownchecklist-text
         setTimeout(() => {
-          // 找到最近的 wrapper，再找 .ui-dropdownchecklist-text
           options.closest('td').find('.ui-dropdownchecklist-text').attr('title', tooltip);
         }, 10);
 
@@ -601,7 +590,6 @@ $(function() {
       }
     });
 
-    // 其他已有初始化逻辑保持
     $('.fan-block').each(function () {
       initOriginalForBlock($(this));
     });
@@ -654,7 +642,6 @@ $(function() {
       .done(function(result) {
         block.remove();
         if (!isTemp) {
-          // 加入延迟：300ms 后再执行 saveFanOrder()
           setTimeout(() => {
             let order = [];
             $('.fan-block').each(function() {
@@ -662,7 +649,7 @@ $(function() {
               if (val && !val.includes('_temp_')) order.push(val);
             });
             saveFanOrder(order);
-          }, 300);  // 延迟 300ms，确保 block.remove() 完全生效
+          }, 300);
         }
         setTimeout(() => updateAllFanStatus(), 500);
 
@@ -670,7 +657,6 @@ $(function() {
       });
   });
 
-  // 手动刷新单独风扇的事件（用原生方式也能放进来）
   document.body.addEventListener('click', function(e) {
     const btn = e.target.closest('.fanctrlplus-interval-refresh');
     if (!btn) return;
@@ -716,18 +702,17 @@ $(function() {
   $(function () {
     $("#fan-column-left, #fan-column-right").sortable({
       items: ".fan-block",
-      connectWith: ".fan-column",   // 双栏可以互拖
+      connectWith: ".fan-column",
       opacity: 0.6,
       tolerance: "pointer",
       helper: "original",
-      disabled: true,               // 初始锁定
-      placeholder: "fan-placeholder",   // 👈 拖动时使用灰色占位块
+      disabled: true,
+      placeholder: "fan-placeholder",
       start: function (event, ui) {
         // 设置 placeholder 高度与原元素一致
         ui.placeholder.height(ui.item.outerHeight());
       },
 
-       // ✅ 拖进某个 column 时，立刻移除已有的 "Drag fan here"
       over: function (event, ui) {
         $(this).find('.sortable-placeholder').remove();
       },
@@ -751,7 +736,6 @@ $(function() {
     // 切换解锁按钮逻辑
     $('#fanctrlplus-sort-toggle').on('click', function () {
       if (!sortableUnlocked) {
-        // 解锁前检查是否有 temp_x.cfg，禁止拖动
         if ($('.fan-block[data-file*="_temp_"]').length > 0) {
           alert("Temporary fan configurations found. Please name them or delete before unlocking.");
           return;
@@ -812,20 +796,15 @@ $(function() {
         }
       });
 
-      console.log("saveFanOrder triggered, final order:", order);
-
       // 提交 AJAX（用于立即保存至 /plugins/fanctrlplus/order.cfg）
       if (order.left.length > 0 || order.right.length > 0) {
         $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
           op: 'saveorder',
           order: order
         }).done(function () {
-          console.log("POST /saveorder success");
         }).fail(function (jqXHR, textStatus, errorThrown) {
-          console.warn("Failed to save order.cfg:", textStatus, errorThrown);
         });
       } else {
-        console.warn("No valid .cfg-file found, nothing to save");
       }
     }
 });  
@@ -843,7 +822,7 @@ $(function() {
         if (is_file($path)) {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
-          $all_cfg[] = $cfg;  // 加入已见列表
+          $all_cfg[] = $cfg;
           echo render_fan_block($cfg, $i++, $pwms, $disks);
         }
       }
