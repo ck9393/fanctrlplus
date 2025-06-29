@@ -3,12 +3,12 @@ ob_start(); // 开启缓冲，防止意外输出破坏 JSON
 
 $plugin = 'fanctrlplus';
 $cfgpath = "/boot/config/plugins/$plugin";
+$rename_map = [];
+$used_files = [];
 
 if (!is_dir($cfgpath)) {
   mkdir($cfgpath, 0777, true);
 }
-
-$used_files = [];
 
 header('Content-Type: application/json');
 
@@ -23,6 +23,7 @@ foreach ($_POST['#file'] as $i => $file) {
   $old_file = basename($file);
   $controller = $_POST['controller'][$i] ?? '';
   $custom = trim($_POST['custom'][$i] ?? '');
+  $interval = $_POST['interval'][$i] ?? '';
 
   // Custom Name 不能为空
   if ($custom === '') {
@@ -38,12 +39,33 @@ foreach ($_POST['#file'] as $i => $file) {
     exit;
   }
 
-  // 如为临时文件则重命名
-  if (strpos($old_file, 'temp') !== false && !empty($controller)) {
+   // 校验 interval 合法性（必须为正整数）
+  if (!ctype_digit($interval) || intval($interval) <= 0) {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => "Interval cannot be empty or 0 (recommended: 1–5 min)."]);
+    exit;
+  } 
+
+  // 检查是否已有相同 custom 名称的 cfg
+  foreach (glob("$cfgpath/{$plugin}_*.cfg") as $existing) {
+    $info = parse_ini_file($existing);
+    if (isset($info['custom']) && trim($info['custom']) === $custom) {
+      // 排除自身（重命名 temp → 正式名时允许自己）
+      if (basename($existing) !== $old_file) {
+        ob_clean();
+        echo json_encode(['status' => 'error', 'message' => "Custom Name \"$custom\" is already used."]);
+        exit;
+      }
+    }
+  }
+
+  // === 临时文件：以 custom 命名为正式文件 ===
+  if (strpos($old_file, 'temp_') !== false && !empty($controller)) {
     $new_file = $plugin . "_$custom.cfg";
+    $rename_map[$old_file] = $new_file;
   } else {
     $new_file = $old_file;
-  }
+  }  
 
   // 避免命名冲突
   $basefile = pathinfo($new_file, PATHINFO_FILENAME);
@@ -91,19 +113,18 @@ foreach (glob("$cfgpath/{$plugin}_*.cfg") as $cfgfile) {
   }
 }
 
-// === 写入 order.cfg 排序顺序（排除 temp）===
-$order_left = $_POST['order_left'] ?? [];
-$order_right = $_POST['order_right'] ?? [];
+// === 写入 order.cfg 排序顺序（转移至OrderManager。php）===
+require_once "$docroot/plugins/fanctrlplus/include/OrderManager.php";
 
-$order_lines = [];
-foreach ($order_left as $i => $f) {
-  $order_lines[] = 'left' . $i . '="' . basename($f) . '"';
-}
-foreach ($order_right as $i => $f) {
-  $order_lines[] = 'right' . $i . '="' . basename($f) . '"';
-}
+$order_left = array_map(function($f) use ($rename_map) {
+  return $rename_map[$f] ?? $f;
+}, $_POST['order_left'] ?? []);
 
-file_put_contents("$cfgpath/order.cfg", implode("\n", $order_lines) . "\n");
+$order_right = array_map(function($f) use ($rename_map) {
+  return $rename_map[$f] ?? $f;
+}, $_POST['order_right'] ?? []);
+
+OrderManager::writeOrder(array_values($order_left), array_values($order_right));
 
 // 重启 fanctrlplus 守护进程
 $script = "/usr/local/emhttp/plugins/$plugin/scripts/rc.fanctrlplus";

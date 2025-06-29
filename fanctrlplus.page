@@ -510,11 +510,39 @@ $(function() {
   $('form').on('ui:changed', function() {
     $('input[name="#apply"]').prop('disabled', false);
   });
+
+  function saveFanOrder() {
+  const order = {
+    left: [],
+    right: []
+  };
+
+  // 清空旧的隐藏 input
+  $('input[name^="order_left"]').remove();
+  $('input[name^="order_right"]').remove();
+
+  $('#fan-column-left .fan-block').each(function (i) {
+    const val = $(this).find('input.cfg-file').val();
+    if (typeof val === 'string' && val.trim() !== '') {
+      order.left.push(val.trim());
+      $('#fan-form').append(`<input type="hidden" name="order_left[${i}]" value="${val.trim()}">`);
+    }
+  });
+
+  $('#fan-column-right .fan-block').each(function (i) {
+    const val = $(this).find('input.cfg-file').val();
+      if (typeof val === 'string' && val.trim() !== '') {
+        order.right.push(val.trim());
+        $('#fan-form').append(`<input type="hidden" name="order_right[${i}]" value="${val.trim()}">`);
+      }
+    });
+  }
   
 
   function initOriginalForBlock($block) {
     const original = {
       custom: $block.find('input[name^="custom["]').val(),
+      service: $block.find('select[name^="service["]').val(),
       controller: $block.find('select[name^="controller["]').val(),
       pwm: $block.find('input[name^="pwm["]').val(),
       low: $block.find('input[name^="low["]').val(),
@@ -533,6 +561,7 @@ $(function() {
       const original = $block.data('original');
       const current = {
         custom: $block.find('input[name^="custom["]').val(),
+        service: $block.find('select[name^="service["]').val(),
         controller: $block.find('select[name^="controller["]').val(),
         pwm: $block.find('input[name^="pwm["]').val(),
         low: $block.find('input[name^="low["]').val(),
@@ -602,12 +631,18 @@ $(function() {
     ensureColumnDroppable();
 
     $(document).on('click', '#apply-btn', function (e) {
-
       let valid = true;
       let errorMsg = '';
 
+      const namesSeen = new Set();
+      let duplicateFound = false;
+
       $('.custom-name-input').each(function() {
+        const block = $(this).closest('.fan-block');
         const name = $(this).val().trim();
+        const intervalField = block.find('.interval-input');
+        const interval = intervalField.length ? intervalField.val().trim() : '';
+        
         if (name === '') {
           valid = false;
           errorMsg = 'Custom Name is required.';
@@ -618,12 +653,28 @@ $(function() {
           errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
           return false;
         }
+        if (namesSeen.has(name)) {
+          valid = false;
+          errorMsg = 'Duplicate Custom Name: "' + name + '"';
+          duplicateFound = true;
+          return false;
+        }
+
+        namesSeen.add(name);
+
+        if (!/^\d+$/.test(interval) || parseInt(interval) <= 0) {
+          valid = false;
+          errorMsg = 'Interval cannot be empty or 0 (recommended: 1–5 min).';
+          return false;
+        } 
       });
 
       if (!valid) {
         alert(errorMsg);
         return;
       }
+
+      saveFanOrder();
 
       $('#fan-form')[0].submit();
     });
