@@ -374,7 +374,7 @@ $(function() {
   }
   
   let sortableUnlocked = false;
-  
+
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
       $('.fan-block').each(function () {
@@ -689,21 +689,27 @@ $(function() {
       : `Are you sure you want to delete this fan configuration?`;
     if (!confirm(msg)) return;
     const isTemp = file.includes('_temp_');
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
-      .done(function(result) {
+
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'delete', file: file })
+      .done(function (result) {
         block.remove();
+
+        if ($('.fan-block').length === 0) {
+          setTimeout(() => addFan(), 300);
+        }
+
         if (!isTemp) {
           setTimeout(() => {
             let order = [];
-            $('.fan-block').each(function() {
+            $('.fan-block').each(function () {
               const val = $(this).find('input.cfg-file').val();
               if (val && !val.includes('_temp_')) order.push(val);
             });
             saveFanOrder(order);
           }, 300);
         }
-        setTimeout(() => updateAllFanStatus(), 500);
 
+        setTimeout(() => updateAllFanStatus(), 500);
         ensureColumnDroppable();
       });
   });

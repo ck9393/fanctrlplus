@@ -7,6 +7,7 @@ class OrderManager {
     $left = [];
     $right = [];
 
+    
     if (!is_file(self::$order_file)) return ['left' => [], 'right' => []];
 
     $lines = file(self::$order_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -38,5 +39,13 @@ class OrderManager {
 
     $content = implode("\n", $lines) . "\n";
     return file_put_contents(self::$order_file, $content) !== false;
+  }
+
+  public static function remove(string $filename): bool {
+    $order = self::readOrder();
+    $left = array_filter($order['left'], fn($f) => $f !== $filename);
+    $right = array_filter($order['right'], fn($f) => $f !== $filename);
+
+    return self::writeOrder(array_values($left), array_values($right));
   }
 }
