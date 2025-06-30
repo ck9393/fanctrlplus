@@ -293,6 +293,23 @@ $width = 300;
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
+const dropdownChecklistOptions = {
+  emptyText: '(None)',
+  width: 300,
+  explicitClose: '...close',
+  textFormatFunction: function (options) {
+    const selected = options.filter(':selected');
+    const count = selected.length;
+    const tooltip = selected.map(function () {
+      return $(this).text();
+    }).get().join('\n') || '(None)';
+    setTimeout(() => {
+      options.closest('td').find('.ui-dropdownchecklist-text').attr('title', tooltip);
+    }, 10);
+    return count === 0 ? '(None)' : `Selected ${count} Disk${count > 1 ? 's' : ''}`;
+  }
+};
+
 $(function() {
   // 跳动绿点动画
   let dotIndex = 0;
@@ -307,7 +324,7 @@ $(function() {
     dotEls[dotIndex].classList.add('visible');
   }
   setInterval(animateDots, 2000);
-});
+
   // 初始化 SVG 风扇转动
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
@@ -374,13 +391,6 @@ $(function() {
   }
   
   let sortableUnlocked = false;
-
-  window.ensureAtLeastOneFanBlock = function () {
-    const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
-    if (realBlocks.length === 0) {
-      addFan();
-    }
-  };
 
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
@@ -479,6 +489,13 @@ $(function() {
     });
   };
 
+  window.ensureAtLeastOneFanBlock = function () {
+    const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
+    if (realBlocks.length === 0) {
+      addFan();
+    }
+  };
+
   window.addFan = function () {
     const index = $('.fan-block').length;
 
@@ -492,11 +509,7 @@ $(function() {
 
       initOriginalForBlock($html);
 
-      $html.find('.disk-select').dropdownchecklist({
-        emptyText: '(None)',
-        width: '',
-        explicitClose: '...close'
-      });
+      $html.find('.disk-select').dropdownchecklist(dropdownChecklistOptions);
 
       updateAllFanStatus();
       ensureColumnDroppable();
@@ -507,10 +520,6 @@ $(function() {
     });
   };
 
-  $('.disk-select').each(function() {
-    $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
-  });
-
   $('form').on('change keyup', 'input, select, textarea', function() {
     $('form').trigger('ui:changed');
   });
@@ -518,34 +527,6 @@ $(function() {
   $('form').on('ui:changed', function() {
     $('input[name="#apply"]').prop('disabled', false);
   });
-
-  function saveFanOrder() {
-  const order = {
-    left: [],
-    right: []
-  };
-
-  // 清空旧的隐藏 input
-  $('input[name^="order_left"]').remove();
-  $('input[name^="order_right"]').remove();
-
-  $('#fan-column-left .fan-block').each(function (i) {
-    const val = $(this).find('input.cfg-file').val();
-    if (typeof val === 'string' && val.trim() !== '') {
-      order.left.push(val.trim());
-      $('#fan-form').append(`<input type="hidden" name="order_left[${i}]" value="${val.trim()}">`);
-    }
-  });
-
-  $('#fan-column-right .fan-block').each(function (i) {
-    const val = $(this).find('input.cfg-file').val();
-      if (typeof val === 'string' && val.trim() !== '') {
-        order.right.push(val.trim());
-        $('#fan-form').append(`<input type="hidden" name="order_right[${i}]" value="${val.trim()}">`);
-      }
-    });
-  }
-  
 
   function initOriginalForBlock($block) {
     const original = {
@@ -604,89 +585,67 @@ $(function() {
     });
   }
 
-  // ✅ 页面加载完成后初始化
-  $(document).ready(function () {
-    $('.disk-select').dropdownchecklist({
-      emptyText: '(None)',
-      width: 300,
-      explicitClose: '...close',
-      textFormatFunction: function (options) {
-        const selected = options.filter(':selected');
-        const count = selected.length;
+  $('.disk-select').dropdownchecklist(dropdownChecklistOptions);
 
-        const tooltip = selected.map(function () {
-          return $(this).text();
-        }).get().join('\n') || '(None)';
+  $('.fan-block').each(function () {
+    initOriginalForBlock($(this));
+  });
 
-        // 设置 title 到对应的 .ui-dropdownchecklist-text
-        setTimeout(() => {
-          options.closest('td').find('.ui-dropdownchecklist-text').attr('title', tooltip);
-        }, 10);
-
-        return count === 0 ? '(None)' : `Selected ${count} Disk${count > 1 ? 's' : ''}`;
-      }
-    });
-
-    $('.fan-block').each(function () {
-      initOriginalForBlock($(this));
-    });
-
-    $('#fan-area').on('input change', 'input, select', function () {
-      setApplyAllButtonState();
-    });
-
+  $('#fan-area').on('input change', 'input, select', function () {
     setApplyAllButtonState();
-    ensureColumnDroppable();
+  });
 
-    $(document).on('click', '#apply-btn', function (e) {
-      let valid = true;
-      let errorMsg = '';
+  setApplyAllButtonState();
+  ensureColumnDroppable();
 
-      const namesSeen = new Set();
-      let duplicateFound = false;
+  $(document).on('click', '#apply-btn', function (e) {
+    let valid = true;
+    let errorMsg = '';
 
-      $('.custom-name-input').each(function() {
-        const block = $(this).closest('.fan-block');
-        const name = $(this).val().trim();
-        const intervalField = block.find('.interval-input');
-        const interval = intervalField.length ? intervalField.val().trim() : '';
-        
-        if (name === '') {
-          valid = false;
-          errorMsg = 'Custom Name is required.';
-          return false;
-        }
-        if (!/^[A-Za-z0-9_]+$/.test(name)) {
-          valid = false;
-          errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
-          return false;
-        }
-        if (namesSeen.has(name)) {
-          valid = false;
-          errorMsg = 'Duplicate Custom Name: "' + name + '"';
-          duplicateFound = true;
-          return false;
-        }
+    const namesSeen = new Set();
+    let duplicateFound = false;
 
-        namesSeen.add(name);
-
-        if (!/^\d+$/.test(interval) || parseInt(interval) <= 0) {
-          valid = false;
-          errorMsg = 'Interval cannot be empty or 0 (recommended: 1–5 min).';
-          return false;
-        } 
-      });
-
-      if (!valid) {
-        alert(errorMsg);
-        return;
+    $('.custom-name-input').each(function() {
+      const block = $(this).closest('.fan-block');
+      const name = $(this).val().trim();
+      const intervalField = block.find('.interval-input');
+      const interval = intervalField.length ? intervalField.val().trim() : '';
+      
+      if (name === '') {
+        valid = false;
+        errorMsg = 'Custom Name is required.';
+        return false;
+      }
+      if (!/^[A-Za-z0-9_]+$/.test(name)) {
+        valid = false;
+        errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
+        return false;
+      }
+      if (namesSeen.has(name)) {
+        valid = false;
+        errorMsg = 'Duplicate Custom Name: "' + name + '"';
+        duplicateFound = true;
+        return false;
       }
 
-      saveFanOrder();
+      namesSeen.add(name);
 
-      $('#fan-form')[0].submit();
+      if (!/^\d+$/.test(interval) || parseInt(interval) <= 0) {
+        valid = false;
+        errorMsg = 'Interval cannot be empty or 0 (recommended: 1–5 min).';
+        return false;
+      } 
     });
-  });  
+
+    if (!valid) {
+      alert(errorMsg);
+      return;
+    }
+
+    saveFanOrder();
+
+    $('#fan-form')[0].submit();
+  }); 
   
   $(document).on('click', '.delete-btn', function () {
     const block = $(this).closest('.fan-block');
@@ -727,10 +686,8 @@ $(function() {
       });
   });
 
-  document.body.addEventListener('click', function(e) {
-    const btn = e.target.closest('.fanctrlplus-interval-refresh');
-    if (!btn) return;
-
+  $(document).on('click', '.fanctrlplus-interval-refresh', function(e) {
+    const btn = e.currentTarget;
     const icon = btn.querySelector('.fa');
     btn.style.color = '#aaa';
     if (icon) icon.classList.add('fa-spin');
@@ -745,9 +702,7 @@ $(function() {
 
     fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(label)}`)
       .then(res => {
-        if (!res.ok) {
-          throw new Error("Request failed");
-        }
+        if (!res.ok) throw new Error("Request failed");
         return res.text();
       })
       .then(() => {
@@ -768,8 +723,7 @@ $(function() {
     e.stopPropagation();
   });
 
-  // 风扇排序逻辑
-  $(function () {
+    // 风扇排序逻辑
     $("#fan-column-left, #fan-column-right").sortable({
       items: ".fan-block",
       connectWith: ".fan-column",
@@ -874,10 +828,9 @@ $(function() {
         }).done(function () {
         }).fail(function (jqXHR, textStatus, errorThrown) {
         });
-      } else {
       }
-    }
-});  
+    }  
+});
 </script>
 
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">
