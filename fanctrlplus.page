@@ -208,16 +208,35 @@ $width = 300;
 .fanctrl-sort-toggle::after {
   content: "";
   position: absolute;
-  bottom: -5px;  /* 与锁头稍微拉开距离 */
+  bottom: -5px;
   left: 50%;
   margin-left: -14px;
   width: 28px;
   height: 2px;
-  background-color: transparent;
+  background-color: transparent; !important;
   border-radius: 4px;
   transition: all 0.25s ease-in-out;
   pointer-events: none;
 }
+
+.drag-handle {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 2;
+  text-align: center;
+  line-height: 36px;
+  cursor: grab;
+  font-size: 1.3em;
+  transition: all 0.25s ease-in-out;
+}
+.fan-block.draggable .drag-handle {
+  color: var(--orange-300);
+}
+.drag-handle:hover {
+  transform: scale(1.2);
+}  
 
 .sortable-placeholder {  /* 用于Drag Fan Here */
   display: flex;
@@ -262,6 +281,7 @@ $width = 300;
 }
 
 .fan-block {
+  position: relative;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -269,7 +289,7 @@ $width = 300;
 
 .fan-fieldset {
   margin: 0;
-  padding: 32px 16px 12px;  /* 内距：上=32, 侧=16, 下=12, */
+  padding: 32px 16px 12px;
   border: 1px solid #ccc;
   border-radius: 6px;
   position: relative;
@@ -725,7 +745,7 @@ $(function() {
 
     // 风扇排序逻辑
     $("#fan-column-left, #fan-column-right").sortable({
-      items: ".fan-block",
+      items: ".fan-block:not(.sortable-placeholder)",
       connectWith: ".fan-column",
       opacity: 0.6,
       tolerance: "pointer",
@@ -774,6 +794,8 @@ $(function() {
       if (sortableUnlocked) {
         // 解锁状态
         $('.fan-block').addClass('draggable');
+        $('.fan-svg-container').hide();
+        $('.drag-handle').show();
         $(this)
           .removeClass('icon-u-lock green-text')
           .addClass('icon-u-lock-open red-text')
@@ -781,6 +803,8 @@ $(function() {
       } else {
         // 锁回状态
         $('.fan-block').removeClass('draggable');
+        $('.fan-svg-container').show();
+        $('.drag-handle').hide();
         $(this)
           .removeClass('icon-u-lock-open red-text')
           .addClass('icon-u-lock green-text')
