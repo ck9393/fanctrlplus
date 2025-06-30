@@ -375,6 +375,13 @@ $(function() {
   
   let sortableUnlocked = false;
 
+  window.ensureAtLeastOneFanBlock = function () {
+    const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
+    if (realBlocks.length === 0) {
+      addFan();
+    }
+  };
+
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
       $('.fan-block').each(function () {
@@ -409,6 +416,7 @@ $(function() {
         }
       });
     }).fail(function (jqXHR, textStatus, errorThrown) {
+      ensureAtLeastOneFanBlock();
     });
   }
   updateStatusLightAndButton();
@@ -688,15 +696,20 @@ $(function() {
       ? `Are you sure you want to delete "${custom}"?`
       : `Are you sure you want to delete this fan configuration?`;
     if (!confirm(msg)) return;
+
     const isTemp = file.includes('_temp_');
 
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'delete', file: file })
-      .done(function (result) {
+      .done(function () {
         block.remove();
 
-        if ($('.fan-block').length === 0) {
-          setTimeout(() => addFan(), 300);
-        }
+        // ✅ 加入这段，稍微延迟后判断
+        setTimeout(() => {
+          const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
+          if (realBlocks.length === 0) {
+            ensureAtLeastOneFanBlock();
+          }
+        }, 100);
 
         if (!isTemp) {
           setTimeout(() => {
