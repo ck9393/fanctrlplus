@@ -5,6 +5,7 @@ $plugin = 'fanctrlplus';
 $cfgpath = "/boot/config/plugins/$plugin";
 $rename_map = [];
 $used_files = [];
+$docroot = $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 
 if (!is_dir($cfgpath)) {
   mkdir($cfgpath, 0777, true);
@@ -24,6 +25,9 @@ foreach ($_POST['#file'] as $i => $file) {
   $controller = $_POST['controller'][$i] ?? '';
   $custom = trim($_POST['custom'][$i] ?? '');
   $interval = $_POST['interval'][$i] ?? '';
+  $expected_file = $plugin . '_' . $custom . '.cfg';
+  $old_path = "$cfgpath/$old_file";
+  $new_path = "$cfgpath/$expected_file";
 
   // Custom Name 不能为空
   if ($custom === '') {
@@ -57,6 +61,20 @@ foreach ($_POST['#file'] as $i => $file) {
       }
     }
   }
+  
+  //重命名custom name后 cfg文件名同步重命名
+  if ($old_file !== $expected_file) {
+      if (file_exists($old_path)) {
+          rename($old_path, $new_path);
+      }
+      require_once "$docroot/plugins/$plugin/include/OrderManager.php";
+      OrderManager::replaceFileName($old_file, $expected_file);
+      $rename_map[$old_file] = $expected_file;
+      $old_file = $expected_file;
+      $old_path = $new_path;
+  }
+
+  file_put_contents($old_path, "custom=\"$custom\"\n...");
 
   // 校验 interval 合法性（必须为正整数）
   if (!ctype_digit($interval) || intval($interval) <= 0) {

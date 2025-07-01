@@ -48,4 +48,28 @@ class OrderManager {
 
     return self::writeOrder(array_values($left), array_values($right));
   }
+
+  public static function replaceFileName($old_file, $new_file) {
+        $cfg_dir = "/boot/config/plugins/fanctrlplus"; // 路径可按你实际定义
+        $order_file = "$cfg_dir/order.cfg";
+
+        if (!file_exists($order_file)) return;
+
+        $lines = file($order_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $out = [];
+        foreach ($lines as $line) {
+            // 只替换 value
+            if (preg_match('/^(left\d+|right\d+)="([^"]+)"/', $line, $m)) {
+                $key = $m[1];
+                $val = $m[2];
+                if ($val === $old_file) {
+                    $val = $new_file;
+                }
+                $out[] = "{$key}=\"{$val}\"";
+            } else {
+                $out[] = $line;
+            }
+        }
+        file_put_contents($order_file, implode("\n", $out) . "\n");
+    }
 }
