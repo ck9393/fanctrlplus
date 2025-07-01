@@ -218,6 +218,9 @@ $width = 300;
   transition: all 0.25s ease-in-out;
   pointer-events: none;
 }
+.fanctrl-sort-toggle:hover::after {
+  background-color: var(--orange-800);
+}
 
 .drag-handle {
   display: none;
@@ -259,10 +262,6 @@ $width = 300;
   box-sizing: border-box;
   margin: 0 auto;
   min-height: 180px;
-}
-
-.fanctrl-sort-toggle:hover::after {
-  background-color: var(--orange-800);
 }
 
 #fan-area {
@@ -641,9 +640,16 @@ $(function() {
         errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
         return false;
       }
+
+      if (/temp_/i.test(name)) {
+        valid = false;
+        errorMsg = 'Custom Name cannot contain "temp_".';
+        return false;
+      }
+      
       if (namesSeen.has(name)) {
         valid = false;
-        errorMsg = 'Duplicate Custom Name: "' + name + '"';
+        errorMsg = `Custom Name "${name}" is already used.`;
         duplicateFound = true;
         return false;
       }

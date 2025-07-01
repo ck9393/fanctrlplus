@@ -39,12 +39,11 @@ foreach ($_POST['#file'] as $i => $file) {
     exit;
   }
 
-   // 校验 interval 合法性（必须为正整数）
-  if (!ctype_digit($interval) || intval($interval) <= 0) {
+  if (stripos($custom, 'temp_') !== false) {
     ob_clean();
-    echo json_encode(['status' => 'error', 'message' => "Interval cannot be empty or 0 (recommended: 1–5 min)."]);
+    echo json_encode(['status' => 'error', 'message' => 'Custom Name cannot contain "temp_".']);
     exit;
-  } 
+  }
 
   // 检查是否已有相同 custom 名称的 cfg
   foreach (glob("$cfgpath/{$plugin}_*.cfg") as $existing) {
@@ -58,6 +57,13 @@ foreach ($_POST['#file'] as $i => $file) {
       }
     }
   }
+
+  // 校验 interval 合法性（必须为正整数）
+  if (!ctype_digit($interval) || intval($interval) <= 0) {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => "Interval cannot be empty or 0 (recommended: 1–5 min)."]);
+    exit;
+  } 
 
   // === 临时文件：以 custom 命名为正式文件 ===
   if (strpos($old_file, 'temp_') !== false && !empty($controller)) {
