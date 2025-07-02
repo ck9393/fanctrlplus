@@ -8,6 +8,7 @@ $cfg_dir = "/boot/config/plugins/$plugin";
 $order_file = "$cfg_dir/order.json";
 
 require_once "$docroot/plugins/$plugin/include/Common.php";
+require_once "/usr/local/emhttp/plugins/fanctrlplus/include/OrderManager.php";
 
 header('Content-Type: application/json');
 
@@ -160,31 +161,24 @@ switch ($op) {
       unlink($cfgpath);
     }
 
-    // ✅ 同步从 order.cfg 中移除该项（无论 temp 与否）
-    $order_file = "/boot/config/plugins/$plugin/order.cfg";
-    if (is_file($order_file)) {
-      $lines = file($order_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-      $lines = array_filter($lines, function ($line) use ($file) {
-        return strpos($line, "\"$file\"") === false;
-      });
-      file_put_contents($order_file, implode("\n", $lines) . "\n");
-    }
+    OrderManager::remove($file);
 
     json_response(['status' => 'ok', 'message' => "Deleted $file"]);
     break;
-    case 'status':
-      $pid_files = glob("/var/run/fanctrlplus_*.pid");
-      $running = false;
-      foreach ($pid_files as $pidfile) {
-        $pid = trim(@file_get_contents($pidfile));
-        if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
-          $running = true;
-          break;
-        }
+
+  case 'status':
+    $pid_files = glob("/var/run/fanctrlplus_*.pid");
+    $running = false;
+    foreach ($pid_files as $pidfile) {
+      $pid = trim(@file_get_contents($pidfile));
+      if (is_numeric($pid) && posix_kill((int)$pid, 0)) {
+        $running = true;
+        break;
       }
-    
-      json_response(['status' => $running ? 'running' : 'stopped']);
-      break;
+    }
+  
+    json_response(['status' => $running ? 'running' : 'stopped']);
+    break;
 
   case 'status_all':
     $cfg_dir = "/boot/config/plugins/$plugin";

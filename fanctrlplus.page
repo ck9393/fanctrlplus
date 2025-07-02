@@ -208,16 +208,38 @@ $width = 300;
 .fanctrl-sort-toggle::after {
   content: "";
   position: absolute;
-  bottom: -5px;  /* 与锁头稍微拉开距离 */
+  bottom: -5px;
   left: 50%;
   margin-left: -14px;
   width: 28px;
   height: 2px;
-  background-color: transparent;
+  background-color: transparent; !important;
   border-radius: 4px;
   transition: all 0.25s ease-in-out;
   pointer-events: none;
 }
+.fanctrl-sort-toggle:hover::after {
+  background-color: var(--orange-800);
+}
+
+.drag-handle {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 2;
+  text-align: center;
+  line-height: 36px;
+  cursor: grab;
+  font-size: 1.3em;
+  transition: all 0.25s ease-in-out;
+}
+.fan-block.draggable .drag-handle {
+  color: var(--orange-300);
+}
+.drag-handle:hover {
+  transform: scale(1.2);
+}  
 
 .sortable-placeholder {  /* 用于Drag Fan Here */
   display: flex;
@@ -242,10 +264,6 @@ $width = 300;
   min-height: 180px;
 }
 
-.fanctrl-sort-toggle:hover::after {
-  background-color: var(--orange-800);
-}
-
 #fan-area {
   display: flex;
   gap: 16px;
@@ -262,6 +280,7 @@ $width = 300;
 }
 
 .fan-block {
+  position: relative;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -269,7 +288,7 @@ $width = 300;
 
 .fan-fieldset {
   margin: 0;
-  padding: 32px 16px 12px;  /* 内距：上=32, 侧=16, 下=12, */
+  padding: 32px 16px 12px;
   border: 1px solid #ccc;
   border-radius: 6px;
   position: relative;
@@ -293,6 +312,46 @@ $width = 300;
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
+function updatePwmDropdowns() {
+  // 统计所有已选PWM（不为空）
+  const selected = [];
+  $('.pwm-controller').each(function() {
+    const val = $(this).val();
+    if (val) selected.push(val);
+  });
+
+  // 逐个select处理option
+  $('.pwm-controller').each(function() {
+    const self = $(this);
+    const ownVal = self.val();
+    self.find('option').each(function() {
+      const optVal = $(this).val();
+      if (optVal === ownVal || !selected.includes(optVal)) {
+        $(this).prop('disabled', false);
+      } else {
+        $(this).prop('disabled', true);
+      }
+    });
+  });
+}  
+
+const dropdownChecklistOptions = {
+  emptyText: '(None)',
+  width: 300,
+  explicitClose: '...close',
+  textFormatFunction: function (options) {
+    const selected = options.filter(':selected');
+    const count = selected.length;
+    const tooltip = selected.map(function () {
+      return $(this).text();
+    }).get().join('\n') || '(None)';
+    setTimeout(() => {
+      options.closest('td').find('.ui-dropdownchecklist-text').attr('title', tooltip);
+    }, 10);
+    return count === 0 ? '(None)' : `Selected ${count} Disk${count > 1 ? 's' : ''}`;
+  }
+};
+
 $(function() {
   // 跳动绿点动画
   let dotIndex = 0;
@@ -307,7 +366,7 @@ $(function() {
     dotEls[dotIndex].classList.add('visible');
   }
   setInterval(animateDots, 2000);
-});
+
   // 初始化 SVG 风扇转动
   $('.fan-block svg[id^="fan-icon-"]').each(function() {
     const id = $(this).attr('id');
@@ -374,7 +433,7 @@ $(function() {
   }
   
   let sortableUnlocked = false;
-  
+
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
       $('.fan-block').each(function () {
@@ -409,6 +468,7 @@ $(function() {
         }
       });
     }).fail(function (jqXHR, textStatus, errorThrown) {
+      ensureAtLeastOneFanBlock();
     });
   }
   updateStatusLightAndButton();
@@ -471,6 +531,13 @@ $(function() {
     });
   };
 
+  window.ensureAtLeastOneFanBlock = function () {
+    const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
+    if (realBlocks.length === 0) {
+      addFan();
+    }
+  };
+
   window.addFan = function () {
     const index = $('.fan-block').length;
 
@@ -484,24 +551,17 @@ $(function() {
 
       initOriginalForBlock($html);
 
-      $html.find('.disk-select').dropdownchecklist({
-        emptyText: '(None)',
-        width: '',
-        explicitClose: '...close'
-      });
+      $html.find('.disk-select').dropdownchecklist(dropdownChecklistOptions);
 
       updateAllFanStatus();
       ensureColumnDroppable();
+      updatePwmDropdowns();
 
       setTimeout(() => {
         updateAllFanStatus();
       }, 100);
     });
   };
-
-  $('.disk-select').each(function() {
-    $(this).dropdownchecklist({emptyText:'(None)', width:<?=$width?>, explicitClose:'...close'});
-  });
 
   $('form').on('change keyup', 'input, select, textarea', function() {
     $('form').trigger('ui:changed');
@@ -510,11 +570,11 @@ $(function() {
   $('form').on('ui:changed', function() {
     $('input[name="#apply"]').prop('disabled', false);
   });
-  
 
   function initOriginalForBlock($block) {
     const original = {
       custom: $block.find('input[name^="custom["]').val(),
+      service: $block.find('select[name^="service["]').val(),
       controller: $block.find('select[name^="controller["]').val(),
       pwm: $block.find('input[name^="pwm["]').val(),
       low: $block.find('input[name^="low["]').val(),
@@ -533,6 +593,7 @@ $(function() {
       const original = $block.data('original');
       const current = {
         custom: $block.find('input[name^="custom["]').val(),
+        service: $block.find('select[name^="service["]').val(),
         controller: $block.find('select[name^="controller["]').val(),
         pwm: $block.find('input[name^="pwm["]').val(),
         low: $block.find('input[name^="low["]').val(),
@@ -567,67 +628,84 @@ $(function() {
     });
   }
 
-  // ✅ 页面加载完成后初始化
-  $(document).ready(function () {
-    $('.disk-select').dropdownchecklist({
-      emptyText: '(None)',
-      width: 300,
-      explicitClose: '...close',
-      textFormatFunction: function (options) {
-        const selected = options.filter(':selected');
-        const count = selected.length;
+  $('.disk-select').dropdownchecklist(dropdownChecklistOptions);
 
-        const tooltip = selected.map(function () {
-          return $(this).text();
-        }).get().join('\n') || '(None)';
+  $('.fan-block').each(function () {
+    initOriginalForBlock($(this));
+  });
 
-        // 设置 title 到对应的 .ui-dropdownchecklist-text
-        setTimeout(() => {
-          options.closest('td').find('.ui-dropdownchecklist-text').attr('title', tooltip);
-        }, 10);
-
-        return count === 0 ? '(None)' : `Selected ${count} Disk${count > 1 ? 's' : ''}`;
-      }
-    });
-
-    $('.fan-block').each(function () {
-      initOriginalForBlock($(this));
-    });
-
-    $('#fan-area').on('input change', 'input, select', function () {
-      setApplyAllButtonState();
-    });
-
+  $('#fan-area').on('input change', 'input, select', function () {
     setApplyAllButtonState();
-    ensureColumnDroppable();
+  });
 
-    $(document).on('click', '#apply-btn', function (e) {
+  setApplyAllButtonState();
+  ensureColumnDroppable();
 
-      let valid = true;
-      let errorMsg = '';
+  $(document).on('change', '.pwm-controller', updatePwmDropdowns);
 
-      $('.custom-name-input').each(function() {
-        const name = $(this).val().trim();
-        if (name === '') {
-          valid = false;
-          errorMsg = 'Custom Name is required.';
-          return false;
-        }
-        if (!/^[A-Za-z0-9_]+$/.test(name)) {
-          valid = false;
-          errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
-          return false;
-        }
-      });
+  $(document).on('click', '#apply-btn', function (e) {
+    let valid = true;
+    let errorMsg = '';
 
-      if (!valid) {
-        alert(errorMsg);
-        return;
+    const namesSeen = new Set();
+    let duplicateFound = false;
+
+    $('.custom-name-input').each(function() {
+      const block = $(this).closest('.fan-block');
+      const name = $(this).val().trim();
+      const intervalField = block.find('.interval-input');
+      const interval = intervalField.length ? intervalField.val().trim() : '';
+      const pwm = block.find('.pwm-controller').val();
+      
+      if (name === '') {
+        valid = false;
+        errorMsg = 'Custom Name is required.';
+        return false;
+      }
+      if (!/^[A-Za-z0-9_]+$/.test(name)) {
+        valid = false;
+        errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
+        return false;
       }
 
-      $('#fan-form')[0].submit();
+      if (!pwm || pwm === "") {
+        valid = false;
+        errorMsg = 'Please select a PWM controller for each fan.';
+        return false;
+      }  
+
+      if (/temp_/i.test(name)) {
+        valid = false;
+        errorMsg = 'Custom Name cannot contain "temp_".';
+        return false;
+      }
+      
+      if (namesSeen.has(name)) {
+        valid = false;
+        errorMsg = `Custom Name "${name}" is already used.`;
+        duplicateFound = true;
+        return false;
+      }
+
+      namesSeen.add(name);
+
+      if (!/^\d+$/.test(interval) || parseInt(interval) <= 0) {
+        valid = false;
+        errorMsg = 'Interval cannot be empty or 0 (recommended: 1–5 min).';
+        return false;
+      } 
     });
-  });  
+
+    if (!valid) {
+      alert(errorMsg);
+      return;
+    }
+
+    saveFanOrder();
+    updatePwmDropdowns();
+
+    $('#fan-form')[0].submit();
+  }); 
   
   $(document).on('click', '.delete-btn', function () {
     const block = $(this).closest('.fan-block');
@@ -637,30 +715,39 @@ $(function() {
       ? `Are you sure you want to delete "${custom}"?`
       : `Are you sure you want to delete this fan configuration?`;
     if (!confirm(msg)) return;
+
     const isTemp = file.includes('_temp_');
-    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {op:'delete', file: file})
-      .done(function(result) {
+
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'delete', file: file })
+      .done(function () {
         block.remove();
-        if (!isTemp) {
-          setTimeout(() => {
+
+        setTimeout(() => {
+          // 保证始终至少有一个 fan block
+          const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
+          if (realBlocks.length === 0) {
+            ensureAtLeastOneFanBlock();
+          }
+          ensureColumnDroppable();
+
+          // 非 temp 才更新顺序
+          if (!isTemp) {
             let order = [];
-            $('.fan-block').each(function() {
+            $('.fan-block').each(function () {
               const val = $(this).find('input.cfg-file').val();
               if (val && !val.includes('_temp_')) order.push(val);
             });
             saveFanOrder(order);
-          }, 300);
-        }
-        setTimeout(() => updateAllFanStatus(), 500);
+          }
 
-        ensureColumnDroppable();
+          updateAllFanStatus();
+          updatePwmDropdowns();
+        }, 120);
       });
   });
 
-  document.body.addEventListener('click', function(e) {
-    const btn = e.target.closest('.fanctrlplus-interval-refresh');
-    if (!btn) return;
-
+  $(document).on('click', '.fanctrlplus-interval-refresh', function(e) {
+    const btn = e.currentTarget;
     const icon = btn.querySelector('.fa');
     btn.style.color = '#aaa';
     if (icon) icon.classList.add('fa-spin');
@@ -675,9 +762,7 @@ $(function() {
 
     fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(label)}`)
       .then(res => {
-        if (!res.ok) {
-          throw new Error("Request failed");
-        }
+        if (!res.ok) throw new Error("Request failed");
         return res.text();
       })
       .then(() => {
@@ -698,10 +783,9 @@ $(function() {
     e.stopPropagation();
   });
 
-  // 风扇排序逻辑
-  $(function () {
+    // 风扇排序逻辑
     $("#fan-column-left, #fan-column-right").sortable({
-      items: ".fan-block",
+      items: ".fan-block:not(.sortable-placeholder)",
       connectWith: ".fan-column",
       opacity: 0.6,
       tolerance: "pointer",
@@ -750,6 +834,8 @@ $(function() {
       if (sortableUnlocked) {
         // 解锁状态
         $('.fan-block').addClass('draggable');
+        $('.fan-svg-container').hide();
+        $('.drag-handle').show();
         $(this)
           .removeClass('icon-u-lock green-text')
           .addClass('icon-u-lock-open red-text')
@@ -757,6 +843,8 @@ $(function() {
       } else {
         // 锁回状态
         $('.fan-block').removeClass('draggable');
+        $('.fan-svg-container').show();
+        $('.drag-handle').hide();
         $(this)
           .removeClass('icon-u-lock-open red-text')
           .addClass('icon-u-lock green-text')
@@ -804,10 +892,10 @@ $(function() {
         }).done(function () {
         }).fail(function (jqXHR, textStatus, errorThrown) {
         });
-      } else {
       }
     }
-});  
+  updatePwmDropdowns();    
+});
 </script>
 
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">

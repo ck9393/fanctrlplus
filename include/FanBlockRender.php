@@ -38,13 +38,14 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
             <path class="frame" fill="var(--frame-color)" d="M463.017,0H49.001C21.928,0,0.005,21.932,0.005,48.987v414.016C0.005,490.059,21.928,512,49.001,512h414.016 c27.055,0,48.978-21.941,48.978-48.996V48.987C511.995,21.932,490.073,0,463.017,0z M463.017,31.706 c9.539,0,17.281,7.743,17.281,17.282c0,9.547-7.742,17.28-17.281,17.28c-9.556,0-17.299-7.734-17.299-17.28 C445.718,39.448,453.461,31.706,463.017,31.706z M49.001,31.706c9.538,0,17.281,7.743,17.281,17.282 c0,9.556-7.743,17.28-17.281,17.28c-9.556,0-17.299-7.724-17.299-17.28C31.702,39.448,39.445,31.706,49.001,31.706z M48.983,480.284c-9.538,0-17.281-7.734-17.281-17.281s7.743-17.281,17.281-17.281c9.556,0,17.299,7.734,17.299,17.281 S58.539,480.284,48.983,480.284z M463.017,480.284c-9.556,0-17.299-7.734-17.299-17.281c0-9.538,7.743-17.281,17.299-17.281 c9.539,0,17.281,7.743,17.281,17.281C480.298,472.55,472.556,480.284,463.017,480.284z M255.991,489.324 c-128.855,0-233.32-104.466-233.32-233.33c0-128.854,104.466-233.319,233.32-233.319c128.873,0,233.338,104.465,233.338,233.319 C489.329,384.858,384.864,489.324,255.991,489.324z"/>
           </svg>
         </div>
+            <span class="drag-handle" ><i class="fa fa-reorder"></i></span>
       </div> 
       
       <button type="button" class="delete-btn" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
         <tr>
-          <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
+          <td style="cursor: help;" title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">Custom Name</td>
           <td>
             <input type="text" name="custom[<?=$i?>]" class="custom-name-input" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
           </td>
@@ -61,9 +62,10 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Select the PWM controller for this fan">PWM Controller:</td>
+          <td style="cursor: help;" title="Select the PWM controller for this fan configuration">PWM Controller:</td>
           <td>
-            <select name="controller[<?=$i?>]">
+            <select name="controller[<?=$i?>]" class="pwm-controller">
+              <option value="">-- Select PWM --</option>
               <?php foreach ($pwms as $pwm): ?>
                 <option value="<?=$pwm['sensor']?>" <?=($cfg['controller'] ?? '') == $pwm['sensor'] ? 'selected' : ''?>>
                   <?=$pwm['chip']?> - <?=$pwm['name']?>
@@ -98,7 +100,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         <tr>
           <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
           <td>
-            <input type="number" name="interval[<?=$i?>]" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>" placeholder="1 or more" min="1" required style="width:225px;display:inline-block;margin-right:4px;">
+            <input type="number" name="interval[<?=$i?>]" class="interval-input" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>" placeholder="Recommended: 1–5 min" min="1" required style="width:225px;display:inline-block;margin-right:4px;">
             <span class="fanctrlplus-interval-refresh"
                   style="cursor:pointer;font-size:13px;color:var(--blue-800);margin-left:1px;vertical-align:middle;"
                   title="Manual Run: Read current temperature and set fan speed immediately"
