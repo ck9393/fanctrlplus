@@ -312,6 +312,29 @@ $width = 300;
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
 
+function updatePwmDropdowns() {
+  // 统计所有已选PWM（不为空）
+  const selected = [];
+  $('.pwm-controller').each(function() {
+    const val = $(this).val();
+    if (val) selected.push(val);
+  });
+
+  // 逐个select处理option
+  $('.pwm-controller').each(function() {
+    const self = $(this);
+    const ownVal = self.val();
+    self.find('option').each(function() {
+      const optVal = $(this).val();
+      if (optVal === ownVal || !selected.includes(optVal)) {
+        $(this).prop('disabled', false);
+      } else {
+        $(this).prop('disabled', true);
+      }
+    });
+  });
+}  
+
 const dropdownChecklistOptions = {
   emptyText: '(None)',
   width: 300,
@@ -532,6 +555,7 @@ $(function() {
 
       updateAllFanStatus();
       ensureColumnDroppable();
+      updatePwmDropdowns();
 
       setTimeout(() => {
         updateAllFanStatus();
@@ -617,6 +641,8 @@ $(function() {
   setApplyAllButtonState();
   ensureColumnDroppable();
 
+  $(document).on('change', '.pwm-controller', updatePwmDropdowns);
+
   $(document).on('click', '#apply-btn', function (e) {
     let valid = true;
     let errorMsg = '';
@@ -629,6 +655,7 @@ $(function() {
       const name = $(this).val().trim();
       const intervalField = block.find('.interval-input');
       const interval = intervalField.length ? intervalField.val().trim() : '';
+      const pwm = block.find('.pwm-controller').val();
       
       if (name === '') {
         valid = false;
@@ -640,6 +667,12 @@ $(function() {
         errorMsg = 'Custom Name can only contain letters, numbers, and underscores.';
         return false;
       }
+
+      if (!pwm || pwm === "") {
+        valid = false;
+        errorMsg = 'Please select a PWM controller for each fan.';
+        return false;
+      }  
 
       if (/temp_/i.test(name)) {
         valid = false;
@@ -669,6 +702,7 @@ $(function() {
     }
 
     saveFanOrder();
+    updatePwmDropdowns();
 
     $('#fan-form')[0].submit();
   }); 
@@ -688,27 +722,27 @@ $(function() {
       .done(function () {
         block.remove();
 
-        // ✅ 加入这段，稍微延迟后判断
         setTimeout(() => {
+          // 保证始终至少有一个 fan block
           const realBlocks = $('.fan-block').not('.sortable-placeholder, .ui-sortable-placeholder');
           if (realBlocks.length === 0) {
             ensureAtLeastOneFanBlock();
           }
-        }, 100);
+          ensureColumnDroppable();
 
-        if (!isTemp) {
-          setTimeout(() => {
+          // 非 temp 才更新顺序
+          if (!isTemp) {
             let order = [];
             $('.fan-block').each(function () {
               const val = $(this).find('input.cfg-file').val();
               if (val && !val.includes('_temp_')) order.push(val);
             });
             saveFanOrder(order);
-          }, 300);
-        }
+          }
 
-        setTimeout(() => updateAllFanStatus(), 500);
-        ensureColumnDroppable();
+          updateAllFanStatus();
+          updatePwmDropdowns();
+        }, 120);
       });
   });
 
@@ -859,7 +893,8 @@ $(function() {
         }).fail(function (jqXHR, textStatus, errorThrown) {
         });
       }
-    }  
+    }
+  updatePwmDropdowns();    
 });
 </script>
 

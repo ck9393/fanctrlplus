@@ -45,7 +45,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
 
       <table style="width:100%;">
         <tr>
-          <td style="cursor: help;" title="Enter a unique name for this fan. Avoid spaces or special characters.">Custom Name</td>
+          <td style="cursor: help;" title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">Custom Name</td>
           <td>
             <input type="text" name="custom[<?=$i?>]" class="custom-name-input" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
           </td>
@@ -62,9 +62,10 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Select the PWM controller for this fan">PWM Controller:</td>
+          <td style="cursor: help;" title="Select the PWM controller for this fan configuration">PWM Controller:</td>
           <td>
-            <select name="controller[<?=$i?>]">
+            <select name="controller[<?=$i?>]" class="pwm-controller">
+              <option value="">-- Select PWM --</option>
               <?php foreach ($pwms as $pwm): ?>
                 <option value="<?=$pwm['sensor']?>" <?=($cfg['controller'] ?? '') == $pwm['sensor'] ? 'selected' : ''?>>
                   <?=$pwm['chip']?> - <?=$pwm['name']?>
