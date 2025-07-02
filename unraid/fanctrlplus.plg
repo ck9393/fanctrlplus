@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.2.3">
+<!ENTITY version "1.2.4">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/unraid/&name;.plg">
 <!ENTITY source "/boot/config/plugins/&name;">
 <!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">
-<!ENTITY MD5 "9287578cedb0d528d89cffa88d793a33">
+<!ENTITY MD5 "c5ae0566dc2fa68b3e2c8c7d878f8e69">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://github.com/ck9393/fanctrlplus/issues">
@@ -19,10 +19,13 @@
 <CHANGES>
 ###&version;
 
-- This version adds Dashboard tile support for Unraid:
-- Displays each fan’s current temperature, RPM, and status.
-- Indicates whether the main daemon is running.
-- Supports both enabled and disabled fans (shown as Active or Inactive).
+- Added "Run Now" button in UI and Dashboard
+- Reorder fan blocks with drag-and-drop support
+- Include Disk(s) shown as "Selected X Disks" with tooltip
+- Input validation for Custom Name and Interval
+- Confirm before deleting fan configuration
+- Dashboard fan order synced with UI
+- Minor bug fixes and UI improvements
 
 </CHANGES>
 
