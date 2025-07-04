@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
 <!ENTITY version "1.2.4">
@@ -10,7 +10,7 @@
 <!ENTITY MD5 "c5ae0566dc2fa68b3e2c8c7d878f8e69">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://github.com/ck9393/fanctrlplus/issues">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://forums.unraid.net/topic/191722-plugin-fancrtl-plus">
 
 <ICON>
 /usr/local/emhttp/plugins/fanctrlplus/images/fanctrlplus.png
@@ -27,6 +27,70 @@
 - Dashboard fan order synced with UI
 - Minor bug fixes and UI improvements
 
+###1.2.3
+- This version adds Dashboard tile support for Unraid:
+- Displays each fan’s current temperature, RPM, and status.
+- Indicates whether the main daemon is running.
+- Supports both enabled and disabled fans (shown as Active or Inactive).
+
+###1.2.2
+- The top green/red status dot is now rendered using CSS for consistent styling and visibility.
+- Each fan block now includes a live SVG icon to indicate control status (Active / Inactive), with automatic rotation and color changes based on running state. 
+- When clicking the Stop button, any fan that was actively controlled will be set to 50% PWM in manual mode. This helps prevent full-speed ramp-ups or complete fan stalls when BIOS fails to take over.
+- Fixed excessive log writes in earlier versions.
+- Minor UI alignment and layout improvements.
+
+###1.2.1
+- fanctrlplus v1.2.1 introduces small but useful improvements. The "Pause 30s" button now shows a proper countdown and restores automatically after 30 seconds, improving user feedback. Additionally, disks in the dropdown list are now sorted more intuitively, with "Parity" and "Parity 2" correctly shown before "Disk 1", "Disk 2", etc.    
+- This version mainly improves UI clarity and minor fan control behavior.
+
+###1.2.0
+- Improved disk selection UI: "Include Disks" dropdown now shows full device labels (Parity, Disk 1~N, pool devices), grouped and labeled as in Unraid Main.
+- Dynamic disk rendering: Disks are listed using JavaScript for better performance. Hover to show full device path and ID. Flash excluded.
+- UI enhancements: Faster load, smoother operation, updated structure.
+- Minor bug fixes and code cleanup.
+
+###1.1.1
+- Added individual fan status indicators to each fan fieldset (🟢 Running / 🔴 Stopped), synced with backend daemon per fan config
+- Moved Delete button to bottom-right corner of each fan section for improved layout clarity
+- Introduced backend support for status_all to report individual config status to the UI
+- Improved handling of .pid file names by sanitizing custom names (trimming whitespace, avoiding hidden characters)
+- Added consistent title tooltips to all input/select fields
+- Changed all field labels to use cursor: help and direct tooltips instead of floating icons
+- Updated Custom Name placeholder to Required (e.g. HDDBay) and enforced it as a required field
+- Improved form validation UX: empty Custom Name now shows tooltip and prevents submission
+- Preserved clean layout in both light and dark themes without visual misalignment
+- Minor UI refinements for spacing, font consistency, and field alignment
+
+###.1.1.0
+- Introduced a more reliable daemon control mechanism by moving fan logic to a standalone .sh script for improved stability.
+- The UI now fully supports Start, Stop, and Status operations with better feedback and reliability.
+- Added .sh backend for a stable fan control loop.
+- Start/Stop button and running status indicator now fully functional.
+- Improved reliability of temperature detection and fan response.
+
+###1.0.3
+- Added status indicator showing Running or Stopped
+- Combined Start/Stop into a single toggle button
+- Fixed missing log entry when stopping the daemon
+- Moved control buttons (Add Fan, Apply, Start/Stop) to the bottom of the page
+- Relocated status text to appear under the page title
+
+###1.0.2
+- Replaced new rc.fanctrlplus
+
+###1.0.1
+- New icon with transparent background
+- Removed all Chinese messages from syslog
+- Excluded Unraid USB flash boot device from disk selection
+- Improved multi-PWM support and runtime stability
+
+###1.0.0
+- Initial public release.
+- Control multiple PWM fans based on disk/NVMe temperatures.
+- Per-fan config, Pause/Identify fan, smart logging.
+- Web UI for configuration and disk selection.
+- Configurations persist across reboots.
 </CHANGES>
 
 
