@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Maintainer>
+  <Icon>https://raw.githubusercontent.com/ck9393/fanctrlplus/main/images/fanctrlplus.png</Icon>
+  <Profile>
+    FanCtrl Plus author. Personal project for Unraid, developed from real-world needs.
+  </Profile>
+  <Forum>https://forums.unraid.net/topic/191722-plugin-fancrtl-plus/</Forum>
+  <DonateLink>https://www.paypal.com/paypalme/cck9393</DonateLink>
+  <DonateText>If you like my work, please consider donating!</DonateText>
+</Maintainer>
