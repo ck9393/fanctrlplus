@@ -5,6 +5,7 @@ You can assign specific fans to specific drives, define low/high temperature thr
 
 ## ✨ Features
 
+- Automatically starts with the Unraid array for hands-free operation
 - Control multiple PWM fans independently
 - Monitor temps from array disks, NVMe, and unassigned devices
 - Set custom thresholds and intervals per fan
