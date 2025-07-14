@@ -109,6 +109,7 @@ foreach ($_POST['#file'] as $i => $file) {
     'service'    => $_POST['service'][$i] ?? '0',
     'controller' => $controller,
     'pwm'        => $_POST['pwm'][$i] ?? '',
+    'max'        => $_POST['max_pwm'][$i] ?? '',
     'low'        => $_POST['low'][$i] ?? '',
     'high'       => $_POST['high'][$i] ?? '',
     'interval'   => $_POST['interval'][$i] ?? '',

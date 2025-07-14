@@ -52,6 +52,11 @@ while true; do
     pwm_val=$((pwm + delta * (255 - pwm) / range))
   fi
 
+  # === 限制最大值（若 max 有设置且 pwm_val 超出）
+  if [[ -n "$max" && "$pwm_val" -gt "$max" ]]; then
+    pwm_val=$max
+  fi
+
   # ✅ 写入 Dashboard 读取的温度缓存
   echo "$max_temp" > "/var/tmp/fanctrlplus/temp_${plugin}_${custom}"
 

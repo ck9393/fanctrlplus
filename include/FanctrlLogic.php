@@ -138,7 +138,7 @@ switch ($op) {
     }
 
     $temp_file = "$cfg_dir/{$plugin}_temp_$index_cfg.cfg";
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
 
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     $cfg = parse_ini_file($temp_file);

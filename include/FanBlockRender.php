@@ -77,9 +77,15 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Set the minimum PWM value (0–255)">Min PWM:</td>
+          <td style="cursor: help;" title="Set the PWM range (0–255)">PWM Range:</td>
           <td>
-            <input type="number" name="pwm[<?=$i?>]" value="<?=htmlspecialchars($cfg['pwm'] ?? '')?>">
+            <div style="display: grid; grid-template-columns: 130px 32px 130px; align-items: center; gap: 4px;">
+              <input type="number" name="pwm[<?=$i?>]" placeholder="Min" min="0" max="255"
+                    value="<?=htmlspecialchars($cfg['pwm'] ?? '')?>" style="width: 100%;">
+              <div style="text-align: center;">~</div>
+              <input type="number" name="max_pwm[<?=$i?>]" placeholder="Max" min="0" max="255"
+                    value="<?=htmlspecialchars($cfg['max'] ?? '255')?>" style="width: 100%;">
+            </div>
           </td>
         </tr>
 
