@@ -24,7 +24,7 @@ $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
 if (empty($cfg_files)) {
   $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
   if (!file_exists($temp_file)) {
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"0\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
   }
   // 重新加载 cfg_files
   $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
@@ -568,6 +568,14 @@ $(function() {
 
       setTimeout(() => {
         updateAllFanStatus();
+      
+        bindUnitInputs([
+          { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
+          { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
+          // 之后可以加入 °C、min 的 selector
+        ]);
+
+        bindFanSpeedEvents();
       }, 100);
     });
   };
@@ -580,13 +588,109 @@ $(function() {
     $('input[name="#apply"]').prop('disabled', false);
   });
 
+  function sanitizePercent(str) {
+    return parseInt(String(str).replace('%', '').replace(/\D/g, '') || '0', 10);
+  }
+
+  function updateFanSpeedDisplay(i) {
+    const $minInput = $(`#pwm_percent_input_${i}`);
+    const $maxInput = $(`#max_percent_input_${i}`);
+
+    let minVal = sanitizePercent($minInput.val());
+    let maxVal = sanitizePercent($maxInput.val());
+
+    minVal = Math.min(Math.max(minVal, 0), 100);
+    maxVal = Math.min(Math.max(maxVal, 0), 100);
+
+    $minInput.val(`${minVal}%`);
+    $maxInput.val(`${maxVal}%`);
+
+    const pwmMin = Math.round(minVal * 255 / 100);
+    const pwmMax = Math.round(maxVal * 255 / 100);
+
+    $(`#pwm_display_min_${i}`).text(`（${pwmMin} PWM）`);
+    $(`#pwm_display_max_${i}`).text(`（${pwmMax} PWM）`);
+  }
+
+  function bindFanSpeedEvents() {
+    $('.fan-block').each(function (i) {
+      $(`#pwm_percent_input_${i}, #max_percent_input_${i}`).off('input');
+      updateFanSpeedDisplay(i);
+      $(`#pwm_percent_input_${i}, #max_percent_input_${i}`).on('input', function () {
+        updateFanSpeedDisplay(i);
+      });
+    });
+  }
+
+  $(document).ready(bindFanSpeedEvents);
+
+  // 光标移到单位前
+  function bindUnitInputs(unitConfigs) {
+    unitConfigs.forEach(({ selector, unit, min = 0, max = 100 }) => {
+      document.querySelectorAll(selector).forEach(input => {
+        const enforceUnit = () => {
+          let val = input.value.replace(/\D/g, '');
+          val = Math.min(Math.max(parseInt(val || '0'), min), max);
+          input.value = val + unit;
+
+          // 光标移到单位前
+          const pos = input.value.indexOf(unit);
+          input.setSelectionRange(pos, pos);
+        };
+
+        input.addEventListener('input', enforceUnit);
+
+        input.addEventListener('click', () => {
+          setTimeout(() => {
+            const pos = input.value.indexOf(unit);
+            input.setSelectionRange(pos, pos);
+          }, 0);
+        });
+
+        enforceUnit();
+      });
+    });
+  }
+
+  $(document).ready(function () {
+    bindUnitInputs([
+      { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
+      { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 }
+    ]);
+  });
+
+  // ✅ 在更新 PWM 显示时，连带更新 input 的 title 提示
+  function updateFanSpeedDisplay(i) {
+    const $minInput = $(`#pwm_percent_input_${i}`);
+    const $maxInput = $(`#max_percent_input_${i}`);
+
+    let minVal = sanitizePercent($minInput.val());
+    let maxVal = sanitizePercent($maxInput.val());
+
+    minVal = Math.min(Math.max(minVal, 0), 100);
+    maxVal = Math.min(Math.max(maxVal, 0), 100);
+
+    $minInput.val(`${minVal}%`);
+    $maxInput.val(`${maxVal}%`);
+
+    const pwmMin = Math.round(minVal * 255 / 100);
+    const pwmMax = Math.round(maxVal * 255 / 100);
+
+    $(`#pwm_display_min_${i}`).text(`（${pwmMin} PWM）`);
+    $(`#pwm_display_max_${i}`).text(`（${pwmMax} PWM）`);
+
+    // ✅ 实时更新 title
+    $minInput.attr('title', `${minVal}% = ${pwmMin} PWM`);
+    $maxInput.attr('title', `${maxVal}% = ${pwmMax} PWM`);
+  }
+
   function initOriginalForBlock($block) {
     const original = {
       custom: $block.find('input[name^="custom["]').val(),
       service: $block.find('select[name^="service["]').val(),
       controller: $block.find('select[name^="controller["]').val(),
-      pwm: $block.find('input[name^="pwm["]').val(),
-      max: $block.find('input[name^="max_pwm["]').val(),
+      pwm_percent: $block.find('input[name^="pwm_percent["]').val(),
+      max_percent: $block.find('input[name^="max_percent["]').val(),
       low: $block.find('input[name^="low["]').val(),
       high: $block.find('input[name^="high["]').val(),
       interval: $block.find('input[name^="interval["]').val(),
@@ -605,8 +709,8 @@ $(function() {
         custom: $block.find('input[name^="custom["]').val(),
         service: $block.find('select[name^="service["]').val(),
         controller: $block.find('select[name^="controller["]').val(),
-        pwm: $block.find('input[name^="pwm["]').val(),
-        max: $block.find('input[name^="max_pwm["]').val(),
+        pwm_percent: $block.find('input[name^="pwm_percent["]').val(),
+        max_percent: $block.find('input[name^="max_percent["]').val(),
         low: $block.find('input[name^="low["]').val(),
         high: $block.find('input[name^="high["]').val(),
         interval: $block.find('input[name^="interval["]').val(),

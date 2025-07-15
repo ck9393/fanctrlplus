@@ -77,14 +77,30 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Set the PWM range (0–255)">PWM Range:</td>
+          <td style="cursor: help;" title="Set the fan speed range (0–100%). % will be automatically converted to PWM. Hover to see actual PWM values.">Fan Speed Range:</td>
           <td>
-            <div style="display: grid; grid-template-columns: 130px 32px 130px; align-items: center; gap: 4px;">
-              <input type="number" name="pwm[<?=$i?>]" placeholder="Min" min="0" max="255"
-                    value="<?=htmlspecialchars($cfg['pwm'] ?? '')?>" style="width: 100%;">
-              <div style="text-align: center;">~</div>
-              <input type="number" name="max_pwm[<?=$i?>]" placeholder="Max" min="0" max="255"
-                    value="<?=htmlspecialchars($cfg['max'] ?? '255')?>" style="width: 100%;">
+            <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
+
+              <!-- 左侧 Min -->
+              <input type="text"
+                    id="pwm_percent_input_<?=$i?>"
+                    name="pwm_percent[<?=$i?>]"
+                    inputmode="numeric"
+                    style="width: 100%; text-align: left;"
+                    value="<?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>%"
+                    title="<?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>% = <?=$cfg['pwm'] ?? 0?> PWM">
+
+              <!-- 中间波浪号 -->
+              <span style="text-align: center;">~</span>
+
+              <!-- 右侧 Max -->
+              <input type="text"
+                    id="max_percent_input_<?=$i?>"
+                    name="max_percent[<?=$i?>]"
+                    inputmode="numeric"
+                    style="width: 100%; text-align: left;"
+                    value="<?=round(($cfg['max'] ?? 255) * 100 / 255)?>%"
+                    title="<?=round(($cfg['max'] ?? 255) * 100 / 255)?>% = <?=$cfg['max'] ?? 255?> PWM">
             </div>
           </td>
         </tr>

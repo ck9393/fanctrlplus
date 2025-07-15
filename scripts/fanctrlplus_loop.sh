@@ -4,6 +4,7 @@
 cfg_file="$1"
 [[ -f "$cfg_file" ]] || exit 1
 source "$cfg_file"
+max="${max:-255}"
 
 plugin="fanctrlplus"
 custom="${custom:-$(basename "$cfg_file" .cfg)}"
@@ -45,11 +46,11 @@ while true; do
   if (( max_temp <= low )); then
     pwm_val=$pwm
   elif (( max_temp >= high )); then
-    pwm_val=255
+    pwm_val=$max
   else
     delta=$((max_temp - low))
     range=$((high - low))
-    pwm_val=$((pwm + delta * (255 - pwm) / range))
+    pwm_val=$((pwm + delta * (max - pwm) / range))
   fi
 
   # === 限制最大值（若 max 有设置且 pwm_val 超出）

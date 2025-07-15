@@ -28,6 +28,11 @@ foreach ($_POST['#file'] as $i => $file) {
   $expected_file = $plugin . '_' . $custom . '.cfg';
   $old_path = "$cfgpath/$old_file";
   $new_path = "$cfgpath/$expected_file";
+  $pwm_percent = str_replace('%', '', $_POST['pwm_percent'][$i] ?? '0');
+  $max_percent = str_replace('%', '', $_POST['max_percent'][$i] ?? '100');
+
+  $pwm = round(intval($pwm_percent) * 255 / 100);
+  $max_pwm = round(intval($max_percent) * 255 / 100);
 
   // Custom Name 不能为空
   if ($custom === '') {
@@ -108,8 +113,8 @@ foreach ($_POST['#file'] as $i => $file) {
     'label'      => $custom,
     'service'    => $_POST['service'][$i] ?? '0',
     'controller' => $controller,
-    'pwm'        => $_POST['pwm'][$i] ?? '',
-    'max'        => $_POST['max_pwm'][$i] ?? '',
+    'pwm'        => $pwm,
+    'max'        => $max_pwm,
     'low'        => $_POST['low'][$i] ?? '',
     'high'       => $_POST['high'][$i] ?? '',
     'interval'   => $_POST['interval'][$i] ?? '',
