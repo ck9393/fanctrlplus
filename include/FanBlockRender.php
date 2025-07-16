@@ -77,7 +77,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Set the fan speed range (0–100%). % will be automatically converted to PWM. Hover to see actual PWM values.">Fan Speed Range:</td>
+          <td style="cursor: help;" title="Set the minimum and maximum fan speed (0–100%). % will be automatically converted to PWM. Hover to see actual values.">Fan Speed Range:</td>
           <td>
             <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
 
@@ -88,7 +88,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
                     inputmode="numeric"
                     style="width: 100%; text-align: left;"
                     value="<?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>%"
-                    title="<?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>% = <?=$cfg['pwm'] ?? 0?> PWM">
+                    title="Minimum speed: <?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>% = <?=$cfg['pwm'] ?? 0?> PWM">
 
               <!-- 中间波浪号 -->
               <span style="text-align: center;">~</span>
@@ -100,40 +100,62 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
                     inputmode="numeric"
                     style="width: 100%; text-align: left;"
                     value="<?=round(($cfg['max'] ?? 255) * 100 / 255)?>%"
-                    title="<?=round(($cfg['max'] ?? 255) * 100 / 255)?>% = <?=$cfg['max'] ?? 255?> PWM">
+                    title="Maximum speed: <?=round(($cfg['max'] ?? 255) * 100 / 255)?>% = <?=$cfg['max'] ?? 255?> PWM">
             </div>
           </td>
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="At or below this temperature, fan will run at the configured minimum PWM">Low Temp (°C):</td>
+          <td style="cursor: help;" title="Fan runs at the configured minimum speed if the highest selected disk temperature is at or below this value. Speed adjusts proportionally between low and high.">
+            Low Temp:
+          </td>
           <td>
-            <input type="number" name="low[<?=$i?>]" value="<?=htmlspecialchars($cfg['low'] ?? '')?>">
+            <input type="text"
+                  id="low_temp_input_<?=$i?>"
+                  name="low[<?=$i?>]"
+                  inputmode="numeric"
+                  style="width: 300px; text-align: left;"
+                  value="<?=intval($cfg['low'] ?? 40)?>°C">
           </td>
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="At or above this temperature, fan will run at the configured maximum PWM">High Temp (°C):</td>
+          <td style="cursor: help;" title="Fan runs at the configured maximum speed if the highest selected disk temperature is at or above this value. Speed adjusts proportionally between low and high.">
+            High Temp:
+          </td>
           <td>
-            <input type="number" name="high[<?=$i?>]" value="<?=htmlspecialchars($cfg['high'] ?? '')?>">
+            <input type="text"
+                  id="high_temp_input_<?=$i?>"
+                  name="high[<?=$i?>]"
+                  inputmode="numeric"
+                  style="width: 300px; text-align: left;"
+                  value="<?=intval($cfg['high'] ?? 60)?>°C">
           </td>
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval (min):</td>
+          <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval:</td>
           <td>
-            <input type="number" name="interval[<?=$i?>]" class="interval-input" value="<?=htmlspecialchars($cfg['interval'] ?? '')?>" placeholder="Recommended: 1–5 min" min="1" required style="width:225px;display:inline-block;margin-right:4px;">
+            <input type="text"
+                  id="interval_input_<?=$i?>"
+                  name="interval[<?=$i?>]"
+                  class="interval-input"
+                  inputmode="numeric"
+                  value="<?=htmlspecialchars(($cfg['interval'] ?? '') . ' min')?>"
+                  placeholder="Recommended: 1–5 min"
+                  style="width: 225px; display: inline-block; margin-right: 4px; text-align: left;">
+
             <span class="fanctrlplus-interval-refresh"
-                  style="cursor:pointer;font-size:13px;color:var(--blue-800);margin-left:1px;vertical-align:middle;"
+                  style="cursor: pointer; font-size: 13px; color: var(--blue-800); margin-left: 1px; vertical-align: middle;"
                   title="Manual Run: Read current temperature and set fan speed immediately"
                   data-label="<?=htmlspecialchars($cfg['custom'] ?? '')?>">
-              <span class="fa fa-refresh"></span> Run Now    
+              <span class="fa fa-refresh"></span> Run Now
             </span>
           </td>
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Select disk(s) to monitor for temperature control.">Include Disk(s):</td>
+          <td style="cursor: help;" title="Select disks, NVMe drives, or other block devices to monitor for this fan.">Include Disk(s):</td>
           <td>
             <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:300px;">
               <?php

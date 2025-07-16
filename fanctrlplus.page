@@ -572,7 +572,9 @@ $(function() {
         bindUnitInputs([
           { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
           { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
-          // 之后可以加入 °C、min 的 selector
+          { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 0, max: 100 },
+          { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 0, max: 100 },
+          { selector: 'input[id^="interval_input_"]', unit: ' min', min: 0, max: 60 }
         ]);
 
         bindFanSpeedEvents();
@@ -608,8 +610,8 @@ $(function() {
     const pwmMin = Math.round(minVal * 255 / 100);
     const pwmMax = Math.round(maxVal * 255 / 100);
 
-    $(`#pwm_display_min_${i}`).text(`（${pwmMin} PWM）`);
-    $(`#pwm_display_max_${i}`).text(`（${pwmMax} PWM）`);
+    $minInput.attr('title', `Minimum speed: ${minVal}% → ${pwmMin} PWM`);
+    $maxInput.attr('title', `Maximum speed: ${maxVal}% → ${pwmMax} PWM`);
   }
 
   function bindFanSpeedEvents() {
@@ -655,7 +657,10 @@ $(function() {
   $(document).ready(function () {
     bindUnitInputs([
       { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
-      { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 }
+      { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
+      { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 0, max: 100 },
+      { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 0, max: 100 },
+      { selector: 'input[id^="interval_input_"]', unit: ' min', min: 0, max: 60 }
     ]);
   });
 
@@ -680,8 +685,8 @@ $(function() {
     $(`#pwm_display_max_${i}`).text(`（${pwmMax} PWM）`);
 
     // ✅ 实时更新 title
-    $minInput.attr('title', `${minVal}% = ${pwmMin} PWM`);
-    $maxInput.attr('title', `${maxVal}% = ${pwmMax} PWM`);
+    $minInput.attr('title', `Minimum speed: ${minVal}% = ${pwmMin} PWM`);
+    $maxInput.attr('title', `Maximum speed: ${maxVal}% = ${pwmMax} PWM`);
   }
 
   function initOriginalForBlock($block) {
