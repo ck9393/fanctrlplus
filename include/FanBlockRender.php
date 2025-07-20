@@ -1,5 +1,15 @@
 <?php
-function render_fan_block($cfg, $i, $pwms, $disks) {
+$label_file = "/boot/config/plugins/fanctrlplus/pwm_labels.cfg";
+$pwm_labels = [];
+if (is_file($label_file)) {
+  foreach (file($label_file, FILE_IGNORE_NEW_LINES) as $line) {
+    if (preg_match('/^(.+?)=(.+)$/', $line, $m)) {
+      $pwm_labels[$m[1]] = $m[2];
+    }
+  }
+}
+
+function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
 
   ob_start();
   ?>
@@ -66,13 +76,17 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
           <td>
             <select name="controller[<?=$i?>]" class="pwm-controller">
               <option value="">-- Select PWM --</option>
-              <?php foreach ($pwms as $pwm): ?>
+              <?php foreach ($pwms as $pwm): 
+                $label = $pwm_labels[$pwm['sensor']] ?? '';
+                $display = $pwm['chip'] . ' - ' . $pwm['name'];
+                if ($label) $display .= '（' . htmlspecialchars($label) . '）';
+              ?>
                 <option value="<?=$pwm['sensor']?>" <?=($cfg['controller'] ?? '') == $pwm['sensor'] ? 'selected' : ''?>>
-                  <?=$pwm['chip']?> - <?=$pwm['name']?>
+                  <?= $display ?>
                 </option>
               <?php endforeach; ?>
             </select>
-            <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button>
+            <!-- <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button> 暂时移除Pause 30s -->
           </td>
         </tr>
 
@@ -113,6 +127,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
             <input type="text"
                   id="low_temp_input_<?=$i?>"
                   name="low[<?=$i?>]"
+                  class="low-temp-input"
                   inputmode="numeric"
                   style="width: 300px; text-align: left;"
                   value="<?=intval($cfg['low'] ?? 40)?>°C">
@@ -126,6 +141,7 @@ function render_fan_block($cfg, $i, $pwms, $disks) {
           <td>
             <input type="text"
                   id="high_temp_input_<?=$i?>"
+                  class="high-temp-input"
                   name="high[<?=$i?>]"
                   inputmode="numeric"
                   style="width: 300px; text-align: left;"

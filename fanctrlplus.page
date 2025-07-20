@@ -11,8 +11,6 @@ $cfg_dir = "/boot/config/plugins/$plugin";
 require_once "$docroot/plugins/$plugin/include/Common.php";
 require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
 
-
-
 // 初始化配置目录
 if (!is_dir($cfg_dir)) {
   mkdir($cfg_dir, 0777, true);
@@ -126,6 +124,15 @@ $width = 300;
 
 .frame, .hub {
     transition: fill 0.3s ease;
+}
+
+.pwm-controller {
+  max-width: 300px !important;
+  width: 300px !important;
+  box-sizing: border-box;
+  padding-right: 24px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* 控制下拉关闭状态时主框宽度 */
@@ -271,6 +278,13 @@ $width = 300;
   box-sizing: border-box;
   margin: 0 auto;
   min-height: 180px;
+}
+
+dt.containerSettingsDt {
+  width: auto !important;
+  display: inline-block;
+  vertical-align: middle;
+  float: none;
 }
 
 #fan-area {
@@ -516,6 +530,8 @@ $(function() {
   window.pauseFan = function(pwm, btn) {
     if (!pwm || !btn) return;
     const $btn = $(btn);
+    const origText = $btn.data('orig') || $btn.text();  // 用 data 存原始文本防止二次卡死
+    $btn.data('orig', origText);
     $btn.prop('disabled', true).text("Pausing...");
     $.ajax({
       url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
@@ -527,7 +543,7 @@ $(function() {
         const interval = setInterval(() => {
           if (seconds <= 0) {
             clearInterval(interval);
-            $btn.text("Pause 30s").prop('disabled', false);
+            $btn.text($btn.data('orig')).prop('disabled', false);
           } else {
             $btn.text(`Paused (${seconds}s)`);
             seconds--;
@@ -535,7 +551,7 @@ $(function() {
         }, 1000);
       },
       error: function(xhr, status, err) {
-        $btn.text("Pause 30s").prop('disabled', false);
+        $btn.text($btn.data('orig')).prop('disabled', false);
       }
     });
   };
@@ -662,7 +678,13 @@ $(function() {
       { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 0, max: 100 },
       { selector: 'input[id^="interval_input_"]', unit: ' min', min: 0, max: 60 }
     ]);
+    loadPWMOptions();
   });
+
+    function stripUnit(val) {
+    // 去掉所有空格、min、°C、%（也支持像 2 min、35°C、40% 这种格式）
+    return val.replace(/\s*(min|°C|%)/gi, '').trim();
+  }
 
   // ✅ 在更新 PWM 显示时，连带更新 input 的 title 提示
   function updateFanSpeedDisplay(i) {
@@ -688,17 +710,90 @@ $(function() {
     $minInput.attr('title', `Minimum speed: ${minVal}% = ${pwmMin} PWM`);
     $maxInput.attr('title', `Maximum speed: ${maxVal}% = ${pwmMax} PWM`);
   }
+  
+  function loadPWMOptions() {
+    $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
+      const select = $('#pwm-select');
+      select.empty();
+      pwmList.forEach(pwm => {
+
+        let display = pwm.chip + ' - ' + pwm.name;
+        if (pwm.label) {
+          display += '（' + pwm.label + '）'; // 中文全角括号
+        }
+        select.append(`<option value="${pwm.sensor}">${display}</option>`);
+      });
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error('Failed to load PWM list:', textStatus, errorThrown);
+    });
+  }
+
+  window.savePWMLabel = function() {
+    const pwm = $('#pwm-select').val();
+    const label = $('#pwm-label-input').val().trim();
+
+    if (!pwm) {
+      alert('Please select a PWM controller!');
+      return;
+    }
+
+    // 允许 label 为空，后端负责删除逻辑
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+      op: 'savelabel',
+      pwm: pwm,
+      label: label
+    }, function(data) {
+      if (data && data.status === 'ok') {
+        $('#pwm-label-input').val('');
+        $('#label-save-tip').css('color', '#4caf50')
+          .text(label ? 'Label saved!' : 'Label cleared!').show();
+        setTimeout(() => {
+          $('#label-save-tip').fadeOut(500, function() {
+            $(this).text('').show();
+          });
+        }, 1500);
+        loadPWMOptions && loadPWMOptions();
+        refreshAllFanBlockPWMLabels();
+      } else {
+        $('#label-save-tip').css('color', '#f44336')
+          .text('Failed to save');
+        setTimeout(() => {
+          $('#label-save-tip').fadeOut(500, function() {
+            $(this).css('color', '#4caf50').text('').show();
+          });
+        }, 2000);
+      }
+    }, 'json').fail(function() {
+      alert('Error saving label (network or server error)');
+    });
+  }
+
+  function refreshAllFanBlockPWMLabels() {
+    $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
+      // 遍历每个 fan block 下拉框
+      $('.pwm-controller').each(function() {
+        const selected = $(this).val();
+        $(this).empty().append('<option value="">-- Select PWM --</option>');
+        pwmList.forEach(pwm => {
+          let display = pwm.chip + ' - ' + pwm.name;
+          if (pwm.label) display += '（' + pwm.label + '）';
+          const isSelected = selected === pwm.sensor ? 'selected' : '';
+          $(this).append(`<option value="${pwm.sensor}" ${isSelected}>${display}</option>`);
+        });
+      });
+    });
+  }
 
   function initOriginalForBlock($block) {
     const original = {
       custom: $block.find('input[name^="custom["]').val(),
       service: $block.find('select[name^="service["]').val(),
       controller: $block.find('select[name^="controller["]').val(),
-      pwm_percent: $block.find('input[name^="pwm_percent["]').val(),
-      max_percent: $block.find('input[name^="max_percent["]').val(),
-      low: $block.find('input[name^="low["]').val(),
-      high: $block.find('input[name^="high["]').val(),
-      interval: $block.find('input[name^="interval["]').val(),
+      pwm_percent: stripUnit($block.find('input[name^="pwm_percent["]').val()),
+      max_percent: stripUnit($block.find('input[name^="max_percent["]').val()),
+      low: stripUnit($block.find('input[name^="low["]').val()),
+      high: stripUnit($block.find('input[name^="high["]').val()),
+      interval: stripUnit($block.find('input[name^="interval["]').val()),
       disks: $block.find('select[name^="disks["]').val()
     };
     $block.data('original', original);
@@ -714,11 +809,11 @@ $(function() {
         custom: $block.find('input[name^="custom["]').val(),
         service: $block.find('select[name^="service["]').val(),
         controller: $block.find('select[name^="controller["]').val(),
-        pwm_percent: $block.find('input[name^="pwm_percent["]').val(),
-        max_percent: $block.find('input[name^="max_percent["]').val(),
-        low: $block.find('input[name^="low["]').val(),
-        high: $block.find('input[name^="high["]').val(),
-        interval: $block.find('input[name^="interval["]').val(),
+        pwm_percent: stripUnit($block.find('input[name^="pwm_percent["]').val()),
+        max_percent: stripUnit($block.find('input[name^="max_percent["]').val()),
+        low: stripUnit($block.find('input[name^="low["]').val()),
+        high: stripUnit($block.find('input[name^="high["]').val()),
+        interval: stripUnit($block.find('input[name^="interval["]').val()),
         disks: $block.find('select[name^="disks["]').val()
       };
       if (JSON.stringify(original) !== JSON.stringify(current)) {
@@ -774,7 +869,11 @@ $(function() {
       const block = $(this).closest('.fan-block');
       const name = $(this).val().trim();
       const intervalField = block.find('.interval-input');
-      const interval = intervalField.length ? intervalField.val().trim() : '';
+      const interval = intervalField.length ? stripUnit(intervalField.val()) : '';
+      const low = stripUnit(block.find('input[name^="low["]').val());
+      const high = stripUnit(block.find('input[name^="high["]').val());
+      const pwm_percent = stripUnit(block.find('input[name^="pwm_percent["]').val());
+      const max_percent = stripUnit(block.find('input[name^="max_percent["]').val());
       const pwm = block.find('.pwm-controller').val();
       
       if (name === '') {
@@ -820,6 +919,10 @@ $(function() {
       alert(errorMsg);
       return;
     }
+
+    $('.interval-input, .low-temp-input, .high-temp-input, .pwm-percent-input, .max-percent-input').each(function(){
+      this.value = stripUnit(this.value);
+    });
 
     saveFanOrder();
     updatePwmDropdowns();
@@ -1031,7 +1134,7 @@ $(function() {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
           $all_cfg[] = $cfg;
-          echo render_fan_block($cfg, $i++, $pwms, $disks);
+          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels);
         }
       }
       ?>
@@ -1046,7 +1149,7 @@ $(function() {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
           $all_cfg[] = $cfg;
-          echo render_fan_block($cfg, $i++, $pwms, $disks);
+          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels);
         }
       }
       ?>
@@ -1071,7 +1174,7 @@ $(function() {
       $cfg['file'] = $basename;
       $all_cfg[] = $cfg;
 
-      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks));
+      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels));
 
       if ($count_left <= $count_right) {
         $target = '#fan-column-left';
@@ -1086,10 +1189,43 @@ $(function() {
     }
     ?>
   </div>
-
   <div style="clear:both; margin-top:15px; text-align: left;">
     <button type="button" onclick="addFan()" title="Add a new fan configuration">➕ Add Fan</button>
     <button type="button" id="apply-btn" title="Save all fan configurations">Apply All</button>
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
+  
+ 
+  <dl>
+    <dt class="containerSettingsDt" style="text-align: left; margin-top: 12px; cursor: help;">
+      <span class="fa fa-info-circle" style="margin-right: 2px; margin-left: -10px;"></span>
+      <strong>Identify Fan</strong> <span style="font-weight: normal;">(Label PWM Controller):</span>
+    </dt>
+    <dd style="margin: 0; padding: 0;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 60px;">
+        <select id="pwm-select">
+          <option value="">Select PWM</option>
+          <?php foreach ($pwms as $pwm): ?>
+            <option value="<?= htmlspecialchars($pwm['sensor']) ?>">
+              <?= htmlspecialchars($pwm['chip'] . ' - ' . $pwm['name']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <button type="button" class="btn" onclick="pauseFan($('#pwm-select').val(), this)">Identify</button>
+        <input type="text" id="pwm-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 150px;">
+        <button type="button" class="btn" onclick="savePWMLabel()">Save Label</button>
+        <span id="label-save-tip" style="margin-left: 8px; color: #4caf50;"></span>
+      </div>
+    </dd>
+  </dl>
+
+  <blockquote class="inline_help"">
+    <p><strong>Usage:</strong></p>
+    <p>
+      Identify pauses the selected fan for 30 seconds so you can determine its physical location.<br>
+      It is recommended to label each fan clearly, such as "Rear Fan" or "Top Fan".<br>
+      If your hardware configuration changes (adding/removing fans or BIOS update), please run Identify again to verify.
+    </p>
+  </blockquote>
+
 </form>
