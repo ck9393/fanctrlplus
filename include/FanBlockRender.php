@@ -50,7 +50,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
         </div>
             <span class="drag-handle" ><i class="fa fa-reorder"></i></span>
       </div> 
-      
+
       <button type="button" class="delete-btn" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
@@ -72,10 +72,10 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Select the PWM controller for this fan configuration">PWM Controller:</td>
+          <td style="cursor: help;" title="Each fan corresponds to a PWM controller (pwm1, pwm2, etc). Select the one controlling this fan. You can use the Identify section below to locate and label each fan.">PWM Controller:</td>
           <td>
             <select name="controller[<?=$i?>]" class="pwm-controller">
-              <option value="">-- Select PWM --</option>
+              <option value="">-- Select Fan Controller --</option>
               <?php foreach ($pwms as $pwm): 
                 $label = $pwm_labels[$pwm['sensor']] ?? '';
                 $display = $pwm['chip'] . ' - ' . $pwm['name'];
@@ -86,7 +86,6 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
                 </option>
               <?php endforeach; ?>
             </select>
-            <!-- <button type="button" onclick="pauseFan($(this).prev().val(), this)" title="Pause this fan for 30 seconds to identify its location.">Pause 30s</button> 暂时移除Pause 30s -->
           </td>
         </tr>
 
@@ -120,32 +119,34 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
         </tr>
 
         <tr>
-          <td style="cursor: help;" title="Fan runs at the configured minimum speed if the highest selected disk temperature is at or below this value. Speed adjusts proportionally between low and high.">
-            Low Temp:
-          </td>
+          <td style="cursor: help;" title="Fan runs at the configured minimum speed if the highest selected disk temperature is at or below the Low Temp. Fan ramps up linearly and reaches maximum speed at or above the High Temp.">Temperature Range:</td>
           <td>
-            <input type="text"
-                  id="low_temp_input_<?=$i?>"
-                  name="low[<?=$i?>]"
-                  class="low-temp-input"
-                  inputmode="numeric"
-                  style="width: 300px; text-align: left;"
-                  value="<?=intval($cfg['low'] ?? 40)?>°C">
-          </td>
-        </tr>
+            <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
 
-        <tr>
-          <td style="cursor: help;" title="Fan runs at the configured maximum speed if the highest selected disk temperature is at or above this value. Speed adjusts proportionally between low and high.">
-            High Temp:
-          </td>
-          <td>
-            <input type="text"
-                  id="high_temp_input_<?=$i?>"
-                  class="high-temp-input"
-                  name="high[<?=$i?>]"
-                  inputmode="numeric"
-                  style="width: 300px; text-align: left;"
-                  value="<?=intval($cfg['high'] ?? 60)?>°C">
+              <!-- 左侧 Low Temp -->
+              <input type="text"
+                    id="low_temp_input_<?=$i?>"
+                    name="low[<?=$i?>]"
+                    class="low-temp-input"
+                    inputmode="numeric"
+                    style="width: 100%; text-align: left;"
+                    value="<?=intval($cfg['low'] ?? 40)?>°C"
+                    title="Low Temp: <?=intval($cfg['low'] ?? 40)?>°C">
+
+              <!-- 中间波浪号 -->
+              <span style="text-align: center;">~</span>
+
+              <!-- 右侧 High Temp -->
+              <input type="text"
+                    id="high_temp_input_<?=$i?>"
+                    name="high[<?=$i?>]"
+                    class="high-temp-input"
+                    inputmode="numeric"
+                    style="width: 100%; text-align: left;"
+                    value="<?=intval($cfg['high'] ?? 60)?>°C"
+                    title="High Temp: <?=intval($cfg['high'] ?? 60)?>°C">
+
+            </div>
           </td>
         </tr>
 
@@ -159,13 +160,13 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
                   inputmode="numeric"
                   value="<?=htmlspecialchars(($cfg['interval'] ?? '') . ' min')?>"
                   placeholder="Recommended: 1–5 min"
-                  style="width: 225px; display: inline-block; margin-right: 4px; text-align: left;">
+                  style="width: 225px; display: inline-block; margin-right: 1px; text-align: left;">
 
             <span class="fanctrlplus-interval-refresh"
                   style="cursor: pointer; font-size: 13px; color: var(--blue-800); margin-left: 1px; vertical-align: middle;"
                   title="Manual Run: Read current temperature and set fan speed immediately"
                   data-label="<?=htmlspecialchars($cfg['custom'] ?? '')?>">
-              <span class="fa fa-refresh"></span> Run Now
+              <span class="fa fa-refresh" style="font-size: 13px;"></span> Run Now
             </span>
           </td>
         </tr>

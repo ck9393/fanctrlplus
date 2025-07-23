@@ -2,6 +2,20 @@ Menu="Utilities"
 Title="FanCtrl Plus"
 Icon="fanctrlplus.png"
 ---
+<?php echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">'; ?>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const titleDiv = document.querySelector('div.title > span.left');
+    if (titleDiv) {
+      titleDiv.innerHTML = `
+        <i class="icon-fanctrlplus" style="font-size:20px; vertical-align:middle;"></i>
+        <span style="margin-left:8px; vertical-align:middle;">FanCtrl Plus Configuration</span>`;
+    }
+  });
+</script>
+
+<link rel="stylesheet" type="text/css" href="/webGui/styles/jquery.switchbutton.css">
 
 <?PHP
 $plugin = "fanctrlplus";
@@ -528,7 +542,11 @@ $(function() {
   };
 
   window.pauseFan = function(pwm, btn) {
-    if (!pwm || !btn) return;
+    if (!pwm) {
+      alert('Please select a PWM controller.');
+      return;
+    }
+    if (!btn) return;
     const $btn = $(btn);
     const origText = $btn.data('orig') || $btn.text();  // 用 data 存原始文本防止二次卡死
     $btn.data('orig', origText);
@@ -642,13 +660,19 @@ $(function() {
 
   $(document).ready(bindFanSpeedEvents);
 
-  // 光标移到单位前
   function bindUnitInputs(unitConfigs) {
     unitConfigs.forEach(({ selector, unit, min = 0, max = 100 }) => {
       document.querySelectorAll(selector).forEach(input => {
         const enforceUnit = () => {
-          let val = input.value.replace(/\D/g, '');
-          val = Math.min(Math.max(parseInt(val || '0'), min), max);
+          let val = (input.value ?? '').toString().replace(/\D/g, '');
+
+          // 如果转换后是空字符串，就不设置单位
+          if (!val) {
+            input.value = '';
+            return;
+          }
+
+          val = Math.min(Math.max(parseInt(val), min), max);
           input.value = val + unit;
 
           // 光标移到单位前
@@ -665,7 +689,7 @@ $(function() {
           }, 0);
         });
 
-        enforceUnit();
+        enforceUnit();  // 初始执行一次
       });
     });
   }
@@ -681,9 +705,8 @@ $(function() {
     loadPWMOptions();
   });
 
-    function stripUnit(val) {
-    // 去掉所有空格、min、°C、%（也支持像 2 min、35°C、40% 这种格式）
-    return val.replace(/\s*(min|°C|%)/gi, '').trim();
+  function stripUnit(val) {
+    return (val ?? '').toString().replace(/\s*(min|°C|%)/gi, '').trim();
   }
 
   // ✅ 在更新 PWM 显示时，连带更新 input 的 title 提示
@@ -715,11 +738,12 @@ $(function() {
     $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
       const select = $('#pwm-select');
       select.empty();
+      select.append('<option value="">-- Select PWM Controller --</option>');
       pwmList.forEach(pwm => {
 
         let display = pwm.chip + ' - ' + pwm.name;
         if (pwm.label) {
-          display += '（' + pwm.label + '）'; // 中文全角括号
+          display += '（' + pwm.label + '）';
         }
         select.append(`<option value="${pwm.sensor}">${display}</option>`);
       });
@@ -751,7 +775,7 @@ $(function() {
           $('#label-save-tip').fadeOut(500, function() {
             $(this).text('').show();
           });
-        }, 1500);
+        }, 2500);
         loadPWMOptions && loadPWMOptions();
         refreshAllFanBlockPWMLabels();
       } else {
@@ -761,7 +785,7 @@ $(function() {
           $('#label-save-tip').fadeOut(500, function() {
             $(this).css('color', '#4caf50').text('').show();
           });
-        }, 2000);
+        }, 3500);
       }
     }, 'json').fail(function() {
       alert('Error saving label (network or server error)');
@@ -773,7 +797,7 @@ $(function() {
       // 遍历每个 fan block 下拉框
       $('.pwm-controller').each(function() {
         const selected = $(this).val();
-        $(this).empty().append('<option value="">-- Select PWM --</option>');
+        $(this).empty().append('<option value="">-- Select PWM Controller --</option>');
         pwmList.forEach(pwm => {
           let display = pwm.chip + ' - ' + pwm.name;
           if (pwm.label) display += '（' + pwm.label + '）';
@@ -929,6 +953,46 @@ $(function() {
 
     $('#fan-form')[0].submit();
   }); 
+
+  $(document).on('click', '.switch-button-background, .switch-button-label', function() {
+    var $area = $(this).closest('.switch-area');
+    var $input = $area.find('input.syslog-switch');
+    var checked = !$input.prop('checked');
+    $input.prop('checked', checked);
+
+    // 切换class和文本
+    $area.find('.switch-button-label.on').css('display', checked ? '' : 'none');
+    $area.find('.switch-button-label.off').css('display', checked ? 'none' : '');
+    $area.find('.switch-button-background').toggleClass('checked', checked);
+
+    // 滑块动画
+    $area.find('.switch-button-button').css('left', checked ? '12px' : '-1px');
+
+    // 保存到后端
+    var cfgFile = $input.data('cfg');
+    saveSyslogSwitchState(cfgFile, checked);
+  });
+
+  $(document).on('change', '.syslog-switch', function() {
+    var checked = $(this).prop('checked');
+    var $area = $(this).closest('.switch-area');
+    $area.find('.switch-button-label.on').css('display', checked ? '' : 'none');
+    $area.find('.switch-button-label.off').css('display', checked ? 'none' : '');
+
+    var $bg = $area.find('.switch-button-background');
+    $bg.toggleClass('checked', checked);
+
+    var $btn = $bg.find('.switch-button-button');
+    $btn.css('left', checked ? '12px' : '-1px');
+  });
+
+  function saveSyslogSwitchState(cfgFile, checked) {
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+      op: 'setsyslog',
+      cfg: cfgFile,
+      enabled: checked ? 1 : 0
+    });
+  }
   
   $(document).on('click', '.delete-btn', function () {
     const block = $(this).closest('.fan-block');
@@ -944,6 +1008,9 @@ $(function() {
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'delete', file: file })
       .done(function () {
         block.remove();
+
+        const safeId = custom.replace(/[^a-zA-Z0-9_-]/g, '');
+        $('#syslog-row-' + safeId).remove();
 
         setTimeout(() => {
           // 保证始终至少有一个 fan block
@@ -991,12 +1058,12 @@ $(function() {
       .then(() => {
         setTimeout(() => {
           if (icon) icon.classList.remove('fa-spin');
-          btn.style.color = 'var(--blue-800)';
+          btn.style.color = '#0088cc';
           btn.style.pointerEvents = '';
         }, 1800);
       })
       .catch(err => {
-        btn.style.color = 'var(--blue-800)';
+        btn.style.color = '#0088cc';
         if (icon) icon.classList.remove('fa-spin');
         btn.style.pointerEvents = '';
         alert("Manual Run failed: " + err.message);
@@ -1124,10 +1191,10 @@ $(function() {
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
 
+  <!-- Fan block 区域保持原状 -->
   <div id="fan-area">
     <div id="fan-column-left" class="fan-column">
       <?php $i = 0;
-      // 左栏渲染 left 排序的 fan block
       foreach ($order_left as $file) {
         $path = "$cfg_dir/$file";
         if (is_file($path)) {
@@ -1139,10 +1206,8 @@ $(function() {
       }
       ?>
     </div>
-
     <div id="fan-column-right" class="fan-column">
       <?php
-      // 右栏渲染 right 排序的 fan block
       foreach ($order_right as $file) {
         $path = "$cfg_dir/$file";
         if (is_file($path)) {
@@ -1154,28 +1219,20 @@ $(function() {
       }
       ?>
     </div>
-
     <?php
-    // 渲染未出现在 order.cfg 的 cfg（包括 temp_*），平均插入 fan-column 较少的一边
     $seen = array_flip(array_merge($order_left, $order_right));
     $count_left = count($order_left);
     $count_right = count($order_right);
-
-    // 找出所有未出现在 order.cfg 的 .cfg 文件，包括 temp_*
     $unsorted_cfgs = array_filter($cfg_files, function ($path) use ($seen) {
       $basename = basename($path);
       return !isset($seen[$basename]);
     });
-
-    // 逐个渲染，动态分配左右栏
     foreach ($unsorted_cfgs as $path) {
       $basename = basename($path);
       $cfg = parse_ini_file($path);
       $cfg['file'] = $basename;
       $all_cfg[] = $cfg;
-
       $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels));
-
       if ($count_left <= $count_right) {
         $target = '#fan-column-left';
         $count_left++;
@@ -1183,49 +1240,207 @@ $(function() {
         $target = '#fan-column-right';
         $count_right++;
       }
-
       echo "<script>document.querySelector('$target').insertAdjacentHTML('beforeend', `$html`);</script>";
       $i++;
     }
     ?>
   </div>
-  <div style="clear:both; margin-top:15px; text-align: left;">
-    <button type="button" onclick="addFan()" title="Add a new fan configuration">➕ Add Fan</button>
-    <button type="button" id="apply-btn" title="Save all fan configurations">Apply All</button>
+
+  <div style="width:100%; text-align:center; margin-top:18px;">
+    <button type="button" onclick="addFan()">➕ Add Fan</button>
+    <button type="button" id="apply-btn">Apply All</button>
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
-  
- 
-  <dl>
-    <dt class="containerSettingsDt" style="text-align: left; margin-top: 12px; cursor: help;">
-      <span class="fa fa-info-circle" style="margin-right: 2px; margin-left: -10px;"></span>
-      <strong>Identify Fan</strong> <span style="font-weight: normal;">(Label PWM Controller):</span>
-    </dt>
-    <dd style="margin: 0; padding: 0;">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 60px;">
-        <select id="pwm-select">
-          <option value="">Select PWM</option>
-          <?php foreach ($pwms as $pwm): ?>
-            <option value="<?= htmlspecialchars($pwm['sensor']) ?>">
-              <?= htmlspecialchars($pwm['chip'] . ' - ' . $pwm['name']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-        <button type="button" class="btn" onclick="pauseFan($('#pwm-select').val(), this)">Identify</button>
-        <input type="text" id="pwm-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 150px;">
-        <button type="button" class="btn" onclick="savePWMLabel()">Save Label</button>
-        <span id="label-save-tip" style="margin-left: 8px; color: #4caf50;"></span>
-      </div>
-    </dd>
-  </dl>
 
-  <blockquote class="inline_help"">
-    <p><strong>Usage:</strong></p>
-    <p>
-      Identify pauses the selected fan for 30 seconds so you can determine its physical location.<br>
-      It is recommended to label each fan clearly, such as "Rear Fan" or "Top Fan".<br>
-      If your hardware configuration changes (adding/removing fans or BIOS update), please run Identify again to verify.
-    </p>
+  <dl>
+    <dt style="width:100%; font-size: 12px; text-align: center; cursor: help;">
+      <span class="fa fa-info-circle" style="margin-right:4px;"></span>
+      <strong>Help & Tips</strong>
+    </dt>
+    <dd>&nbsp;</dd>
+  </dl>
+  <blockquote class="inline_help">
+    <p><strong>Usage Guide:</strong></p>
+
+    <p><strong>Overview:</strong> Each fan block allows you to assign a PWM controller, set temperature thresholds, and specify which disks to monitor. Use the “Identify” feature to label physical fans, then assign appropriate names for clarity (e.g. Rear Fan, HDD Fan).</p>
+
+    <p><strong>Custom Name:</strong> This label will be used in logs, UI, and configuration files. Choose a clear name like “HDD_Bay” or “Rear” to identify each block. A valid name is required to save settings.</p>
+
+    <p><strong>Fan Control:</strong> Enables or disables the selected fan configuration. When disabled, temperature monitoring and fan speed control for that configuration will stop. In contrast, the <strong>Stop</strong> button fully halts the fanctrlplus service, stopping all fan updates and logging across all configurations.</p>
+
+    <p><strong>Fan Speed Range (%):</strong> This sets the minimum and maximum PWM duty cycle values. For example, a range of 40–80% means the fan will never go below 40% even when cool, and will cap at 80% under high temperatures.</p>
+
+    <p><strong>Low Temp / High Temp:</strong> These define the temperature range (°C) within which the fan will scale its speed. Below the Low Temp, the fan runs at the <strong>Min Speed %</strong>. Above the High Temp, it ramps up to the <strong>Max Speed %</strong>. Between these two values, the speed increases smoothly and <strong>linearly</strong>.</p>
+
+      <p style="margin: 10px 0 6px 0; font-weight: bold;">Example:</p>
+      <p style="margin: 4px 0 10px 0; padding: 8px 12px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; line-height: 1.6;">
+      <strong>How it works:</strong> The plugin uses a simple linear fan control <strong>algorithm</strong> to calculate the speed between your defined temperature points.<br><br>
+      <strong>Your setting:</strong><br>
+      Low Temp = 30°C, Min Speed = 40%<br>
+      High Temp = 50°C, Max Speed = 100%<br><br>
+      The fan speed will automatically scale <strong>linearly</strong> between these two:<br>
+      • 30°C → 40%<br>
+      • 35°C → 55%<br>
+      • 40°C → 70%<br>
+      • 45°C → 85%<br>
+      • 50°C → 100%
+      </p>
+
+    <p><strong>Interval:</strong> How often the plugin checks disk temperatures and adjusts fan speed accordingly. Shorter intervals provide more responsive cooling but may result in more frequent fan changes.</p>
+
+    <p><strong>Run Now:</strong> Immediately applies the current fan setting based on the latest temperature. Useful for testing or verifying PWM control and fan response without waiting for the next scheduled check.</p>
+
+    <p><strong>Disks:</strong> Only the selected disks will be monitored to control this fan. Multiple fans can monitor overlapping disks, and one disk can be assigned to multiple fans.</p>
+
+    <p><strong>Apply All:</strong> After making any change in a fan block (like temperature range, assigned disks, or name), the <strong>Apply All</strong> button will light up to indicate unsaved changes. Make sure to click it to confirm and save all modifications.</p>
+
+    <p><strong>Unlock & Reorder:</strong> Click the <span class="fa fa-lock"></span> icon in the upper-right corner to unlock fan configuration blocks. While unlocked, you can drag and drop blocks to change their order. The new layout will be saved automatically when you click the lock icon again to re-lock.</p>
+
+    <p><strong>Notes:</strong></p>
+    <ul>
+      <li>When setting low <strong>Min Speed %</strong>, always observe how your fan behaves. Some fans may stall or report 0 RPM if the PWM is too low.</li>
+      <li>Fan response to PWM 0 varies: some fans continue spinning slowly (e.g. 100–200 RPM), while others stop completely. This is determined by hardware, not software.</li>
+      <li>The temperature shown in syslog and the Dashboard tile is the <strong>highest</strong> among the selected disks, because the fan algorithm always uses the hottest one to determine the speed.</li>
+      <li>When the <strong>Stop</strong> button is clicked, all configured fans are set to 50% speed to prevent stalling or uncontrolled RPM spikes.</li>
+      <li>If you clicked <strong>Stop</strong> before rebooting, <strong>FanCtrl Plus</strong> will auto-start after the array is started. To fully disable fan control on reboot, either <strong>uninstall the plugin</strong> or <strong>disable all fan configurations</strong>.</li>
+      <li>If you uninstall <strong>FanCtrl Plus</strong>, it's recommended to reboot Unraid to restore fan control to the motherboard or BIOS defaults.</li>
+    </ul>
   </blockquote>
+
+
+  <!----------------- 两栏设置区块 --------------->
+  <div style="display: flex; justify-content: center; gap: 40px; align-items: flex-start; flex-wrap: wrap; margin-top: 20px;">
+
+    <!-- 左侧：Identify Fan -->
+    <div style="flex: 1 1 480px; min-width: 380px;">
+      <div class="title">
+        <span class="fa fa-tag" style="margin-right: 4px;"></span>
+        Identify Fan <span style="font-weight: normal;">(Label PWM Controller)</span>
+      </div>
+
+      <div style="margin: 20px auto;">
+        <dl>
+          <dt style="width:100%; font-size: 13px; text-align: center; cursor: help;">
+            <span class="fa fa-info-circle" style="margin-right:4px;"></span>
+            <strong>How to use</strong>
+          </dt>
+          <dd>&nbsp;</dd>
+        </dl>
+        <blockquote class="inline_help">
+          <p><strong>Usage Guide:</strong></p>
+          <p>
+            Use Identify to help locate each physical fan, then assign a custom label so it's easier to recognize later in the Fan Configuration section.
+          </p>
+          <ol style="padding-left: 20px; margin-top: 6px;">
+            <li>Select a <strong>PWM controller</strong> from the dropdown.</li>
+            <li>Click <strong>Identify</strong> to pause the fan for 30 seconds — locate the fan by observing which one stops.</li>
+            <li>Once identified, enter a clear label (e.g. <em>Rear Fan</em>, <em>Top Fan</em>) in the text field.</li>
+            <li>Click <strong>Save Label</strong> to store the name for future reference.</li>
+          </ol>
+          <p style="margin-top: 8px;">
+            <strong>To remove a label:</strong> select the desired PWM controller, leave the label input empty and click <strong>Save Label</strong>.
+          </p>
+          <p style="margin-top: 8px;">
+            <strong>Tip:</strong> If you change your hardware (e.g. adding/removing fans or BIOS updates), please re-run Identify to confirm fan mappings.
+          </p>
+        </blockquote>
+
+        <table style="margin: 30px auto 20px auto;">
+          <tr>
+            <td style="padding-right: 50px; padding-top: 6px; text-align: right;"><label for="pwm-select">Select PWM Controller:</label></td>
+            <td><select id="pwm-select" style="width: 200px; padding-top: 6px;"></select></td>
+          </tr>
+          <tr>
+            <td style="padding-right: 50px; padding-top: 6px; text-align: right;"><label for="pwm-label-input">Custom Label:</label></td>
+            <td><input type="text" id="pwm-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px;"></td>
+          </tr>
+        </table>
+
+        <div style="width: 100%; text-align: center; margin-top: 18px; margin-bottom: 20px; position: relative;">
+          <button type="button" class="btn" onclick="pauseFan($('#pwm-select').val(), this)" title="Click Identify to pause the fan for 30 seconds — locate the fan by observing which one stops.">Identify</button>
+          <button type="button" class="btn" onclick="savePWMLabel()" title="Click to save the label, or delete it by leaving the input empty and clicking again."">Save Label</button>
+          <span id="label-save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧：Syslog Switch -->
+    <div style="flex: 1 1 480px; min-width: 380px;">
+      <div class="title">
+        <span class="fa fa-sliders" style="margin-right: 4px;"></span>Syslog On/Off Setting
+      </div>
+
+      <div style="margin: 20px auto;">
+        <dl>
+          <dt style="width:100%; font-size: 13px; text-align: center; cursor: help;">
+            <span class="fa fa-info-circle" style="margin-right:4px;"></span>
+            <strong>How to use</strong>
+          </dt>
+          <dd>&nbsp;</dd>
+        </dl>
+        <blockquote class="inline_help">
+          <p><strong>Usage Guide:</strong></p>
+          <p>Syslog output is <strong>enabled by default</strong>. When active, each fan will report actions such as:</p>
+          <p style="margin: 4px 0; padding: 6px 10px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 13px;">
+            [HDDBay] Temp=53 → PWM=255 → RPM=2089
+          </p>
+          <p>This helps you track fan behavior in real time. However, if a particular fan changes frequently and generates too many log entries, you can <strong>disable logging</strong> for that fan.</p>
+          <p><strong>Note:</strong> The plugin only writes to syslog when the <strong>PWM value changes by more than 5</strong> compared to the previous value — small changes are ignored to reduce log noise.</p>
+        </blockquote>
+      </div>
+
+      <div style="max-width: 500px; margin: 32px auto;">
+        <table style="width: 100%; table-layout: fixed; font-size: 13px; margin: 20px auto; border-collapse: collapse;">
+          <colgroup>
+            <col style="width: 50%;">
+            <col style="width: 50%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th style="text-align: right; padding: 6px 80px 6px 8px;">Configured Fan</th>
+              <th style="text-align: left; padding: 6px 8px 6px 80px;">Syslog Switch</th>
+            </tr>
+          </thead>
+          <tbody>
+          <?php
+          $custom_seen = [];
+          foreach ($all_cfg as $cfg):
+            if (in_array($cfg['custom'], $custom_seen, true)) continue;
+            $custom_seen[] = $cfg['custom'];
+            $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
+          ?>
+            <tr id="syslog-row-<?= $custom_id ?>" style="border-bottom: 1px solid rgba(0,0,0,0.07);">
+              <td style="text-align: right; padding: 8px 80px 8px 8px;">
+                <span style="display: inline-block;">
+                  <?= htmlspecialchars($cfg['custom']) ?>
+                </span>
+              </td>
+              <td style="text-align: left; padding: 8px 8px 8px 80px;">
+                <span class="switch-area" style="display: inline-flex; align-items: center;">
+                  <div class="switch-button-background<?= ($cfg['syslog'] ?? "1") != "0" ? ' checked' : '' ?>"
+                    data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+                    style="width: 25px; height: 11px; margin-right: 6px;">
+                    <div class="switch-button-button"
+                        style="width: 12px; height: 11px; left: <?= ($cfg['syslog'] ?? "1") != "0" ? '12px' : '-1px' ?>;"></div>
+                  </div>
+                  <input type="checkbox"
+                    id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+                    class="syslog-switch"
+                    data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
+                    <?= ($cfg['syslog'] ?? "1") != "0" ? "checked" : "" ?>
+                    style="display:none;">
+                  <span class="switch-button-label on"
+                    style="<?= $cfg['syslog'] != "0" ? '' : 'display:none;' ?>; font-size: 12px;">ON</span>
+                  <span class="switch-button-label off"
+                    style="<?= $cfg['syslog'] != "0" ? 'display:none;' : '' ?>; font-size: 12px;">OFF</span>
+                </span>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 </form>

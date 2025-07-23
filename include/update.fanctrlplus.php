@@ -54,6 +54,17 @@ foreach ($_POST['#file'] as $i => $file) {
     exit;
   }
 
+  $syslog_val = '1'; // 默认 1（开启）
+  if (file_exists($old_path)) {
+    $lines = file($old_path, FILE_IGNORE_NEW_LINES);
+    foreach ($lines as $line) {
+      if (strpos($line, 'syslog=') === 0) {
+        $syslog_val = trim(explode('=', $line, 2)[1], "\" \t\r\n");
+        break;
+      }
+    }
+  }
+
   // 检查是否已有相同 custom 名称的 cfg
   foreach (glob("$cfgpath/{$plugin}_*.cfg") as $existing) {
     $info = parse_ini_file($existing);
@@ -118,7 +129,8 @@ foreach ($_POST['#file'] as $i => $file) {
     'low'        => $_POST['low'][$i] ?? '',
     'high'       => $_POST['high'][$i] ?? '',
     'interval'   => $_POST['interval'][$i] ?? '',
-    'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : ''
+    'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : '',
+    'syslog'     => $syslog_val
   ];
 
   $content = '';

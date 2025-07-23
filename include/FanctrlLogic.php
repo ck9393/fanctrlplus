@@ -178,7 +178,7 @@ switch ($op) {
     }
 
     $temp_file = "$cfg_dir/{$plugin}_temp_$index_cfg.cfg";
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"\nsyslog=\"1\"");
 
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     $cfg = parse_ini_file($temp_file);
@@ -192,6 +192,32 @@ switch ($op) {
     header('Content-Type: text/html; charset=utf-8');
     echo render_fan_block($cfg, $page_index, $pwms, $disks, $pwm_labels);
     exit;
+
+  case 'setsyslog':
+      $cfg_file = basename($_POST['cfg']);
+      $enabled = isset($_POST['enabled']) && $_POST['enabled'] == 1 ? 1 : 0;
+
+      $cfg_dir = "/boot/config/plugins/fanctrlplus";
+      $cfg_path = "$cfg_dir/$cfg_file";
+
+      if (file_exists($cfg_path)) {
+          $lines = file($cfg_path, FILE_IGNORE_NEW_LINES);
+          $found = false;
+          foreach ($lines as &$line) {
+              if (strpos($line, 'syslog=') === 0) {
+                  $line = 'syslog="' . $enabled . '"';
+                  $found = true;
+              }
+          }
+          if (!$found) {
+              $lines[] = 'syslog="' . $enabled . '"';
+          }
+          file_put_contents($cfg_path, implode("\n", $lines) . "\n");
+          echo json_encode(['status' => 'ok']);
+      } else {
+          echo json_encode(['status' => 'error', 'msg' => 'Config file not found']);
+      }
+      exit;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
