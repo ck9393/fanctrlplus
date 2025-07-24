@@ -1,0 +1,108 @@
+/* 黑色主题（适用于 Black / Gray） */
+.swal2-popup {
+  width: 520px !important;
+  font-size: 14px;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  background-color: #1e1e1e !important;
+  color: #f0f0f0 !important;
+  border: 1px solid #999;
+  border-radius: 10px;
+}
+
+/* 标题 */
+.swal2-title {
+  margin-bottom: 22px !important;
+  font-size: 20px;
+  color: #f0f0f0 !important;
+}
+
+/* 表格布局 */
+.swal2-popup table {
+  width: 100%;
+  margin: 0 auto 20px auto !important;
+  border-spacing: 0 10px;
+  background-color: transparent !important;
+  border-collapse: separate !important;
+}
+
+/* td 间距 */
+.swal2-popup td {
+  vertical-align: middle;
+  padding: 6px 8px;
+}
+
+/* 表单区与按钮之间留空 */
+.swal2-popup .swal2-html-container > div:last-child {
+  margin-top: 24px !important;
+}
+
+/* CLOSE按钮的间距 */
+.swal2-actions {
+  margin-top: 28px !important;
+}
+
+/* 文本对齐 */
+.swal2-html-container {
+  text-align: left;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 输入框与下拉框样式 */
+.swal2-popup input,
+.swal2-popup select {
+  border: none !important;
+  border-bottom: 1px solid #ccc !important;
+  padding: 6px 4px !important;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  color: #f0f0f0 !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* 焦点时高亮 */
+.swal2-popup input:focus,
+.swal2-popup select:focus {
+  border-bottom: 1px solid #888 !important;
+  outline: none !important;
+  background-color: #2a2a2a !important;
+}
+
+/* label 样式 */
+.swal2-popup label {
+  color: #f0f0f0 !important;
+  font-weight: 500;
+}
+
+/* 按钮居中 */
+.swal2-popup .swal2-actions {
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Identify / Save Label 的按钮内边距 */
+.swal2-popup #identify-btn,
+.swal2-popup #save-label-btn {
+  margin: 0 6px;
+}
+
+/* span 提示 */
+.save-tip {
+  display: inline-block;
+  width: 100px;
+  text-align: left;
+  margin-left: 8px;
+  color: #4caf50;
+  font-size: 13px;
+  line-height: 28px;
+}
+
+/* 全局 input 焦点时浅灰底 */
+input:focus {
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #888;
+  outline: none;
+}

@@ -2,7 +2,14 @@ Menu="Utilities"
 Title="FanCtrl Plus"
 Icon="fanctrlplus.png"
 ---
-<?php echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">'; ?>
+<?php
+echo <<<HTML
+<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
+<link rel="stylesheet" type="text/css" href="/webGui/styles/jquery.switchbutton.css">
+<link rel="stylesheet" href="/plugins/fanctrlplus/css/sweetalert2.min.css">
+<script src="/plugins/fanctrlplus/js/sweetalert2.min.js"></script>
+HTML;
+?>
 
 <script>
   window.addEventListener('DOMContentLoaded', () => {
@@ -140,16 +147,15 @@ $width = 300;
     transition: fill 0.3s ease;
 }
 
-.pwm-controller {
-  max-width: 300px !important;
-  width: 300px !important;
-  box-sizing: border-box;
-  padding-right: 24px;
-  overflow: hidden;
-  white-space: nowrap;
+.switch-button-label {
+  display: inline-block;
+  width: 30px;
+  text-align: center;
+  font-size: 12px;
 }
 
 /* 控制下拉关闭状态时主框宽度 */
+.pwm-controller,
 .ui-dropdownchecklist-selector-wrapper {
   max-width: 300px !important;
   width: 300px !important;
@@ -348,6 +354,17 @@ dt.containerSettingsDt {
 
 <script>
 const DEBUG = false; // ✅ 设置是否开启调试输出
+
+const themeClass = document.documentElement.className;
+let cssFile = '/plugins/fanctrlplus/css/fanctrlplus-swal2.css';
+if (themeClass.includes('Theme--black') || themeClass.includes('Theme--gray')) {
+  cssFile = '/plugins/fanctrlplus/css/fanctrlplus-swal2-dark.css';
+}
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = cssFile;
+document.head.appendChild(link);
 
 function updatePwmDropdowns() {
   // 统计所有已选PWM（不为空）
@@ -734,13 +751,73 @@ $(function() {
     $maxInput.attr('title', `Maximum speed: ${maxVal}% = ${pwmMax} PWM`);
   }
   
-  function loadPWMOptions() {
+  window.showIdentifyModal = function () {
+    const html = `
+      <table style="width:100%; margin: 12px 0;">
+        <tr>
+          <td style="padding-right: 12px; text-align: right;">
+            <label for="identify-modal-select">Select PWM Controller:</label>
+          </td>
+          <td>
+            <select id="identify-modal-select" style="width: 100%; max-width: 220px;"></select>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-right: 12px; text-align: right; padding-top: 12px;">
+            <label for="identify-modal-label-input">Custom Label:</label>
+          </td>
+          <td style="padding-top: 12px;">
+            <input type="text" id="identify-modal-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 100%; max-width: 220px;">
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align:center; margin-top: 16px;">
+        <button type="button" class="btn" id="identify-btn">Identify</button>
+        <button type="button" class="btn" id="save-label-btn">Save Label</button>
+        <span id="identify-modal-label-tip" class="save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
+      </div>
+    `;
+
+    Swal.fire({
+      title: 'Identify PWM Controller',
+      html: html,
+      showCancelButton: true,
+      showConfirmButton: false,
+      cancelButtonText: 'Close',
+      didOpen: () => {
+        const dummy = document.createElement('div');
+        dummy.tabIndex = -1;
+        dummy.style.position = 'absolute';
+        dummy.style.opacity = 0;
+        Swal.getPopup().prepend(dummy);
+        dummy.focus(); 
+        
+        loadPWMOptions('identify-modal-select');
+
+        document.getElementById('identify-btn')?.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const pwm = $('#identify-modal-select').val();
+          pauseFan(pwm, this);
+        });
+
+        document.getElementById('save-label-btn')?.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          savePWMLabel('identify-modal-select', 'identify-modal-label-input', 'identify-modal-label-tip');
+        });
+      }
+    });
+  };
+
+  window.loadPWMOptionsIntoElement = function(selector) {
     $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
-      const select = $('#pwm-select');
+      const select = $(selector);
+      if (!select.length) return;
       select.empty();
       select.append('<option value="">-- Select PWM Controller --</option>');
       pwmList.forEach(pwm => {
-
         let display = pwm.chip + ' - ' + pwm.name;
         if (pwm.label) {
           display += '（' + pwm.label + '）';
@@ -748,41 +825,65 @@ $(function() {
         select.append(`<option value="${pwm.sensor}">${display}</option>`);
       });
     }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error('Failed to load PWM list into ' + selector, textStatus, errorThrown);
+    });
+  };
+
+  window.loadPWMOptions = function(selectIds = ['pwm-select', 'identify-pwm-select', 'identify-modal-select']) {
+    if (!Array.isArray(selectIds)) {
+      selectIds = [selectIds];
+    }
+    $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
+      selectIds.forEach(selectId => {
+        const select = $('#' + selectId);
+        if (!select.length) return;
+        select.empty();
+        select.append('<option value="">-- Select PWM Controller --</option>');
+        pwmList.forEach(pwm => {
+          let display = pwm.chip + ' - ' + pwm.name;
+          if (pwm.label) {
+            display += '（' + pwm.label + '）';
+          }
+          select.append(`<option value="${pwm.sensor}">${display}</option>`);
+        });
+      });
+    }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error('Failed to load PWM list:', textStatus, errorThrown);
     });
-  }
+  };
 
-  window.savePWMLabel = function() {
-    const pwm = $('#pwm-select').val();
-    const label = $('#pwm-label-input').val().trim();
+  window.savePWMLabel = function(selectId, inputId, tipId) {
+    const select = $('#' + selectId);
+    const input = $('#' + inputId);
+    const tip = $('#' + tipId);
+    const pwm = select.val();
+    const label = input.val().trim();
 
     if (!pwm) {
       alert('Please select a PWM controller!');
       return;
     }
 
-    // 允许 label 为空，后端负责删除逻辑
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
       op: 'savelabel',
       pwm: pwm,
       label: label
     }, function(data) {
       if (data && data.status === 'ok') {
-        $('#pwm-label-input').val('');
-        $('#label-save-tip').css('color', '#4caf50')
+        input.val('');
+        tip.css('color', '#4caf50')
           .text(label ? 'Label saved!' : 'Label cleared!').show();
         setTimeout(() => {
-          $('#label-save-tip').fadeOut(500, function() {
+          tip.fadeOut(500, function() {
             $(this).text('').show();
           });
         }, 2500);
         loadPWMOptions && loadPWMOptions();
-        refreshAllFanBlockPWMLabels();
+        refreshAllFanBlockPWMLabels && refreshAllFanBlockPWMLabels();
       } else {
-        $('#label-save-tip').css('color', '#f44336')
-          .text('Failed to save');
+        tip.css('color', '#f44336').text('Failed to save');
         setTimeout(() => {
-          $('#label-save-tip').fadeOut(500, function() {
+          tip.fadeOut(500, function() {
             $(this).css('color', '#4caf50').text('').show();
           });
         }, 3500);
@@ -1347,19 +1448,19 @@ $(function() {
 
         <table style="margin: 30px auto 20px auto;">
           <tr>
-            <td style="padding-right: 50px; padding-top: 6px; text-align: right;"><label for="pwm-select">Select PWM Controller:</label></td>
-            <td><select id="pwm-select" style="width: 200px; padding-top: 6px;"></select></td>
+            <td style="padding-right: 50px; padding-top: 12px; text-align: right;"><label for="pwm-select">Select PWM Controller:</label></td>
+            <td><select id="identify-pwm-select" style="width: 200px; padding-top: 6px;"></select></td>
           </tr>
           <tr>
-            <td style="padding-right: 50px; padding-top: 6px; text-align: right;"><label for="pwm-label-input">Custom Label:</label></td>
-            <td><input type="text" id="pwm-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px;"></td>
+            <td style="padding-right: 50px; padding-top: 12px; text-align: right;"><label for="pwm-label-input">Custom Label:</label></td>
+            <td><input type="text" id="identify-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px;"></td>
           </tr>
         </table>
 
         <div style="width: 100%; text-align: center; margin-top: 18px; margin-bottom: 20px; position: relative;">
-          <button type="button" class="btn" onclick="pauseFan($('#pwm-select').val(), this)" title="Click Identify to pause the fan for 30 seconds — locate the fan by observing which one stops.">Identify</button>
-          <button type="button" class="btn" onclick="savePWMLabel()" title="Click to save the label, or delete it by leaving the input empty and clicking again."">Save Label</button>
-          <span id="label-save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
+          <button type="button" class="btn" onclick="pauseFan($('#identify-pwm-select').val(), this)" title="Click Identify to pause the fan for 30 seconds — locate the fan by observing which one stops.">Identify</button>
+          <button type="button" class="btn" onclick="savePWMLabel('identify-pwm-select', 'identify-label-input', 'identify-label-tip')" title="Click to save the label, or delete it by leaving the input empty and clicking again."">Save Label</button>
+          <span id="identify-label-tip" class="save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
         </div>
       </div>
     </div>
@@ -1389,58 +1490,57 @@ $(function() {
         </blockquote>
       </div>
 
-      <div style="max-width: 500px; margin: 32px auto;">
-        <table style="width: 100%; table-layout: fixed; font-size: 13px; margin: 20px auto; border-collapse: collapse;">
-          <colgroup>
-            <col style="width: 50%;">
-            <col style="width: 50%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th style="text-align: right; padding: 6px 80px 6px 8px;">Configured Fan</th>
-              <th style="text-align: left; padding: 6px 8px 6px 80px;">Syslog Switch</th>
-            </tr>
-          </thead>
-          <tbody>
-          <?php
-          $custom_seen = [];
-          foreach ($all_cfg as $cfg):
-            if (in_array($cfg['custom'], $custom_seen, true)) continue;
-            $custom_seen[] = $cfg['custom'];
-            $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
-          ?>
-            <tr id="syslog-row-<?= $custom_id ?>" style="border-bottom: 1px solid rgba(0,0,0,0.07);">
-              <td style="text-align: right; padding: 8px 80px 8px 8px;">
-                <span style="display: inline-block;">
-                  <?= htmlspecialchars($cfg['custom']) ?>
-                </span>
-              </td>
-              <td style="text-align: left; padding: 8px 8px 8px 80px;">
-                <span class="switch-area" style="display: inline-flex; align-items: center;">
-                  <div class="switch-button-background<?= ($cfg['syslog'] ?? "1") != "0" ? ' checked' : '' ?>"
-                    data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-                    style="width: 25px; height: 11px; margin-right: 6px;">
-                    <div class="switch-button-button"
-                        style="width: 12px; height: 11px; left: <?= ($cfg['syslog'] ?? "1") != "0" ? '12px' : '-1px' ?>;"></div>
-                  </div>
-                  <input type="checkbox"
-                    id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-                    class="syslog-switch"
-                    data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
-                    <?= ($cfg['syslog'] ?? "1") != "0" ? "checked" : "" ?>
-                    style="display:none;">
-                  <span class="switch-button-label on"
-                    style="<?= $cfg['syslog'] != "0" ? '' : 'display:none;' ?>; font-size: 12px;">ON</span>
-                  <span class="switch-button-label off"
-                    style="<?= $cfg['syslog'] != "0" ? 'display:none;' : '' ?>; font-size: 12px;">OFF</span>
-                </span>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
+<!-- 整体容器 -->
+<div class="tablesorter" style="margin: 32px auto; max-width: 500px;">
+  <table class="syslog-table tablesorter" style="width:100%;">
+    <thead>
+      <tr>
+        <th style="text-align:left;">Configured Fan</th>
+        <th style="text-align:center; width: 20%; padding: 8px;">Syslog Switch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php
+      $custom_seen = [];
+      foreach ($all_cfg as $cfg):
+        if (in_array($cfg['custom'], $custom_seen, true)) continue;
+        $custom_seen[] = $cfg['custom'];
+        $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
+      ?>
+      <tr class="sortable">
+        <td style="padding: 6px 10px;">
+          <?= htmlspecialchars($cfg['custom']) ?>
+        </td>
+        <td style="text-align:center; padding: 6px;">
+          <span class="switch-area" style="display: inline-flex; align-items: center;">
+            <div class="switch-button-background<?= ($cfg['syslog'] ?? "1") != "0" ? ' checked' : '' ?>"
+              data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+              style="width: 25px; height: 11px; margin-right: 6px;">
+              <div class="switch-button-button"
+                style="width: 12px; height: 11px; left: <?= ($cfg['syslog'] ?? "1") != "0" ? '12px' : '-1px' ?>;"></div>
+            </div>
+            <input type="checkbox"
+              id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+              class="syslog-switch"
+              data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
+              <?= ($cfg['syslog'] ?? "1") != "0" ? "checked" : "" ?>
+              style="display:none;">
+            <span class="switch-button-label on"
+              style="<?= $cfg['syslog'] != "0" ? '' : 'display:none;' ?>; font-size: 12px;">ON</span>
+            <span class="switch-button-label off"
+              style="<?= $cfg['syslog'] != "0" ? 'display:none;' : '' ?>; font-size: 12px;">OFF</span>
+          </span>
+        </td>
+      </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+</div>
     </div>
   </div>
-
 </form>
+
+<!---------- 弹窗范围 ---------->
+
+
+<button type="button" onclick="showIdentifyModal()">测试弹窗</button>
