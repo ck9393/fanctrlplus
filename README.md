@@ -26,4 +26,4 @@ Configuration is done through intuitive fan blocks with per-fan thresholds, inte
 Support / Issues
 - https://forums.unraid.net/topic/191722-plugin-fancrtl-plus/
 
-- If you find this plugin helpful, consider buying me a coffee! [![Donate](https://github.com/ck9393/fanctrlplus/raw/main/.github/assets/donate.png)](https://www.paypal.com/paypalme/cck9393)
+- If you find this plugin helpful, consider buying me a coffee! [![Donate](https://raw.githubusercontent.com/ck9393/fanctrlplus/dev/.github/assets/donate.png)](https://www.paypal.com/paypalme/cck9393)
