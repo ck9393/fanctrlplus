@@ -1,0 +1,108 @@
+/* 白色主题（默认适用于 Light / Azure） */
+
+/* 确保弹窗宽度和字体 */
+.swal2-popup {
+  width: 520px !important;
+  font-size: 14px;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: thin;
+  border-radius: 10px
+}
+
+/* 标题与表单间距 */
+.swal2-title {
+  margin-bottom: 22px !important;
+  font-size: 20px;
+}
+
+/* table 结构间距优化 */
+.swal2-popup table {
+  width: 100%;
+  margin: 0 auto 20px auto !important;
+  border-spacing: 0 10px; /* 增加行与行之间的垂直间距 */
+}
+
+/* label 与输入框靠得太近的问题 */
+.swal2-popup td {
+  vertical-align: middle;
+  padding: 6px 8px;
+}
+
+/* 下方按钮整体区域与表单分离 */
+.swal2-popup .swal2-html-container > div:last-child {
+  margin-top: 24px !important;
+}
+
+/* CLOSE按钮与其上面的按钮分隔清晰 */
+.swal2-actions {
+  margin-top: 28px !important;
+}
+
+/* 主体文字区域的对齐 */
+.swal2-html-container {
+  text-align: left;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.swal2-popup input,
+.swal2-popup select {
+  border: none !important;
+  border-bottom: 1px solid #000000 !important;
+  padding: 6px 4px !important;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+  border-radius: 0 !important;
+}
+
+/* 焦点时颜色变深 */
+.swal2-popup input:focus,
+.swal2-popup select:focus {
+  border-bottom: 1px solid #000000 !important;
+  outline: none !important;
+}
+
+/* label 标签统一样式 */
+.swal2-popup label {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+.swal2-popup table {
+  background-color: transparent !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}  
+
+/* 操作按钮居中 */
+.swal2-popup .swal2-actions {
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* 内嵌按钮区（Identify / Save Label）居中显示 */
+.swal2-popup #identify-btn,
+.swal2-popup #save-label-btn {
+  margin: 0 6px;
+}
+
+input:focus {
+  border-bottom: 1px solid #888;
+  background-color: #eee; /* 或 #eee，看主题 */
+  outline: none;
+}
+
+/* span 提示文字样式 */
+.save-tip {
+  display: inline-block;
+  width: 100px;
+  text-align: left;
+  margin-left: 8px;
+  color: #4caf50;
+  font-size: 13px;
+  line-height: 28px;
+}

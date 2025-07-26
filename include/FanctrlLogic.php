@@ -5,7 +5,8 @@ ini_set('display_errors', 1);
 $plugin  = 'fanctrlplus';
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
 $cfg_dir = "/boot/config/plugins/$plugin";
-$order_file = "$cfg_dir/order.json";
+$order_file = "$cfg_dir/order.cfg";
+$label_file = "$cfg_dir/pwm_labels.cfg";
 
 require_once "$docroot/plugins/$plugin/include/Common.php";
 require_once "/usr/local/emhttp/plugins/fanctrlplus/include/OrderManager.php";
@@ -108,6 +109,7 @@ switch ($op) {
       exec("$autofan start >/dev/null");
     }
     exit;
+    
   case 'pause':
     $pwm = $_GET['pwm'] ?? '';
     if (is_file($pwm)) {
@@ -127,6 +129,44 @@ switch ($op) {
       json_response(['status' => 'error', 'message' => 'Invalid PWM path']);
     }
     break;
+
+  case 'savelabel':
+    $pwm = $_POST['pwm'] ?? '';
+    $label = $_POST['label'] ?? '';
+
+    $label_file = "/boot/config/plugins/fanctrlplus/pwm_labels.cfg";
+    // 读取现有label
+    $lines = is_file($label_file) ? file($label_file, FILE_IGNORE_NEW_LINES) : [];
+    $found = false;
+
+    if (!$pwm) {
+      json_response(['status' => 'error', 'message' => 'Missing pwm']);
+      break;
+    }
+
+    // 空label表示删除
+    if ($label === '') {
+      $new_lines = [];
+      foreach ($lines as $line) {
+        if (strpos($line, "$pwm=") !== 0) $new_lines[] = $line;
+      }
+      file_put_contents($label_file, implode("\n", $new_lines) . "\n");
+      json_response(['status' => 'ok', 'message' => 'Label removed']);
+      break;
+    }
+
+    // 正常写入label
+    foreach ($lines as &$line) {
+      if (strpos($line, "$pwm=") === 0) {
+        $line = "$pwm=$label";
+        $found = true;
+        break;
+      }
+    }
+    if (!$found) $lines[] = "$pwm=$label";
+    file_put_contents($label_file, implode("\n", $lines) . "\n");
+    json_response(['status' => 'ok', 'message' => 'Label saved']);
+    break;
   
   case 'newtemp':
     $cfg_dir = "/boot/config/plugins/$plugin";
@@ -138,7 +178,7 @@ switch ($op) {
     }
 
     $temp_file = "$cfg_dir/{$plugin}_temp_$index_cfg.cfg";
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"100\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"\nsyslog=\"1\"");
 
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     $cfg = parse_ini_file($temp_file);
@@ -150,8 +190,34 @@ switch ($op) {
     $disks = list_valid_disks_by_id();
 
     header('Content-Type: text/html; charset=utf-8');
-    echo render_fan_block($cfg, $page_index, $pwms, $disks);
+    echo render_fan_block($cfg, $page_index, $pwms, $disks, $pwm_labels);
     exit;
+
+  case 'setsyslog':
+      $cfg_file = basename($_POST['cfg']);
+      $enabled = isset($_POST['enabled']) && $_POST['enabled'] == 1 ? 1 : 0;
+
+      $cfg_dir = "/boot/config/plugins/fanctrlplus";
+      $cfg_path = "$cfg_dir/$cfg_file";
+
+      if (file_exists($cfg_path)) {
+          $lines = file($cfg_path, FILE_IGNORE_NEW_LINES);
+          $found = false;
+          foreach ($lines as &$line) {
+              if (strpos($line, 'syslog=') === 0) {
+                  $line = 'syslog="' . $enabled . '"';
+                  $found = true;
+              }
+          }
+          if (!$found) {
+              $lines[] = 'syslog="' . $enabled . '"';
+          }
+          file_put_contents($cfg_path, implode("\n", $lines) . "\n");
+          echo json_encode(['status' => 'ok']);
+      } else {
+          echo json_encode(['status' => 'error', 'msg' => 'Config file not found']);
+      }
+      exit;
 
   case 'delete':
     $file = basename($_POST['file'] ?? '');
@@ -251,6 +317,23 @@ switch ($op) {
   case 'stop':
     shell_exec("/etc/rc.d/rc.fanctrlplus stop");
     json_response(['status' => 'stopped']);
+    break;
+
+  case 'getpwm':
+    $pwms = list_pwm();
+    $label_file = "/boot/config/plugins/fanctrlplus/pwm_labels.cfg";
+    $labels = [];
+    if (is_file($label_file)) {
+      foreach (file($label_file, FILE_IGNORE_NEW_LINES) as $line) {
+        if (preg_match('/^(.+?)=(.+)$/', $line, $m)) {
+          $labels[$m[1]] = $m[2];
+        }
+      }
+    }
+    foreach ($pwms as &$pwm) {
+      $pwm['label'] = $labels[$pwm['sensor']] ?? '';
+    }
+    json_response($pwms);
     break;
 }
 ?>

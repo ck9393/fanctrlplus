@@ -4,7 +4,7 @@ function list_pwm() {
   $out = [];
   exec("find /sys/devices -type f -iname 'pwm[0-9]' -exec dirname \"{}\" + | uniq", $chips);
   foreach ($chips as $chip) {
-    $name = is_file("$chip/name") ? file_get_contents("$chip/name") : '';
+    $name = is_file("$chip/name") ? trim(file_get_contents("$chip/name")) : '';
     foreach (glob("$chip/pwm[0-9]") as $pwm) {
       $out[] = ['chip' => $name, 'name' => basename($pwm), 'sensor' => $pwm];
     }

@@ -28,6 +28,23 @@ foreach ($_POST['#file'] as $i => $file) {
   $expected_file = $plugin . '_' . $custom . '.cfg';
   $old_path = "$cfgpath/$old_file";
   $new_path = "$cfgpath/$expected_file";
+  
+  // ✅ 先取原始文本
+  $pwm_percent_raw = $_POST['pwm_percent'][$i] ?? '';
+  $max_percent_raw = $_POST['max_percent'][$i] ?? '';
+
+  // ✅ 清除非数字并 fallback（空值 fallback: 40% / 100%）
+  $pwm_percent = is_numeric($p = preg_replace('/[^0-9]/', '', $pwm_percent_raw)) ? intval($p) : 40;
+  $max_percent = is_numeric($m = preg_replace('/[^0-9]/', '', $max_percent_raw)) ? intval($m) : 100;
+
+  $pwm = round($pwm_percent * 255 / 100);
+  $max_pwm = round($max_percent * 255 / 100);
+
+  // ✅ 温度 fallback（°C）
+  $low_raw = $_POST['low'][$i] ?? '';
+  $high_raw = $_POST['high'][$i] ?? '';
+  $low_temp = is_numeric($l = preg_replace('/[^0-9]/', '', $low_raw)) ? intval($l) : 40;
+  $high_temp = is_numeric($h = preg_replace('/[^0-9]/', '', $high_raw)) ? intval($h) : 60;
 
   // Custom Name 不能为空
   if ($custom === '') {
@@ -47,6 +64,17 @@ foreach ($_POST['#file'] as $i => $file) {
     ob_clean();
     echo json_encode(['status' => 'error', 'message' => 'Custom Name cannot contain "temp_".']);
     exit;
+  }
+
+  $syslog_val = '1'; // 默认 1（开启）
+  if (file_exists($old_path)) {
+    $lines = file($old_path, FILE_IGNORE_NEW_LINES);
+    foreach ($lines as $line) {
+      if (strpos($line, 'syslog=') === 0) {
+        $syslog_val = trim(explode('=', $line, 2)[1], "\" \t\r\n");
+        break;
+      }
+    }
   }
 
   // 检查是否已有相同 custom 名称的 cfg
@@ -108,11 +136,13 @@ foreach ($_POST['#file'] as $i => $file) {
     'label'      => $custom,
     'service'    => $_POST['service'][$i] ?? '0',
     'controller' => $controller,
-    'pwm'        => $_POST['pwm'][$i] ?? '',
-    'low'        => $_POST['low'][$i] ?? '',
-    'high'       => $_POST['high'][$i] ?? '',
+    'pwm'        => $pwm,
+    'max'        => $max_pwm,
+    'low'        => $low_temp,
+    'high'       => $high_temp,
     'interval'   => $_POST['interval'][$i] ?? '',
-    'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : ''
+    'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : '',
+    'syslog'     => $syslog_val
   ];
 
   $content = '';
