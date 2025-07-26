@@ -28,11 +28,23 @@ foreach ($_POST['#file'] as $i => $file) {
   $expected_file = $plugin . '_' . $custom . '.cfg';
   $old_path = "$cfgpath/$old_file";
   $new_path = "$cfgpath/$expected_file";
-  $pwm_percent = str_replace('%', '', $_POST['pwm_percent'][$i] ?? '0');
-  $max_percent = str_replace('%', '', $_POST['max_percent'][$i] ?? '100');
+  
+  // ✅ 先取原始文本
+  $pwm_percent_raw = $_POST['pwm_percent'][$i] ?? '';
+  $max_percent_raw = $_POST['max_percent'][$i] ?? '';
 
-  $pwm = round(intval($pwm_percent) * 255 / 100);
-  $max_pwm = round(intval($max_percent) * 255 / 100);
+  // ✅ 清除非数字并 fallback（空值 fallback: 40% / 100%）
+  $pwm_percent = is_numeric($p = preg_replace('/[^0-9]/', '', $pwm_percent_raw)) ? intval($p) : 40;
+  $max_percent = is_numeric($m = preg_replace('/[^0-9]/', '', $max_percent_raw)) ? intval($m) : 100;
+
+  $pwm = round($pwm_percent * 255 / 100);
+  $max_pwm = round($max_percent * 255 / 100);
+
+  // ✅ 温度 fallback（°C）
+  $low_raw = $_POST['low'][$i] ?? '';
+  $high_raw = $_POST['high'][$i] ?? '';
+  $low_temp = is_numeric($l = preg_replace('/[^0-9]/', '', $low_raw)) ? intval($l) : 40;
+  $high_temp = is_numeric($h = preg_replace('/[^0-9]/', '', $high_raw)) ? intval($h) : 60;
 
   // Custom Name 不能为空
   if ($custom === '') {
@@ -126,8 +138,8 @@ foreach ($_POST['#file'] as $i => $file) {
     'controller' => $controller,
     'pwm'        => $pwm,
     'max'        => $max_pwm,
-    'low'        => $_POST['low'][$i] ?? '',
-    'high'       => $_POST['high'][$i] ?? '',
+    'low'        => $low_temp,
+    'high'       => $high_temp,
     'interval'   => $_POST['interval'][$i] ?? '',
     'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : '',
     'syslog'     => $syslog_val

@@ -10,6 +10,16 @@ if (is_file($label_file)) {
 }
 
 function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
+  // PWM fallback（如果值为空，则默认 fallback 为 40% 和 100%）
+  $pwm_raw = isset($cfg['pwm']) && is_numeric($cfg['pwm']) ? $cfg['pwm'] : 102;
+  $max_raw = isset($cfg['max']) && is_numeric($cfg['max']) ? $cfg['max'] : 255;
+
+  $pwm_pct = round($pwm_raw * 100 / 255) . '%';
+  $max_pct = round($max_raw * 100 / 255) . '%';
+
+  // 温度 fallback（防止空值出现 UI 上显示为 0°C）
+  $low = isset($cfg['low']) && is_numeric($cfg['low']) ? intval($cfg['low']) : 40;
+  $high = isset($cfg['high']) && is_numeric($cfg['high']) ? intval($cfg['high']) : 60;
 
   ob_start();
   ?>
@@ -100,8 +110,10 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
                     name="pwm_percent[<?=$i?>]"
                     inputmode="numeric"
                     style="width: 100%; text-align: left;"
-                    value="<?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>%"
-                    title="Minimum speed: <?=round(($cfg['pwm'] ?? 0) * 100 / 255)?>% = <?=$cfg['pwm'] ?? 0?> PWM">
+                    value="<?=$pwm_pct?>"
+                    title="Minimum speed: <?=$pwm_pct?> = <?=htmlspecialchars($pwm_raw)?> PWM"
+                    placeholder="Min %">
+
 
               <!-- 中间波浪号 -->
               <span style="text-align: center;">~</span>
@@ -112,8 +124,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
                     name="max_percent[<?=$i?>]"
                     inputmode="numeric"
                     style="width: 100%; text-align: left;"
-                    value="<?=round(($cfg['max'] ?? 255) * 100 / 255)?>%"
-                    title="Maximum speed: <?=round(($cfg['max'] ?? 255) * 100 / 255)?>% = <?=$cfg['max'] ?? 255?> PWM">
+                    value="<?=$max_pct?>"
+                    title="Maximum speed: <?=$max_pct?> = <?=htmlspecialchars($max_raw)?> PWM"
+                    placeholder="Max %">
             </div>
           </td>
         </tr>
@@ -130,8 +143,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
                     class="low-temp-input"
                     inputmode="numeric"
                     style="width: 100%; text-align: left;"
-                    value="<?=intval($cfg['low'] ?? 40)?>°C"
-                    title="Low Temp: <?=intval($cfg['low'] ?? 40)?>°C">
+                    value="<?=$low?>°C"
+                    title="Low Temp: <?=intval($cfg['low'] ?? 40)?>°C"
+                    placeholder="Low °C">
 
               <!-- 中间波浪号 -->
               <span style="text-align: center;">~</span>
@@ -143,8 +157,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
                     class="high-temp-input"
                     inputmode="numeric"
                     style="width: 100%; text-align: left;"
-                    value="<?=intval($cfg['high'] ?? 60)?>°C"
-                    title="High Temp: <?=intval($cfg['high'] ?? 60)?>°C">
+                    value="<?=$high?>°C"
+                    title="High Temp: <?=intval($cfg['high'] ?? 60)?>°C"
+                    placeholder="High °C">
 
             </div>
           </td>

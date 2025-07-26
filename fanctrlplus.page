@@ -616,6 +616,7 @@ $(function() {
       updateAllFanStatus();
       ensureColumnDroppable();
       updatePwmDropdowns();
+      bindPWMChangeHandlers();
 
       setTimeout(() => {
         updateAllFanStatus();
@@ -623,9 +624,9 @@ $(function() {
         bindUnitInputs([
           { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
           { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
-          { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 0, max: 100 },
-          { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 0, max: 100 },
-          { selector: 'input[id^="interval_input_"]', unit: ' min', min: 0, max: 60 }
+          { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
+          { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
+          { selector: 'input[id^="interval_input_"]', unit: ' min', min: 1, max: 60 }
         ]);
 
         bindFanSpeedEvents();
@@ -715,11 +716,12 @@ $(function() {
     bindUnitInputs([
       { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
       { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
-      { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 0, max: 100 },
-      { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 0, max: 100 },
-      { selector: 'input[id^="interval_input_"]', unit: ' min', min: 0, max: 60 }
+      { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
+      { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
+      { selector: 'input[id^="interval_input_"]', unit: ' min', min: 1, max: 60 }
     ]);
     loadPWMOptions();
+    bindPWMChangeHandlers();
   });
 
   function stripUnit(val) {
@@ -731,28 +733,42 @@ $(function() {
     const $minInput = $(`#pwm_percent_input_${i}`);
     const $maxInput = $(`#max_percent_input_${i}`);
 
-    let minVal = sanitizePercent($minInput.val());
-    let maxVal = sanitizePercent($maxInput.val());
+    let rawMin = stripUnit($minInput.val());
+    let rawMax = stripUnit($maxInput.val());
+
+    if (!rawMin && !rawMax) return;
+
+    let minVal = parseInt(rawMin || 0);
+    let maxVal = parseInt(rawMax || 0);
 
     minVal = Math.min(Math.max(minVal, 0), 100);
     maxVal = Math.min(Math.max(maxVal, 0), 100);
 
-    $minInput.val(`${minVal}%`);
-    $maxInput.val(`${maxVal}%`);
+    if (rawMin) $minInput.val(`${minVal}%`);
+    if (rawMax) $maxInput.val(`${maxVal}%`);
 
     const pwmMin = Math.round(minVal * 255 / 100);
     const pwmMax = Math.round(maxVal * 255 / 100);
 
-    $(`#pwm_display_min_${i}`).text(`（${pwmMin} PWM）`);
-    $(`#pwm_display_max_${i}`).text(`（${pwmMax} PWM）`);
+    $(`#pwm_display_min_${i}`).text(rawMin ? `（${pwmMin} PWM）` : '');
+    $(`#pwm_display_max_${i}`).text(rawMax ? `（${pwmMax} PWM）` : '');
 
-    // ✅ 实时更新 title
-    $minInput.attr('title', `Minimum speed: ${minVal}% = ${pwmMin} PWM`);
-    $maxInput.attr('title', `Maximum speed: ${maxVal}% = ${pwmMax} PWM`);
+    $minInput.attr('title', rawMin ? `Minimum speed: ${minVal}% = ${pwmMin} PWM` : '');
+    $maxInput.attr('title', rawMax ? `Maximum speed: ${maxVal}% = ${pwmMax} PWM` : '');
   }
-  
-  window.showIdentifyModal = function () {
+  // Identify 弹窗块
+  function showIdentifyModal(pwm = '') {
     const html = `
+      <div style="font-size: 13px; margin-bottom: 12px; line-height: 1.5;">
+        You’ve selected a PWM controller that hasn’t been labeled yet.
+        <br>
+        To help identify which physical fan it controls, you can click <b>Identify</b> to <b>pause it for 30 seconds</b> and observe which fan stops.
+        <br>
+        Then enter a custom label for future reference.
+        <br><br>
+        If you don’t need to identify it now, just click <b>Close</b> to continue setting up.<br>
+        This feature is also available anytime in the <b>Identify PWM Controller</b> section below.
+      </div>
       <table style="width:100%; margin: 12px 0;">
         <tr>
           <td style="padding-right: 12px; text-align: right;">
@@ -776,40 +792,44 @@ $(function() {
         <button type="button" class="btn" id="identify-btn">Identify</button>
         <button type="button" class="btn" id="save-label-btn">Save Label</button>
         <span id="identify-modal-label-tip" class="save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
-      </div>
-    `;
+      </div>`;
 
-    Swal.fire({
-      title: 'Identify PWM Controller',
-      html: html,
-      showCancelButton: true,
-      showConfirmButton: false,
-      cancelButtonText: 'Close',
-      didOpen: () => {
-        const dummy = document.createElement('div');
-        dummy.tabIndex = -1;
-        dummy.style.position = 'absolute';
-        dummy.style.opacity = 0;
-        Swal.getPopup().prepend(dummy);
-        dummy.focus(); 
-        
-        loadPWMOptions('identify-modal-select');
+      Swal.fire({
+        title: 'Identify PWM Controller',
+        html: html,
+        showCancelButton: true,
+        showConfirmButton: false,
+        cancelButtonText: 'Close',
+        customClass: 'wide-swal',
+        didOpen: () => {
 
-        document.getElementById('identify-btn')?.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          const pwm = $('#identify-modal-select').val();
-          pauseFan(pwm, this);
-        });
+          const dummy = document.createElement('div');
+          dummy.tabIndex = -1;
+          dummy.style.position = 'absolute';
+          dummy.style.opacity = 0;
+          Swal.getPopup().prepend(dummy);
+          dummy.focus();
 
-        document.getElementById('save-label-btn')?.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          savePWMLabel('identify-modal-select', 'identify-modal-label-input', 'identify-modal-label-tip');
-        });
-      }
-    });
-  };
+          // 加载并选中 pwm
+          if (pwm) {
+            loadPWMOptions('identify-modal-select', pwm);
+          } else {
+            loadPWMOptions('identify-modal-select');
+          }
+
+          // 绑定按钮事件照旧
+          $('#identify-btn').off('click').on('click', function () {
+            const pwmVal = $('#identify-modal-select').val();
+            pauseFan(pwmVal, this);
+          });
+
+          $('#save-label-btn').off('click').on('click', function () {
+            savePWMLabel('identify-modal-select', 'identify-modal-label-input', 'identify-modal-label-tip');
+          });
+        }
+      });
+    };
+  window.showIdentifyModal = showIdentifyModal;  
 
   window.loadPWMOptionsIntoElement = function(selector) {
     $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
@@ -828,24 +848,34 @@ $(function() {
       console.error('Failed to load PWM list into ' + selector, textStatus, errorThrown);
     });
   };
+  
 
-  window.loadPWMOptions = function(selectIds = ['pwm-select', 'identify-pwm-select', 'identify-modal-select']) {
+  window.loadPWMOptions = function(selectIds = ['pwm-select', 'identify-pwm-select', 'identify-modal-select'], selectedPWM = '') {
     if (!Array.isArray(selectIds)) {
       selectIds = [selectIds];
     }
+
     $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
       selectIds.forEach(selectId => {
         const select = $('#' + selectId);
         if (!select.length) return;
+
         select.empty();
         select.append('<option value="">-- Select PWM Controller --</option>');
+
         pwmList.forEach(pwm => {
           let display = pwm.chip + ' - ' + pwm.name;
-          if (pwm.label) {
-            display += '（' + pwm.label + '）';
-          }
-          select.append(`<option value="${pwm.sensor}">${display}</option>`);
+          if (pwm.label) display += `（${pwm.label}）`;
+
+          // 判断是否选中
+          const isSelected = (selectedPWM && pwm.sensor === selectedPWM) ? ' selected' : '';
+          select.append(`<option value="${pwm.sensor}"${isSelected}>${display}</option>`);
         });
+
+        // 如果传了 selectedPWM 但找不到匹配选项，强制设置
+        if (selectedPWM && !select.val()) {
+          select.val(selectedPWM);
+        }
       });
     }).fail(function(jqXHR, textStatus, errorThrown) {
       console.error('Failed to load PWM list:', textStatus, errorThrown);
@@ -893,19 +923,58 @@ $(function() {
     });
   }
 
+  let pwmLabelMap = {};
+  function updatePWMLabelMap() {
+    $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
+      pwmLabelMap = {};
+      pwmList.forEach(pwm => {
+        pwmLabelMap[pwm.sensor] = pwm.label || '';
+      });
+    });
+  }
+
+  function bindPWMChangeHandlers() {
+    $('.pwm-controller').off('change').on('change', function () {
+      const selectedPWM = $(this).val();
+      if (!selectedPWM) return;
+
+      // 查询当前 PWM 是否有 label
+      $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function (pwmList) {
+        const match = pwmList.find(pwm => pwm.sensor === selectedPWM);
+        if (match && !match.label) {
+          // 如果该 PWM 没有 label，才弹窗
+          showIdentifyModal(selectedPWM);
+        }
+      });
+    });
+  }
+
   function refreshAllFanBlockPWMLabels() {
     $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
-      // 遍历每个 fan block 下拉框
-      $('.pwm-controller').each(function() {
+      // 收集所有 fan block 已选中的 PWM
+      const usedPWMs = [];
+      $('.pwm-controller').each(function () {
+        const val = $(this).val();
+        if (val) usedPWMs.push(val);
+      });
+
+      $('.pwm-controller').each(function () {
         const selected = $(this).val();
         $(this).empty().append('<option value="">-- Select PWM Controller --</option>');
+
         pwmList.forEach(pwm => {
           let display = pwm.chip + ' - ' + pwm.name;
-          if (pwm.label) display += '（' + pwm.label + '）';
-          const isSelected = selected === pwm.sensor ? 'selected' : '';
-          $(this).append(`<option value="${pwm.sensor}" ${isSelected}>${display}</option>`);
+          if (pwm.label) display += `（${pwm.label}）`;
+
+          const isSelected = pwm.sensor === selected;
+          const isUsed = usedPWMs.includes(pwm.sensor) && !isSelected;
+
+          $(this).append(`<option value="${pwm.sensor}" ${isSelected ? 'selected' : ''} ${isUsed ? 'disabled' : ''}>${display}</option>`);
         });
       });
+
+      updatePWMLabelMap();
+      bindPWMChangeHandlers();
     });
   }
 
@@ -1040,6 +1109,32 @@ $(function() {
       } 
     });
 
+    let rangeValid = true;
+
+    $('.fan-block').each(function () {
+      const block = $(this);
+      const lowTemp = parseInt(stripUnit(block.find('input[name^="low["]').val()));
+      const highTemp = parseInt(stripUnit(block.find('input[name^="high["]').val()));
+      const pwmMin = parseInt(stripUnit(block.find('input[name^="pwm_percent["]').val()));
+      const pwmMax = parseInt(stripUnit(block.find('input[name^="max_percent["]').val()));
+      const name = block.find('.custom-name-input').val() || `#${$(this).index() + 1}`;
+
+      if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp > highTemp) {
+        alert(`Fan configuration "${name}": Low Temp cannot be higher than High Temp.`);
+        rangeValid = false;
+        return false;
+      }
+
+      if (!isNaN(pwmMin) && !isNaN(pwmMax) && pwmMin > pwmMax) {
+        alert(`Fan configuration "${name}": Minimum fan speed cannot be higher than Maximum.`);
+        rangeValid = false;
+        return false;
+      }
+    });
+
+    if (!rangeValid) 
+      return;
+
     if (!valid) {
       alert(errorMsg);
       return;
@@ -1086,6 +1181,10 @@ $(function() {
     var $btn = $bg.find('.switch-button-button');
     $btn.css('left', checked ? '12px' : '-1px');
   });
+
+  function refreshSyslogSettings() {
+    $('#syslog-settings-area').load('/Settings/fanctrlplus #syslog-settings-area > *');
+  }
 
   function saveSyslogSwitchState(cfgFile, checked) {
     $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
@@ -1281,6 +1380,7 @@ $(function() {
           op: 'saveorder',
           order: order
         }).done(function () {
+          refreshSyslogSettings();
         }).fail(function (jqXHR, textStatus, errorThrown) {
         });
       }
@@ -1292,7 +1392,7 @@ $(function() {
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">
   <input type="hidden" name="#include" value="plugins/fanctrlplus/include/update.fanctrlplus.php">
 
-  <!-- Fan block 区域保持原状 -->
+  <!--------------- Fan block 区域保持原状 --------------->
   <div id="fan-area">
     <div id="fan-column-left" class="fan-column">
       <?php $i = 0;
@@ -1353,6 +1453,7 @@ $(function() {
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
 
+  <!----------------- Help & Tips --------------->
   <dl>
     <dt style="width:100%; font-size: 12px; text-align: center; cursor: help;">
       <span class="fa fa-info-circle" style="margin-right:4px;"></span>
@@ -1369,9 +1470,15 @@ $(function() {
 
     <p><strong>Fan Control:</strong> Enables or disables the selected fan configuration. When disabled, temperature monitoring and fan speed control for that configuration will stop. In contrast, the <strong>Stop</strong> button fully halts the fanctrlplus service, stopping all fan updates and logging across all configurations.</p>
 
-    <p><strong>Fan Speed Range (%):</strong> This sets the minimum and maximum PWM duty cycle values. For example, a range of 40–80% means the fan will never go below 40% even when cool, and will cap at 80% under high temperatures.</p>
+    <p><strong>PWM Controller:</strong> Each fan is controlled by a specific PWM controller (e.g. <code>pwm1</code>, <code>pwm2</code>, etc). Select the controller that corresponds to the physical fan you want to manage.</p>
 
-    <p><strong>Low Temp / High Temp:</strong> These define the temperature range (°C) within which the fan will scale its speed. Below the Low Temp, the fan runs at the <strong>Min Speed %</strong>. Above the High Temp, it ramps up to the <strong>Max Speed %</strong>. Between these two values, the speed increases smoothly and <strong>linearly</strong>.</p>
+    <p>If the selected PWM hasn't been labeled yet, the system will automatically open the <strong>Identify PWM Controller</strong> popup to help you locate which fan it controls by temporarily pausing it for 30 seconds.</p>
+
+    <p>It's strongly recommended to <strong>label each PWM</strong> after identification for future reference. If you're not ready to label it now, simply click <strong>Close</strong> to continue setting up. You can use the <strong>Identify PWM Controller</strong> section below at any time to perform this task later.</p>
+
+    <p><strong>Fan Speed Range:</strong> This sets the minimum and maximum PWM duty cycle values. For example, a range of 40–80% means the fan will never go below 40% even when cool, and will cap at 80% under high temperatures.</p>
+
+    <p><strong>Temperature Range:</strong> These define the temperature range (°C) within which the fan will scale its speed. Below the Low Temp, the fan runs at the <strong>Min Speed %</strong>. Above the High Temp, it ramps up to the <strong>Max Speed %</strong>. Between these two values, the speed increases smoothly and <strong>linearly</strong>.</p>
 
       <p style="margin: 10px 0 6px 0; font-weight: bold;">Example:</p>
       <p style="margin: 4px 0 10px 0; padding: 8px 12px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; line-height: 1.6;">
@@ -1397,6 +1504,10 @@ $(function() {
 
     <p><strong>Unlock & Reorder:</strong> Click the <span class="fa fa-lock"></span> icon in the upper-right corner to unlock fan configuration blocks. While unlocked, you can drag and drop blocks to change their order. The new layout will be saved automatically when you click the lock icon again to re-lock.</p>
 
+    <p><strong>Identify PWM Controller:</strong> Use this tool to help locate which physical fan is linked to each PWM controller. After identification, adding a custom label makes it easier to recognize and configure later.</p>
+
+    <p><strong>Syslog Setting:</strong> Enable or disable syslog logging for each fan individually. When enabled, changes in temperature and fan speed will be recorded in the system log. If a fan setup is already stable or updates too frequently, you can turn off its logging to reduce clutter.</p>
+
     <p><strong>Notes:</strong></p>
     <ul>
       <li>When setting low <strong>Min Speed %</strong>, always observe how your fan behaves. Some fans may stall or report 0 RPM if the PWM is too low.</li>
@@ -1408,15 +1519,14 @@ $(function() {
     </ul>
   </blockquote>
 
-
   <!----------------- 两栏设置区块 --------------->
   <div style="display: flex; justify-content: center; gap: 40px; align-items: flex-start; flex-wrap: wrap; margin-top: 20px;">
 
-    <!-- 左侧：Identify Fan -->
+    <!-- 左侧：Identify PWM Controller -->
     <div style="flex: 1 1 480px; min-width: 380px;">
       <div class="title">
         <span class="fa fa-tag" style="margin-right: 4px;"></span>
-        Identify Fan <span style="font-weight: normal;">(Label PWM Controller)</span>
+        Identify PWM Controller</span>
       </div>
 
       <div style="margin: 20px auto;">
@@ -1468,7 +1578,7 @@ $(function() {
     <!-- 右侧：Syslog Switch -->
     <div style="flex: 1 1 480px; min-width: 380px;">
       <div class="title">
-        <span class="fa fa-sliders" style="margin-right: 4px;"></span>Syslog On/Off Setting
+        <span class="fa fa-sliders" style="margin-right: 4px;"></span>Syslog Setting
       </div>
 
       <div style="margin: 20px auto;">
@@ -1490,57 +1600,54 @@ $(function() {
         </blockquote>
       </div>
 
-<!-- 整体容器 -->
-<div class="tablesorter" style="margin: 32px auto; max-width: 500px;">
-  <table class="syslog-table tablesorter" style="width:100%;">
-    <thead>
-      <tr>
-        <th style="text-align:left;">Configured Fan</th>
-        <th style="text-align:center; width: 20%; padding: 8px;">Syslog Switch</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php
-      $custom_seen = [];
-      foreach ($all_cfg as $cfg):
-        if (in_array($cfg['custom'], $custom_seen, true)) continue;
-        $custom_seen[] = $cfg['custom'];
-        $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
-      ?>
-      <tr class="sortable">
-        <td style="padding: 6px 10px;">
-          <?= htmlspecialchars($cfg['custom']) ?>
-        </td>
-        <td style="text-align:center; padding: 6px;">
-          <span class="switch-area" style="display: inline-flex; align-items: center;">
-            <div class="switch-button-background<?= ($cfg['syslog'] ?? "1") != "0" ? ' checked' : '' ?>"
-              data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-              style="width: 25px; height: 11px; margin-right: 6px;">
-              <div class="switch-button-button"
-                style="width: 12px; height: 11px; left: <?= ($cfg['syslog'] ?? "1") != "0" ? '12px' : '-1px' ?>;"></div>
-            </div>
-            <input type="checkbox"
-              id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-              class="syslog-switch"
-              data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
-              <?= ($cfg['syslog'] ?? "1") != "0" ? "checked" : "" ?>
-              style="display:none;">
-            <span class="switch-button-label on"
-              style="<?= $cfg['syslog'] != "0" ? '' : 'display:none;' ?>; font-size: 12px;">ON</span>
-            <span class="switch-button-label off"
-              style="<?= $cfg['syslog'] != "0" ? 'display:none;' : '' ?>; font-size: 12px;">OFF</span>
-          </span>
-        </td>
-      </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
-</div>
+      <div id="syslog-settings-area">
+        <div class="tablesorter" style="margin: 32px auto; max-width: 500px;">
+          <table class="syslog-table tablesorter" style="width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Configured Fan</th>
+                <th style="text-align:center; width: 20%; padding: 8px;">Syslog Switch</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php
+              $custom_seen = [];
+              foreach ($all_cfg as $cfg):
+                if (empty($cfg['custom']) || strpos($cfg['file'], '_temp_') !== false) continue;
+                if (in_array($cfg['custom'], $custom_seen, true)) continue;
+                $custom_seen[] = $cfg['custom'];
+                $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
+              ?>
+              <tr class="sortable" id="syslog-row-<?= $custom_id ?>">
+                <td style="padding: 6px 10px;">
+                  <?= htmlspecialchars($cfg['custom']) ?>
+                </td>
+                <td style="text-align:center; padding: 6px;">
+                  <span class="switch-area" style="display: inline-flex; align-items: center;">
+                    <div class="switch-button-background<?= ($cfg['syslog'] ?? "1") != "0" ? ' checked' : '' ?>"
+                      data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+                      style="width: 25px; height: 11px; margin-right: 6px;">
+                      <div class="switch-button-button"
+                        style="width: 12px; height: 11px; left: <?= ($cfg['syslog'] ?? "1") != "0" ? '12px' : '-1px' ?>;"></div>
+                    </div>
+                    <input type="checkbox"
+                      id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+                      class="syslog-switch"
+                      data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
+                      <?= ($cfg['syslog'] ?? "1") != "0" ? "checked" : "" ?>
+                      style="display:none;">
+                    <span class="switch-button-label on"
+                      style="<?= $cfg['syslog'] != "0" ? '' : 'display:none;' ?>; font-size: 12px;">ON</span>
+                    <span class="switch-button-label off"
+                      style="<?= $cfg['syslog'] != "0" ? 'display:none;' : '' ?>; font-size: 12px;">OFF</span>
+                  </span>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>  
     </div>
   </div>
 </form>
-
-<!---------- 弹窗范围 ---------->
-
-
-<button type="button" onclick="showIdentifyModal()">测试弹窗</button>

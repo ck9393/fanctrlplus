@@ -94,7 +94,7 @@
 </CHANGES>
 
 
-<!-- 清理旧 txz -->
+<!-- 清理旧 .txz -->
 <FILE Run="/bin/bash">
 <INLINE>
 #!/bin/bash
@@ -111,23 +111,23 @@ fi
 <MD5>&MD5;</MD5>
 </FILE>
 
-<!-- 启动 array monitor 守护脚本 -->
+<!-- 启动 array monitor 守护脚本，并注册 rc.fanctrlplus -->
 <FILE Run="/bin/bash">
 <INLINE>
 <![CDATA[
 #!/bin/bash
 
-# 确保 rc.fanctrlplus 注册进 /etc/rc.d（Unraid 会调用这里）
+# 注册 rc.fanctrlplus 到 /etc/rc.d
 src="/usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus"
 dst="/etc/rc.d/rc.fanctrlplus"
 if [ -f "$src" ]; then
 ln -sf "$src" "$dst"
 fi
 
-# 若之前启动过，先杀掉
+# 杀掉旧的 array_monitor 实例
 pkill -f "/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
 
-# 启动 array monitor 守护脚本
+# 启动新的 array_monitor 守护脚本
 script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
 if [ -x "$script" ]; then
 nohup "$script" >/dev/null 2>&1 &
@@ -154,7 +154,7 @@ exit 0
 /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus stop 2>/dev/null
 pkill -f array_monitor.sh
 
-# 清理插件文件和注册的 rc.d 启动脚本
+# 删除插件目录和注册文件
 rm -rf /usr/local/emhttp/plugins/fanctrlplus
 rm -rf /boot/config/plugins/fanctrlplus
 rm -f /etc/rc.d/rc.fanctrlplus

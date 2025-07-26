@@ -1,4 +1,7 @@
 <?php
+// [DEPRECATED] This file was the early version of Fan Block rendering logic.
+// Replaced by FanBlockRender.php -> render_fan_block()
+// Safe to delete if not referenced elsewhere.
 $plugin = 'fanctrlplus';
 $index = isset($_GET['index']) ? (int)$_GET['index'] : 0;
 
