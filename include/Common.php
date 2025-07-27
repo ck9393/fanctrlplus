@@ -46,6 +46,21 @@ function list_valid_disks_by_id() {
     }
   }
 
+  // 映射 /dev/sdX → 非 ZFS Pool（btrfs, xfs）名（通过挂载点）
+  $dev_to_pool_fs = [];
+  $mounts = shell_exec("findmnt -rn -o SOURCE,TARGET,FSTYPE | grep -E 'btrfs|xfs'");
+  foreach (explode("\n", $mounts) as $line) {
+    $parts = preg_split('/\s+/', $line);
+    if (count($parts) === 3) {
+      [$dev, $mount, $fstype] = $parts;
+      $base = preg_replace('#[0-9]+$#', '', $dev); // /dev/sdj1 → /dev/sdj
+      // 过滤掉 array 的 mdX 磁盘
+      if (strpos($base, '/dev/md') === 0 || strpos($base, '/dev/loop') === 0) continue;
+      $pool_name = basename($mount); // 从挂载路径推断 pool 名
+      $dev_to_pool_fs[$base] = ucfirst($pool_name);
+    }
+  }
+
   // boot device
   $boot_dev = exec("findmnt -n -o SOURCE --target /boot 2>/dev/null");
   $boot_base = preg_replace('#[0-9]+$#', '', $boot_dev);
@@ -60,22 +75,29 @@ function list_valid_disks_by_id() {
     if (strpos($real, $boot_base) === 0) continue;
     $seen[] = $real;
 
+    $base = $real;
+
+    // 只对 sdX1 / nvme0n1p1 这类分区做 base 处理
+    if (preg_match('#^/dev/(sd[a-z]|nvme\d+n\d+)p?\d+$#', $real, $m)) {
+      $base = "/dev/" . $m[1];  // 去除分区编号
+    }
+
     $id = basename($dev);
     $label = preg_replace('/^(nvme|ata)-/', '', $id);
     $title = "$id → $real";
     $group = 'Others';
 
-    if (preg_match('#/dev/([a-zA-Z0-9]+)[p]?[0-9]*$#', $real, $m)) {
-      $base = "/dev/" . $m[1];
-      if (isset($dev_to_diskx[$base])) {
-        $label = $dev_to_diskx[$base] . " - " . $label;
-        $group = "Array";
-      } elseif (isset($dev_to_pool[$base])) {
-        $label .= " ($m[1])";
-        $group = $dev_to_pool[$base];
-      } else {
-        $label .= " ($m[1])";
-      }
+    if (isset($dev_to_diskx[$base])) {
+      $label = $dev_to_diskx[$base] . " - " . $label;
+      $group = "Array";
+    } elseif (isset($dev_to_pool[$base])) {
+      $label .= " (" . basename($base) . ")";
+      $group = $dev_to_pool[$base];
+    } elseif (isset($dev_to_pool_fs[$base])) {
+      $label .= " (" . basename($base) . ")";
+      $group = $dev_to_pool_fs[$base];
+    } else {
+      $label .= " (" . basename($base) . ")";
     }
 
     $groups[$group][] = [

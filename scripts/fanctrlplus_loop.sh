@@ -20,6 +20,7 @@ fi
 
 prev_pwm=-1
 
+# 计算 max_temp
 while true; do
   max_temp=0
   IFS=',' read -ra disks_list <<< "$disks"
@@ -29,18 +30,22 @@ while true; do
     real_path=$(realpath "$disk_path" 2>/dev/null)
     [[ ! -b "$real_path" ]] && continue
 
-    # 跳过休眠中的硬盘
     smartctl -n standby -A "$real_path" | grep -q "Device is in STANDBY" && continue
 
-    # 获取温度
     if [[ "$real_path" == /dev/nvme* ]]; then
       temp=$(smartctl -A "$real_path" | awk '/Temperature:/ {print $2; exit}')
     else
-      temp=$(smartctl -A "$real_path" | awk '/^194|Temperature_Celsius/ {print $10; exit}')
+      temp=$(smartctl -A "$real_path" | awk '
+        $1 == 190 || $1 == 194                 { print $10; exit }
+        $1 == "Temperature_Celsius"           { print $10; exit }
+        $1 == "Airflow_Temperature_Cel"       { print $10; exit }
+        $1 == "Current" && $3 == "Temperature:" { print $4; exit }
+      ')
     fi
 
     [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > max_temp )) && max_temp=$temp
   done
+
 
   # 计算 PWM 值
   if (( max_temp <= low )); then
