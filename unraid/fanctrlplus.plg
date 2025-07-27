@@ -1,13 +1,13 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.2.4">
+<!ENTITY version "1.3.0">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/unraid/&name;.plg">
 <!ENTITY source "/boot/config/plugins/&name;">
 <!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">
-<!ENTITY MD5 "c5ae0566dc2fa68b3e2c8c7d878f8e69">
+<!ENTITY MD5 "bfd974979f28ecd853dea388a66d2cca">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://forums.unraid.net/topic/191722-plugin-fancrtl-plus">
@@ -18,7 +18,22 @@
 
 <CHANGES>
 ###&version;
+- Replaced “Min PWM” with Fan Speed Range to allow setting both minimum and maximum fan speed
+- UI now automatically converts PWM values to 0–100%, with tooltips showing both % and raw PWM for reference
+- Added fallback protection: if input field is left empty, Fan Speed Range will default to 40%–100%.
+- Combined Low/High Temp fields into a single Temperature Range row for better usability
+- Added fallback protection: if input field is left empty, Temperature Range will default to 40°C–60°C.
+- Unit labels (%, °C, min) are now consistently shown in input fields for clarity
+- New Identify section allows assigning or removing labels for PWM controllers (replaces the old Pause 30s buttons)
+- If an unlabeled PWM is selected in a fan configuration, the Identify popup will automatically open for labeling
+- Added Syslog On/Off setting to reduce log noise for fan configurations where logging is not needed (enabled by default)
+- Syslog list now updates in real time to match the fan configuration order
+- Introduced a Help &amp; Tips section for inline guidance and explanations
+- Improved UI layout, tooltips, placeholders, and “How to Use” descriptions
+- **Fixed** temperature reading failures on certain SSDs and non-standard drives.
+- **Fixed** missing cache pool grouping for XFS/BTRFS drives in Include Disks selector.
 
+###1.2.4
 - Added "Run Now" button in UI and Dashboard
 - Reorder fan blocks with drag-and-drop support
 - Include Disk(s) shown as "Selected X Disks" with tooltip
