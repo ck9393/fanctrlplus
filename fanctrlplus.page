@@ -1454,13 +1454,15 @@ $(function() {
   </div>
 
   <!----------------- Help & Tips --------------->
-  <dl>
-    <dt style="width:100%; font-size: 12px; text-align: center; cursor: help;">
+  <div style="width:100%; text-align:center; margin-top:12px;"> 
+  <dl style="display: inline-block;">
+    <dt style="text-align: center; width: 90px; cursor: help;">
       <span class="fa fa-info-circle" style="margin-right:4px;"></span>
       <strong>Help & Tips</strong>
     </dt>
-    <dd>&nbsp;</dd>
+    <dd></dd>
   </dl>
+  
   <blockquote class="inline_help">
     <p><strong>Usage Guide:</strong></p>
 
@@ -1518,7 +1520,7 @@ $(function() {
       <li>If you uninstall <strong>FanCtrl Plus</strong>, it's recommended to reboot Unraid to restore fan control to the motherboard or BIOS defaults.</li>
     </ul>
   </blockquote>
-
+</div>
   <!----------------- 两栏设置区块 --------------->
   <div style="display: flex; justify-content: center; gap: 40px; align-items: flex-start; flex-wrap: wrap; margin-top: 20px;">
 
@@ -1529,9 +1531,9 @@ $(function() {
         Identify PWM Controller</span>
       </div>
 
-      <div style="margin: 20px auto;">
-        <dl>
-          <dt style="width:100%; font-size: 13px; text-align: center; cursor: help;">
+      <div style="width:100%; text-align:center; margin: 12px;">
+        <dl style="display: inline-block;">
+          <dt style="width:90px; font-size: 13px; cursor: help;">
             <span class="fa fa-info-circle" style="margin-right:4px;"></span>
             <strong>How to use</strong>
           </dt>
@@ -1581,9 +1583,9 @@ $(function() {
         <span class="fa fa-sliders" style="margin-right: 4px;"></span>Syslog Setting
       </div>
 
-      <div style="margin: 20px auto;">
-        <dl>
-          <dt style="width:100%; font-size: 13px; text-align: center; cursor: help;">
+      <div style="width:100%; text-align:center; margin: 12px;">
+        <dl style="display: inline-block;">
+          <dt style="width:90px; font-size: 13px; cursor: help;">
             <span class="fa fa-info-circle" style="margin-right:4px;"></span>
             <strong>How to use</strong>
           </dt>
