@@ -1565,7 +1565,7 @@ $(function() {
           </tr>
           <tr>
             <td style="padding-right: 50px; padding-top: 12px; text-align: right;"><label for="pwm-label-input">Custom Label:</label></td>
-            <td><input type="text" id="identify-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px;"></td>
+            <td><input type="text" id="identify-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px; margin: 0 10px 0 0;"></td>
           </tr>
         </table>
 

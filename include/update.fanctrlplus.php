@@ -93,7 +93,14 @@ foreach ($_POST['#file'] as $i => $file) {
   //重命名custom name后 cfg文件名同步重命名
   if ($old_file !== $expected_file) {
       if (file_exists($old_path)) {
-          rename($old_path, $new_path);
+          // detect case-only rename
+          if (strtolower($old_file) === strtolower($expected_file)) {
+              $tmp = $old_path . '.tmp';
+              rename($old_path, $tmp);
+              rename($tmp, $new_path);
+          } else {
+              rename($old_path, $new_path);
+          }
       }
       require_once "$docroot/plugins/$plugin/include/OrderManager.php";
       OrderManager::replaceFileName($old_file, $expected_file);
