@@ -26,11 +26,20 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
 
   // 如果启用并且守护进程仍在运行，才读取缓存值
   if ($enabled && $daemon_running) {
-    $temp = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
-    $rpm  = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
+    $temp_raw = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
+    $rpm      = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
 
-    $temp = (is_numeric($temp)) ? "{$temp}°C" : "-";
-    $rpm  = ($rpm !== "" && is_numeric($rpm)) ? $rpm : "-";
+    // 解析温度：如 "55 (CPU)" 或 "46 (Disk)"
+    if (preg_match('/^([0-9]+)\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
+      $temp_val = $matches[1];
+      $source   = $matches[2];
+      // 格式化：温度占2位，后加°C + 两个空格 + 来源
+      $temp = sprintf("%2d°C  (%s)", $temp_val, $source);
+    } else {
+      $temp = "-";
+    }
+
+    $rpm = ($rpm !== "" && is_numeric($rpm)) ? $rpm : "-";
     $status = '<span class="green-text">Active</span>';
   } else {
     $temp = "-";
@@ -41,6 +50,8 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $fans[] = [
     'label' => $label,
     'temp' => $temp,
+    'temp_raw' => $temp_val,
+    'temp_origin' => $source,
     'rpm'  => $rpm,
     'status' => $status
   ];

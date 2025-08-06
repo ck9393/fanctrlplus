@@ -116,6 +116,8 @@ foreach ($cfg_files as $path) {
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
 $width = 300;
+$cpu_sensors = detect_cpu_sensors();
+
 ?>
 
 <style>
@@ -338,6 +340,20 @@ dt.containerSettingsDt {
 }
 .fan-block.draggable { cursor: move !important; }
 .fan-block.ui-sortable-helper { cursor: grabbing !important; }
+
+.cpu-label.disabled {
+  opacity: 0.5;
+}
+
+.subhead {
+  font-weight: bold;
+  color: #000;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  padding-top: 6px;
+  padding-bottom: 0px;
+  text-transform: uppercase;
+}
 </style>
 
 <div class="fanctrl-header">
@@ -626,8 +642,15 @@ $(function() {
           { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
           { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
           { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
+          { selector: 'input[id^="cpu_low_temp_input_"]', unit: '°C', min: 1, max: 95 },
+          { selector: 'input[id^="cpu_high_temp_input_"]', unit: '°C', min: 1, max: 110 },
           { selector: 'input[id^="interval_input_"]', unit: ' min', min: 1, max: 60 }
         ]);
+
+        $html.find('select[id^="cpu-enable-"]').each(function () {
+          const index = this.id.replace('cpu-enable-', '');
+          window.handleCpuEnableChange(this, index);
+        });
 
         bindFanSpeedEvents();
       }, 100);
@@ -718,6 +741,8 @@ $(function() {
       { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
       { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
       { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
+      { selector: 'input[id^="cpu_low_temp_input_"]', unit: '°C', min: 1, max: 95 },
+      { selector: 'input[id^="cpu_high_temp_input_"]', unit: '°C', min: 1, max: 110 },
       { selector: 'input[id^="interval_input_"]', unit: ' min', min: 1, max: 60 }
     ]);
     loadPWMOptions();
@@ -988,7 +1013,11 @@ $(function() {
       low: stripUnit($block.find('input[name^="low["]').val()),
       high: stripUnit($block.find('input[name^="high["]').val()),
       interval: stripUnit($block.find('input[name^="interval["]').val()),
-      disks: $block.find('select[name^="disks["]').val()
+      disks: $block.find('select[name^="disks["]').val(),
+      cpu_enable: $block.find('select[name^="cpu_enable["]').val(),
+      cpu_sensor: $block.find('select[name^="cpu_sensor["]').val(),
+      cpu_min_temp: stripUnit($block.find('input[name^="cpu_min_temp["]').val()),
+      cpu_max_temp: stripUnit($block.find('input[name^="cpu_max_temp["]').val())
     };
     $block.data('original', original);
   }
@@ -1008,8 +1037,18 @@ $(function() {
         low: stripUnit($block.find('input[name^="low["]').val()),
         high: stripUnit($block.find('input[name^="high["]').val()),
         interval: stripUnit($block.find('input[name^="interval["]').val()),
-        disks: $block.find('select[name^="disks["]').val()
+        disks: $block.find('select[name^="disks["]').val(),
+        cpu_enable: $block.find('select[name^="cpu_enable["]').val(),
+        cpu_sensor: $block.find('select[name^="cpu_sensor["]').val(),
+        cpu_min_temp: stripUnit($block.find('input[name^="cpu_min_temp["]').val()),
+        cpu_max_temp: stripUnit($block.find('input[name^="cpu_max_temp["]').val())
       };
+
+      if (original.cpu_enable === "0" && current.cpu_enable === "0") {
+        current.cpu_sensor = original.cpu_sensor;
+        current.cpu_min_temp = original.cpu_min_temp;
+        current.cpu_max_temp = original.cpu_max_temp;
+      }
       if (JSON.stringify(original) !== JSON.stringify(current)) {
         dirty = true;
       }
@@ -1117,16 +1156,24 @@ $(function() {
       const highTemp = parseInt(stripUnit(block.find('input[name^="high["]').val()));
       const pwmMin = parseInt(stripUnit(block.find('input[name^="pwm_percent["]').val()));
       const pwmMax = parseInt(stripUnit(block.find('input[name^="max_percent["]').val()));
+      const cpuLow = parseInt(stripUnit(block.find('input[name^="cpu_min_temp["]').val()));
+      const cpuHigh = parseInt(stripUnit(block.find('input[name^="cpu_max_temp["]').val()));
       const name = block.find('.custom-name-input').val() || `#${$(this).index() + 1}`;
 
       if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp > highTemp) {
-        alert(`Fan configuration "${name}": Low Temp cannot be higher than High Temp.`);
+        alert(`Fan configuration "${name}": Disk Low Temp cannot exceed High Temp.`);
+        rangeValid = false;
+        return false;
+      }
+
+        if (!isNaN(cpuLow) && !isNaN(cpuHigh) && cpuLow >= cpuHigh) {
+        alert(`Fan configuration "${name}": CPU Low Temp cannot exceed High Temp.`);
         rangeValid = false;
         return false;
       }
 
       if (!isNaN(pwmMin) && !isNaN(pwmMax) && pwmMin > pwmMax) {
-        alert(`Fan configuration "${name}": Minimum fan speed cannot be higher than Maximum.`);
+        alert(`Fan configuration "${name}": Minimum fan speed cannot exceed Maximum.`);
         rangeValid = false;
         return false;
       }
@@ -1141,6 +1188,10 @@ $(function() {
     }
 
     $('.interval-input, .low-temp-input, .high-temp-input, .pwm-percent-input, .max-percent-input').each(function(){
+      this.value = stripUnit(this.value);
+    });
+
+    $('.cpu-low-temp-input, .cpu-high-temp-input').each(function(){
       this.value = stripUnit(this.value);
     });
 
@@ -1386,7 +1437,60 @@ $(function() {
       }
     }
   updatePwmDropdowns();    
-});
+
+  window.handleCpuEnableChange = function(selectEl, index) {
+    const enabled = selectEl.value === "1";
+
+    // 选中所有 CPU 控制相关的 tr（包含 sensor 和 temp）
+    const rows = document.querySelectorAll(`.cpu-control-${index}`);
+    rows.forEach(row => {
+      row.querySelectorAll('.cpu-input').forEach(el => {
+        el.disabled = !enabled;
+        el.classList.toggle('disabled', !enabled);
+      });
+    });
+
+    document.querySelectorAll(`.cpu-control-${index} .cpu-label`).forEach(label => {
+      label.classList.toggle('disabled', !enabled);
+    });
+
+    // 若启用且输入为空，则填入默认温度
+    if (enabled) {
+      const lowInput  = document.querySelector(`#cpu_low_temp_input_${index}`);
+      const highInput = document.querySelector(`#cpu_high_temp_input_${index}`);
+
+      if (lowInput && lowInput.value.trim() === '') {
+        lowInput.value = '40°C';
+      }
+      if (highInput && highInput.value.trim() === '') {
+        highInput.value = '70°C';
+      }
+    }
+  };
+
+  // 初始化所有 block 的状态，并绑定 onchange
+  window.addEventListener('load', function () {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('select[id^="cpu-enable-"]').forEach(select => {
+        const index = select.id.replace('cpu-enable-', '');
+        window.handleCpuEnableChange(select, index);  // 初始状态应用
+
+        select.addEventListener('change', function () {
+          window.handleCpuEnableChange(this, index);
+        });
+      });
+    });
+  });
+  setTimeout(() => {
+    document.querySelectorAll('select[id^="cpu-enable-"]').forEach(select => {
+      const index = select.id.replace('cpu-enable-', '');
+      const enabled = select.value === "1";
+      document.querySelectorAll(`.cpu-control-${index} .cpu-label`).forEach(label => {
+        label.classList.toggle('disabled', !enabled);
+      });
+    });
+  }, 10);
+});  
 </script>
 
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">
@@ -1402,7 +1506,7 @@ $(function() {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
           $all_cfg[] = $cfg;
-          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels);
+          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels, $cpu_sensors);
         }
       }
       ?>
@@ -1415,7 +1519,7 @@ $(function() {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
           $all_cfg[] = $cfg;
-          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels);
+          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels, $cpu_sensors);
         }
       }
       ?>
@@ -1433,7 +1537,7 @@ $(function() {
       $cfg = parse_ini_file($path);
       $cfg['file'] = $basename;
       $all_cfg[] = $cfg;
-      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels));
+      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors));
       if ($count_left <= $count_right) {
         $target = '#fan-column-left';
         $count_left++;

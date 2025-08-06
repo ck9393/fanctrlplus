@@ -9,7 +9,7 @@ if (is_file($label_file)) {
   }
 }
 
-function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
+function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
   // PWM fallback（如果值为空，则默认 fallback 为 40% 和 100%）
   $pwm_raw = isset($cfg['pwm']) && is_numeric($cfg['pwm']) ? $cfg['pwm'] : 102;
   $max_raw = isset($cfg['max']) && is_numeric($cfg['max']) ? $cfg['max'] : 255;
@@ -64,6 +64,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
       <button type="button" class="delete-btn" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
 
       <table style="width:100%;">
+        <!-- Custom Name -->
         <tr>
           <td style="cursor: help;" title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">Custom Name</td>
           <td>
@@ -71,6 +72,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
           </td>
         </tr>
 
+        <!-- Fan Control Dropdown -->
         <tr>
           <td style="cursor: help;" title="Enable or disable this fan controller">Fan Control:</td>
           <td>
@@ -81,6 +83,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
           </td>
         </tr>
 
+
+
+        <!-- PWM Controller -->
         <tr>
           <td style="cursor: help;" title="Each fan corresponds to a PWM controller (pwm1, pwm2, etc). Select the one controlling this fan. You can use the Identify section below to locate and label each fan.">PWM Controller:</td>
           <td>
@@ -99,6 +104,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
           </td>
         </tr>
 
+        <!-- Fan Speed Range -->
         <tr>
           <td style="cursor: help;" title="Set the minimum and maximum fan speed (0–100%). % will be automatically converted to PWM. Hover to see actual values.">Fan Speed Range:</td>
           <td>
@@ -131,8 +137,54 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
           </td>
         </tr>
 
+        <!-- Interval -->
         <tr>
-          <td style="cursor: help;" title="Fan runs at the configured minimum speed if the highest selected disk temperature is at or below the Low Temp. Fan ramps up linearly and reaches maximum speed at or above the High Temp.">Temperature Range:</td>
+          <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval:</td>
+          <td>
+            <input type="text"
+                  id="interval_input_<?=$i?>"
+                  name="interval[<?=$i?>]"
+                  class="interval-input"
+                  inputmode="numeric"
+                  value="<?=htmlspecialchars(($cfg['interval'] ?? '') . ' min')?>"
+                  placeholder="Recommended: 1–5 min"
+                  style="width: 225px; display: inline-block; margin-right: 1px; text-align: left;">
+
+            <span class="fanctrlplus-interval-refresh"
+                  style="cursor: pointer; font-size: 13px; color: var(--blue-800); margin-left: 1px; vertical-align: middle;"
+                  title="Manual Run: Read current temperature and set fan speed immediately"
+                  data-label="<?=htmlspecialchars($cfg['custom'] ?? '')?>">
+              <span class="fa fa-refresh" style="font-size: 13px;"></span> Run Now
+            </span>
+          </td>
+        </tr>
+
+        <tr><td colspan="2" class="subhead">Disk Temperature Settings</td></tr>
+
+        <!-- Include Disk(s) -->
+        <tr>
+          <td style="cursor: help;" title="Select disks, NVMe drives, or other block devices to monitor for this fan.">Include Disk(s):</td>
+          <td>
+            <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:300px;">
+              <?php
+              $selected = explode(',', $cfg['disks'] ?? '');
+              foreach ($disks as $group => $entries):
+              ?>
+                <optgroup label="<?=htmlspecialchars($group)?>">
+                  <?php foreach ($entries as $disk):
+                    $sel = in_array($disk['id'], $selected) ? 'selected' : '';
+                  ?>
+                    <option value="<?=$disk['id']?>" <?=$sel?> title="<?=$disk['id']?>&#10;<?=$disk['dev']?>"><?=htmlspecialchars($disk['label'])?></option>
+                  <?php endforeach; ?>
+                </optgroup>
+              <?php endforeach; ?>
+            </select>
+          </td>
+        </tr>
+
+        <!-- Disk Temperature Range -->
+        <tr>
+          <td style="cursor: help;" title="Fan runs at the configured minimum speed if the highest selected disk temperature is at or below the Low Temp. Fan ramps up linearly and reaches maximum speed at or above the High Temp.">Disk Temperature Range:</td>
           <td>
             <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
 
@@ -165,44 +217,60 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels) {
           </td>
         </tr>
 
-        <tr>
-          <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval:</td>
-          <td>
-            <input type="text"
-                  id="interval_input_<?=$i?>"
-                  name="interval[<?=$i?>]"
-                  class="interval-input"
-                  inputmode="numeric"
-                  value="<?=htmlspecialchars(($cfg['interval'] ?? '') . ' min')?>"
-                  placeholder="Recommended: 1–5 min"
-                  style="width: 225px; display: inline-block; margin-right: 1px; text-align: left;">
+        <tr><td colspan="2" class="subhead">CPU Temperature Settings</td></tr>
 
-            <span class="fanctrlplus-interval-refresh"
-                  style="cursor: pointer; font-size: 13px; color: var(--blue-800); margin-left: 1px; vertical-align: middle;"
-                  title="Manual Run: Read current temperature and set fan speed immediately"
-                  data-label="<?=htmlspecialchars($cfg['custom'] ?? '')?>">
-              <span class="fa fa-refresh" style="font-size: 13px;"></span> Run Now
-            </span>
+        <!-- CPU Temp Monitoring Dropdown -->
+        <tr>
+          <td style="cursor: help;" title="Enable or disable monitoring CPU temperature for this fan.">CPU Temp Monitor:</td>
+          <td>
+            <select id="cpu-enable-<?=$i?>" name="cpu_enable[<?=$i?>]" onchange="handleCpuEnableChange(this, <?=$i?>);">
+              <option value="0" <?=($cfg['cpu_enable'] ?? '') != '1' ? 'selected' : ''?>>Disabled</option>
+              <option value="1" <?=($cfg['cpu_enable'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
+            </select>
           </td>
         </tr>
 
-        <tr>
-          <td style="cursor: help;" title="Select disks, NVMe drives, or other block devices to monitor for this fan.">Include Disk(s):</td>
+        <!-- CPU Sensor -->
+        <tr class="cpu-control cpu-control-<?=$i?>">
+          <td class="cpu-label" style="cursor: help;" title="Automatically selected the most reliable CPU temperature sensor. Change only if necessary.">CPU Sensor:</td>
           <td>
-            <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:300px;">
-              <?php
-              $selected = explode(',', $cfg['disks'] ?? '');
-              foreach ($disks as $group => $entries):
-              ?>
-                <optgroup label="<?=htmlspecialchars($group)?>">
-                  <?php foreach ($entries as $disk):
-                    $sel = in_array($disk['id'], $selected) ? 'selected' : '';
-                  ?>
-                    <option value="<?=$disk['id']?>" <?=$sel?> title="<?=$disk['id']?>&#10;<?=$disk['dev']?>"><?=htmlspecialchars($disk['label'])?></option>
-                  <?php endforeach; ?>
-                </optgroup>
+            <select name="cpu_sensor[<?=$i?>]" class="cpu-input" style="width: 300px;" <?=($cfg['cpu_enable'] ?? '') != '1' ? 'disabled' : ''?>>
+              <?php foreach ($cpu_sensors as $path => $label): ?>
+                <option value="<?=htmlspecialchars($path)?>" <?=($cfg['cpu_sensor'] ?? '') == $path ? 'selected' : ''?>><?=htmlspecialchars($label)?></option>
               <?php endforeach; ?>
             </select>
+          </td>
+        </tr>
+
+        <!-- CPU Temp Range -->
+        <tr class="cpu-control cpu-control-<?=$i?>">
+          <td class="cpu-label" style="cursor: help;" title="Fan runs at the configured minimum speed if the CPU temperature is at or below the Low Temp. Fan ramps up linearly and reaches maximum speed at or above the High Temp.">CPU Temperature Range:</td>
+          <td>
+            <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
+              <input type="text"
+                    id="cpu_low_temp_input_<?=$i?>"
+                    name="cpu_min_temp[<?=$i?>]"
+                    class="cpu-input"
+                    inputmode="numeric"
+                    style="width: 100%; text-align: left;"
+                    value="<?=htmlspecialchars(($cfg['cpu_min_temp'] ?? '') . '°C')?>"
+                    title="Low Temp: <?=intval($cfg['cpu_min_temp'] ?? 50)?>°C"
+                    placeholder="Low °C"
+                    <?=($cfg['cpu_enable'] ?? '') != '1' ? 'disabled' : ''?>>
+
+              <span style="text-align: center;">~</span>
+
+              <input type="text"
+                    id="cpu_high_temp_input_<?=$i?>"
+                    name="cpu_max_temp[<?=$i?>]"
+                    class="cpu-input"
+                    inputmode="numeric"
+                    style="width: 100%; text-align: left;"
+                    value="<?=htmlspecialchars(($cfg['cpu_max_temp'] ?? '') . '°C')?>"
+                    title="High Temp: <?=intval($cfg['cpu_max_temp'] ?? 75)?>°C"
+                    placeholder="High °C"
+                    <?=($cfg['cpu_enable'] ?? '') != '1' ? 'disabled' : ''?>>
+            </div>
           </td>
         </tr>
       </table>

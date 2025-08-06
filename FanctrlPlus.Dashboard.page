@@ -78,6 +78,16 @@ echo <<<STYLE
   display: inline-block;
   margin-bottom: 6px;
 }
+
+.fp-temp {
+  display: inline-block;
+  min-width: 42px;
+  margin-right: 4px;
+}
+.fp-origin {
+  font-size: 90%;
+  opacity: 0.7;
+}
 </style>
 STYLE;
 
@@ -98,7 +108,7 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tr class="header">
   <td>
     <span class="w26">NAME</span>
-    <span class="w18">TEMP</span>
+    <span class="w18">TEMP (SOURCE)</span>
     <span class="w18">RPM</span>
     <span class="w18">STATUS</span>
     <span class="w18">RUN</span>
@@ -112,6 +122,13 @@ EOT;
 function refreshSingleFan(custom) {
   fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(custom)}`)
     .then(() => setTimeout(updateFanctrlplusTile, 2000)); // 2秒后刷新界面
+}
+
+function formatTemp(raw) {
+  if (!raw || raw === "-") return "-";
+
+  const tempStr = raw.toString();
+  return (tempStr.length === 1 ? "&nbsp;" + tempStr : tempStr) + "°C";
 }
 
 function updateFanctrlplusTile() {
@@ -134,7 +151,17 @@ function updateFanctrlplusTile() {
         const tempEl = tile.querySelector(`.fanctrlplus-temp[data-label="${label}"]`);
         const rpmEl = tile.querySelector(`.fanctrlplus-rpm[data-label="${label}"]`);
         const statusEl = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
-        if (tempEl) tempEl.textContent = f.temp;
+      if (tempEl) {
+        const raw = f.temp_raw || (f.temp?.split("°")[0] || "").trim();  // fallback 拆出温度数字
+        const origin = f.temp_origin || (f.temp?.includes("(") ? f.temp.split("(")[1].replace(")", "") : null);
+        const tempText = formatTemp(raw);
+
+        if (origin) {
+          tempEl.innerHTML = `<span class="fp-temp">${tempText}</span><span class="fp-origin">(${origin})</span>`;
+        } else {
+          tempEl.textContent = tempText;
+        }
+       }
         if (rpmEl) rpmEl.textContent = f.rpm;
         if (statusEl) statusEl.innerHTML = f.status;
       });

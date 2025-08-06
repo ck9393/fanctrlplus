@@ -110,7 +110,23 @@ switch ($op) {
     }
 
     $temp_file = "$cfg_dir/{$plugin}_temp_$index_cfg.cfg";
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"\nsyslog=\"1\"");
+    file_put_contents($temp_file, <<<INI
+    custom=""
+    service="1"
+    controller=""
+    pwm="102"
+    max="255"
+    low="40"
+    high="60"
+    interval="2"
+    disks=""
+    syslog="1"
+    cpu_enable="0"
+    cpu_sensor=""
+    cpu_min_temp=""
+    cpu_max_temp=""
+    INI
+    );
 
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     $cfg = parse_ini_file($temp_file);
@@ -120,9 +136,10 @@ switch ($op) {
     $page_index = intval($_REQUEST['index'] ?? 99);
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
+    $cpu_sensors = detect_cpu_sensors();
 
     header('Content-Type: text/html; charset=utf-8');
-    echo render_fan_block($cfg, $page_index, $pwms, $disks, $pwm_labels);
+    echo render_fan_block($cfg, $page_index, $pwms, $disks, $pwm_labels, $cpu_sensors); 
     exit;
 
   case 'setsyslog':

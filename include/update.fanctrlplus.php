@@ -46,6 +46,21 @@ foreach ($_POST['#file'] as $i => $file) {
   $low_temp = is_numeric($l = preg_replace('/[^0-9]/', '', $low_raw)) ? intval($l) : 40;
   $high_temp = is_numeric($h = preg_replace('/[^0-9]/', '', $high_raw)) ? intval($h) : 60;
 
+  // ✅ CPU fallback
+  $cpu_enable = $_POST['cpu_enable'][$i] ?? '0';
+  $cpu_sensor = $_POST['cpu_sensor'][$i] ?? '';
+
+  $cpu_min_raw = $_POST['cpu_min_temp'][$i] ?? '';
+  $cpu_max_raw = $_POST['cpu_max_temp'][$i] ?? '';
+
+  if ($cpu_enable === '1') {
+    $cpu_min_temp = is_numeric($cmin = preg_replace('/[^0-9]/', '', $cpu_min_raw)) ? intval($cmin) : 40;
+    $cpu_max_temp = is_numeric($cmax = preg_replace('/[^0-9]/', '', $cpu_max_raw)) ? intval($cmax) : 70;
+  } else {
+    $cpu_min_temp = '';
+    $cpu_max_temp = '';
+  }
+
   // Custom Name 不能为空
   if ($custom === '') {
     ob_clean();
@@ -149,7 +164,11 @@ foreach ($_POST['#file'] as $i => $file) {
     'high'       => $high_temp,
     'interval'   => $_POST['interval'][$i] ?? '',
     'disks'      => isset($_POST['disks'][$i]) ? implode(',', $_POST['disks'][$i]) : '',
-    'syslog'     => $syslog_val
+    'syslog'     => $syslog_val,
+    'cpu_enable'    => $cpu_enable,
+    'cpu_sensor'    => $cpu_sensor,
+    'cpu_min_temp'  => $cpu_min_temp,
+    'cpu_max_temp'  => $cpu_max_temp,
   ];
 
   $content = '';

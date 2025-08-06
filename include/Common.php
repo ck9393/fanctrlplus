@@ -33,6 +33,54 @@ function list_valid_disks_by_id() {
     }
   }
 
+// 掃描所有 hwmon 傳感器，找出可能的 CPU 溫度路徑，並附上即時溫度與優先排序
+function detect_cpu_sensors(): array {
+  $result = [];
+  $priority_order = [
+    'Package id', 'Tctl', 'Tdie', 'CPU Temp',
+    'PECI Agent', 'CPUTIN', 'Core 0'
+  ];
+
+  foreach (glob('/sys/class/hwmon/hwmon*') as $hwmonPath) {
+    $nameFile = "$hwmonPath/name";
+    if (!is_readable($nameFile)) continue;
+    $chipName = trim(file_get_contents($nameFile));
+
+    foreach (glob("$hwmonPath/temp*_label") as $labelFile) {
+      $label = trim(file_get_contents($labelFile));
+      $tempInput = str_replace('_label', '_input', $labelFile);
+      if (!is_readable($tempInput)) continue;
+
+      $raw = trim(file_get_contents($tempInput));
+      $c = is_numeric($raw) ? intval($raw) / 1000 : null;
+      if ($c === null || $c <= 0) continue;
+
+      $tempC = round($c, 1) . '°C';
+      $labelFull = "$chipName - $label ($tempC)";
+
+      $priority = array_search(true, array_map(fn($k) => stripos($label, $k) !== false, $priority_order));
+      if ($priority === false) continue;
+
+      $result[] = [
+        'path' => $tempInput,
+        'label' => $labelFull,
+        'priority' => $priority
+      ];
+    }
+  }
+
+  // 排序：先按优先级，再按芯片名
+  usort($result, fn($a, $b) => $a['priority'] <=> $b['priority']);
+
+  // 生成最终键值对（path => label）
+  $final = [];
+  foreach ($result as $entry) {
+    $final[$entry['path']] = $entry['label'];
+  }
+
+  return $final;
+}
+
   // 映射 /dev/nvmeXp1 → pool 名（通过 zpool list -v）
   $dev_to_pool = [];
   $zpool = shell_exec("zpool list -v 2>/dev/null");
