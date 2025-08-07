@@ -61,7 +61,19 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
             <span class="drag-handle" ><i class="fa fa-reorder"></i></span>
       </div> 
 
-      <button type="button" class="delete-btn" title="Delete this fan configuration" style="position:absolute; bottom:0px; right:0px; transform: translate(2px, 0px);">DELETE</button>
+<!-- 放在每个风扇 fan-block 内部 -->
+<div class="fan-tools" style="position:absolute; bottom:10px; right:10px; display:flex; flex-direction:column; width: 86px; height: 96px">
+  <button type="button" class="show-chart-btn" 
+          onclick="showFanChart(this)" 
+          title="Preview Fan Speed Curve">
+    <i class="fa fa-line-chart" style= "color: var(--blue-800); font:"></i> Chart
+  </button>
+  <button type="button" class="delete-btn" 
+          onclick="removeFan(this)" 
+          title="Delete this fan configuration">
+    DELETE
+  </button>
+</div>
 
       <table style="width:100%;">
         <!-- Custom Name -->

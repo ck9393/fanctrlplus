@@ -106,3 +106,12 @@ input:focus {
   font-size: 13px;
   line-height: 28px;
 }
+
+.swal2-popup.chart-swal {
+  width: 700px !important;
+  max-width: 90vw;
+  padding: 20px 30px;
+  font-size: 14px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+}
