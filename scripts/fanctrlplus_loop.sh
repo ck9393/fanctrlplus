@@ -21,29 +21,6 @@ fi
 prev_pwm=-1
 
 while true; do
-  disk_max=0
-  IFS=',' read -ra disks_list <<< "$disks"
-
-  for disk in "${disks_list[@]}"; do
-    disk_path="/dev/disk/by-id/$disk"
-    real_path=$(realpath "$disk_path" 2>/dev/null)
-    [[ ! -b "$real_path" ]] && continue
-    smartctl -n standby -A "$real_path" | grep -q "Device is in STANDBY" && continue
-
-    if [[ "$real_path" == /dev/nvme* ]]; then
-      temp=$(smartctl -A "$real_path" | awk '/Temperature:/ {print $2; exit}')
-    else
-      temp=$(smartctl -A "$real_path" | awk '
-        $1 == 190 || $1 == 194                   { print $10; exit }
-        $1 == "Temperature_Celsius"             { print $10; exit }
-        $1 == "Airflow_Temperature_Cel"         { print $10; exit }
-        $1 == "Current" && $3 == "Temperature:" { print $4; exit }
-      ')
-    fi
-
-    [[ "$temp" =~ ^[0-9]+$ ]] && (( temp > disk_max )) && disk_max=$temp
-  done
-
   # === CPU 温度 ===
   cpu_pwm_val=0
   if [[ "${cpu_enable:-0}" == "1" && -n "$cpu_sensor" && -f "$cpu_sensor" ]]; then
@@ -127,8 +104,6 @@ while true; do
     max_temp=$disk_max
     temp_origin=$([ -n "$disks" ] && echo "(Disk)" || echo "(CPU)")
   fi
-
-  [[ -n "$max" && "$pwm_val" -gt "$max" ]] && pwm_val=$max
 
   # 避免空写入
   if [[ ! "$max_temp" =~ ^[0-9]+$ ]]; then

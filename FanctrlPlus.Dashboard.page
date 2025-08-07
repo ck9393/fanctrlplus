@@ -86,10 +86,12 @@ echo <<<STYLE
   }
 .fp-temp-unit {
   display: inline-block;
-  margin-right: 12px;
   opacity: 0.9;
 }
 .fp-temp-origin {
+  display: inline-block;
+  min-width: 55px;
+  text-align: center;
   font-size: 90%;
   opacity: 0.6;
 }
