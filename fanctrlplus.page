@@ -45,7 +45,23 @@ $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
 if (empty($cfg_files)) {
   $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
   if (!file_exists($temp_file)) {
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+file_put_contents($temp_file, <<<INI
+custom=""
+service="1"
+controller=""
+pwm="102"
+max="255"
+low="40"
+high="60"
+interval="2"
+disks=""
+syslog="1"
+cpu_enable="0"
+cpu_sensor=""
+cpu_min_temp=""
+cpu_max_temp=""
+INI
+);
   }
   // 重新加载 cfg_files
   $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
@@ -1046,11 +1062,6 @@ $(function() {
         cpu_max_temp: stripUnit($block.find('input[name^="cpu_max_temp["]').val())
       };
 
-      if (original.cpu_enable === "0" && current.cpu_enable === "0") {
-        current.cpu_sensor = original.cpu_sensor;
-        current.cpu_min_temp = original.cpu_min_temp;
-        current.cpu_max_temp = original.cpu_max_temp;
-      }
       if (JSON.stringify(original) !== JSON.stringify(current)) {
         dirty = true;
       }
