@@ -93,6 +93,12 @@ echo <<<STYLE
   font-size: 90%;
   opacity: 0.6;
 }
+.fp-origin-placeholder {
+  display: inline-block;
+  min-width: 85px;
+  text-align: center;
+  color: inherit;
+}
 </style>
 STYLE;
 
@@ -153,17 +159,25 @@ function updateFanctrlplusTile() {
         const origin   = f.temp_origin;
 
         // 温度显示：分段样式渲染
-        if (tempEl) {
-          if (val && origin) {
-            tempEl.innerHTML = `
-              <span class="fp-temp-val">${val}</span>
-              <span class="fp-temp-unit">°C</span>
-              <span class="fp-temp-origin">(${origin})</span>
-            `;
-          } else {
-            tempEl.textContent = "*";
-          }
-        }
+if (tempEl) {
+  if (val === "*") {
+    tempEl.innerHTML = `
+      <span class="fp-temp-val">*</span>
+      <span class="fp-temp-origin">${origin ? `(${origin})` : `<span class="fp-origin-placeholder">-</span>`}</span>
+    `;
+  } else if (val) {
+    tempEl.innerHTML = `
+      <span class="fp-temp-val">${val}</span>
+      <span class="fp-temp-unit">°C</span>
+      <span class="fp-temp-origin">${origin ? `(${origin})` : `<span class="fp-origin-placeholder">-</span>`}</span>
+    `;
+  } else {
+    tempEl.innerHTML = `
+      <span class="fp-temp-val">-</span>
+      <span class="fp-temp-origin"><span class="fp-origin-placeholder">-</span></span>
+    `;
+  }
+}
 
         if (rpmEl) rpmEl.textContent = f.rpm ?? "-";
         if (statEl) statEl.innerHTML = f.status ?? "-";
