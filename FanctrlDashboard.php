@@ -25,7 +25,7 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $enabled = ($cfg['service'] ?? '0') === '1';
 
   // 初始化字段
-  $temp_val = "-";
+  $temp_val = "*";
   $temp_origin = "";
   $rpm = "-";
   $status = '<span class="red-text">Inactive</span>';
@@ -34,10 +34,15 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
     $temp_raw = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
     $rpm_raw  = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
 
-    // ✅ 解析温度（形如 "55 (Disk)"）
+    // ✅ 解析温度（数字）
     if (preg_match('/^([0-9]+)\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
       $temp_val = $matches[1];
       $temp_origin = $matches[2];
+    }
+    // ✅ 解析温度为 * 的情形
+    elseif (preg_match('/^\*\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
+      $temp_val = "*";
+      $temp_origin = $matches[1];
     }
 
     $rpm = ($rpm_raw !== "" && is_numeric($rpm_raw)) ? $rpm_raw : "-";
@@ -46,7 +51,7 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
 
   $fans[] = [
     'label'        => $label,
-    'temp'         => $temp_val !== "-" ? "{$temp_val}°C" : "-",
+    'temp' => ($temp_val === "*" ? "*" : "{$temp_val}°C"),
     'temp_raw'     => $temp_val,
     'temp_origin'  => $temp_origin,
     'rpm'          => $rpm,

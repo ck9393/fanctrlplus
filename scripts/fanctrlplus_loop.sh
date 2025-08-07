@@ -65,14 +65,56 @@ while true; do
   fi
 
   # === Disk 温控 PWM ===
-  if (( disk_max <= low )); then
-    disk_pwm_val=$pwm
-  elif (( disk_max >= high )); then
-    disk_pwm_val=$max
-  else
-    delta=$((disk_max - low))
-    range=$((high - low))
-    disk_pwm_val=$((pwm + delta * (max - pwm) / range))
+  disk_pwm_val=0
+  disk_max="*"
+
+  # 有勾选 disk 时才处理
+  if [ -n "$disks" ]; then
+    disk_max_valid=0
+    found_valid_temp=0
+
+    IFS=',' read -ra disks_list <<< "$disks"
+    for disk in "${disks_list[@]}"; do
+      disk_path="/dev/disk/by-id/$disk"
+      real_path=$(realpath "$disk_path" 2>/dev/null)
+      [[ ! -b "$real_path" ]] && continue
+
+      # 跳过休眠磁盘
+      smartctl -n standby -A "$real_path" | grep -q "Device is in STANDBY" && continue
+
+      # 获取温度
+      if [[ "$real_path" == /dev/nvme* ]]; then
+        temp=$(smartctl -A "$real_path" | awk '/Temperature:/ {print $2; exit}')
+      else
+        temp=$(smartctl -A "$real_path" | awk '
+          $1 == 190 || $1 == 194                   { print $10; exit }
+          $1 == "Temperature_Celsius"             { print $10; exit }
+          $1 == "Airflow_Temperature_Cel"         { print $10; exit }
+          $1 == "Current" && $3 == "Temperature:" { print $4; exit }
+        ')
+      fi
+
+      # 有效温度，更新最大值
+      if [[ "$temp" =~ ^[0-9]+$ ]]; then
+        (( temp > disk_max_valid )) && disk_max_valid=$temp
+        found_valid_temp=1
+      fi
+    done
+
+    # 若取得有效温度，再执行 PWM 推算
+    if (( found_valid_temp == 1 )); then
+      disk_max=$disk_max_valid
+
+      if (( disk_max <= low )); then
+        disk_pwm_val=$pwm
+      elif (( disk_max >= high )); then
+        disk_pwm_val=$max
+      else
+        delta=$((disk_max - low))
+        range=$((high - low))
+        disk_pwm_val=$((pwm + delta * (max - pwm) / range))
+      fi
+    fi
   fi
 
   # === 取较高 PWM 作为最终值，同时设定 max_temp 与来源 ===
@@ -83,18 +125,18 @@ while true; do
   else
     pwm_val=$disk_pwm_val
     max_temp=$disk_max
-    temp_origin="(Disk)"
+    temp_origin=$([ -n "$disks" ] && echo "(Disk)" || echo "(CPU)")
   fi
 
   [[ -n "$max" && "$pwm_val" -gt "$max" ]] && pwm_val=$max
 
-  # ✅ 避免空写入
+  # 避免空写入
   if [[ ! "$max_temp" =~ ^[0-9]+$ ]]; then
-    max_temp="-"
+    max_temp="*"
     temp_origin=""
   fi
 
-  # ✅ 每轮都写入 Dashboard 缓存
+  # 每轮都写入 Dashboard 缓存
   echo "${max_temp} ${temp_origin}" > "/var/tmp/fanctrlplus/temp_${plugin}_${custom}"
 
   # === 若 PWM 有明显变化，或首次 ===
