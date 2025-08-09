@@ -284,5 +284,19 @@ switch ($op) {
     }
     json_response($pwms);
     break;
+
+  case 'read_temp_rpm':
+    $custom = $_GET['custom'] ?? '';
+    $custom = basename($custom); // 安全过滤
+
+    $plugin = 'fanctrlplus';
+    $temp_file = "/var/tmp/$plugin/temp_${plugin}_$custom";
+    $rpm_file  = "/var/tmp/$plugin/rpm_${plugin}_$custom";
+
+    $temp = is_file($temp_file) ? trim(file_get_contents($temp_file)) : '*';
+    $rpm  = is_file($rpm_file)  ? trim(file_get_contents($rpm_file))  : '?';
+
+    echo "$temp|$rpm";  // 示例："48 (CPU)|1150"
+    exit;  
 }
 ?>

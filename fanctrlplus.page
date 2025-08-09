@@ -365,7 +365,6 @@ dt.containerSettingsDt {
 
 .subhead {
   font-weight: bold;
-  color: #000;
   font-size: 1.1rem;
   letter-spacing: 1px;
   padding-top: 6px;
@@ -550,9 +549,21 @@ $(function() {
         if (frame) frame.setAttribute('fill', frameColor);
         if (hub)   hub.setAttribute('fill', hubColor);
 
+        const cpuEnabled = block.find('select[name^="cpu_enable["]').val() === "1";
+        const hasDisks = block.find('select[name^="disks["] option:selected').length > 0;
         const container = fanSvg.closest('.fan-svg-container');
         if (container) {
-          container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
+          const sources = [];
+          if (cpuEnabled) sources.push("CPU");
+          if (hasDisks) sources.push("Disk");
+
+          const sourceText = sources.length
+            ? ` (based on ${sources.join(" and ")} temperature)`
+            : '';
+
+          container.title = `Fan control: ${isRunning
+            ? `Active${sourceText}`
+            : 'Inactive (not automatically controlled)'}`;
         }
       });
     }).fail(function (jqXHR, textStatus, errorThrown) {
@@ -1173,7 +1184,7 @@ $(function() {
       const cpuHigh = parseInt(stripUnit(block.find('input[name^="cpu_max_temp["]').val()));
       const name = block.find('.custom-name-input').val() || `#${$(this).index() + 1}`;
 
-      if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp > highTemp) {
+      if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp >= highTemp) {
         alert(`Fan configuration "${name}": Disk Low Temp cannot exceed High Temp.`);
         rangeValid = false;
         return false;

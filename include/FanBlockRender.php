@@ -102,7 +102,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
           <td style="cursor: help;" title="Each fan corresponds to a PWM controller (pwm1, pwm2, etc). Select the one controlling this fan. You can use the Identify section below to locate and label each fan.">PWM Controller:</td>
           <td>
             <select name="controller[<?=$i?>]" class="pwm-controller">
-              <option value="">-- Select Fan Controller --</option>
+              <option value="">-- Select PWM Controller --</option>
               <?php foreach ($pwms as $pwm): 
                 $label = $pwm_labels[$pwm['sensor']] ?? '';
                 $display = $pwm['chip'] . ' - ' . $pwm['name'];
