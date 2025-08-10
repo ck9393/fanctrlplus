@@ -2,27 +2,35 @@
 
 async function fetchRealtimeData(custom) {
   const res = await fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=read_temp_rpm&custom=${encodeURIComponent(custom)}`);
-  if (!res.ok) return null;
+  if (!res.ok) return { noCache: true };
 
-  const text = await res.text();
-  // 可能的格式：
-  // "49 (CPU)|1138"
-  // "* (Disk)|1138"   ← 磁盘休眠
-  const [tempPart, rpmStr] = text.trim().split('|');
+  const raw = (await res.text()).trim();
 
-  // 先匹配 '*'（spun down）
-  const starMatch = tempPart.match(/^\*\s*(?:\((CPU|Disk)\))?/i);
+  // 文件不存在 / 还没写 / 占位符
+  if (!raw || raw === '-' || raw.toUpperCase() === 'N/A') {
+    return { noCache: true };
+  }
+
+  // 统一用同一份 raw
+  const [tempPart, rpmStr = ''] = raw.split('|');
+
+  // 1) 星号：磁盘休眠
+  const starMatch = /^\*\s*(?:\((CPU|Disk)\))?/i.exec(tempPart);
   if (starMatch) {
-    const origin = (starMatch[1] || 'Disk'); // 没写就默认 Disk
-    const rpm = /^\d+$/.test(rpmStr) ? parseInt(rpmStr) : null;
+    const origin = starMatch[1] || 'Disk';
+    const rpm = /^\d+$/.test(rpmStr) ? parseInt(rpmStr, 10) : null;
+    // ⭐ 没有有效 RPM → 把它当作没缓存（新 fan 最常见）
+    if (rpm === null) return { noCache: true };
     return { temp: null, origin, rpm, spunDown: true };
   }
 
-  // 再匹配数字温度
-  const numMatch = tempPart.match(/(\d+)\s*\((CPU|Disk)\)/i);
-  const temp = numMatch ? parseInt(numMatch[1]) : null;
-  const origin = numMatch ? numMatch[2] : null;
-  const rpm = /^\d+$/.test(rpmStr) ? parseInt(rpmStr) : null;
+  // 2) 正常数字温度
+  const numMatch = /(\d+)\s*\((CPU|Disk)\)/i.exec(tempPart);
+  if (!numMatch) return { noCache: true };
+
+  const temp   = parseInt(numMatch[1], 10);
+  const origin = numMatch[2];
+  const rpm    = /^\d+$/.test(rpmStr) ? parseInt(rpmStr, 10) : null;
 
   return { temp, origin, rpm, spunDown: false };
 }
@@ -138,7 +146,7 @@ window.showFanChart = function (btn) {
         <div style="margin-top: 8px; font-size: 13px; color: #666; text-align: center;">${footerNote}</div>
       </div>`,
 
-    customClass: 'chart-swal',
+  customClass: 'chart-swal',
   didOpen: () => {
     // 1) 只取一次的快照（避免 5s 刷新时 DOM 状态抖动）
     const customName = custom; // 供后端取 /var 的 key
@@ -284,7 +292,18 @@ window.showFanChart = function (btn) {
       // 3) 顶部 Current + 十字线（每 5 秒）
       async function updateTopNote() {
         const data = await fetchRealtimeData(customName);
-        if (!data || data.rpm == null || !liveNote) return;
+        if (!liveNote) return;
+
+        // ✅ 新增：完全读不到缓存 → 新 fan block 的大概率场景
+        if (!data || data.noCache) {
+          liveNote.innerHTML = `Current: --<br><span style="color:#999;">
+            No runtime data yet. If this is a new fan, click <b>Apply</b> to start the loop, 
+            or wait a few seconds after saving.
+          </span>`;
+          // 隐藏十字线
+          vLine.style.display = hLine.style.display = dot.style.display = 'none';
+          return;
+        }  
 
         const { temp, origin, rpm, spunDown } = data;
         const ds = origin === 'CPU' ? dsCPU : dsDisk;
