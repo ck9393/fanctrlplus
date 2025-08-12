@@ -63,7 +63,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
       <!-- 放在每个风扇 fan-block 内部 -->
       <div class="fan-tools" style="position:absolute; bottom:10px; right:10px; display:flex; flex-direction:column; width: 86px; height: 96px">
-        <button type="button" class="show-chart-btn" onclick="showFanChart(this)" title="Preview Fan Speed Curve">
+        <button type="button" class="show-chart-btn" onclick="showFanChart(this)" title="Preview this fan's speed curve based on current Disk/CPU settings">
           <i class="fa fa-line-chart" style= "color: var(--blue-800); font:"></i> Chart
         </button>
         <button type="button" class="delete-btn" title="Delete this fan configuration">DELETE</button>
@@ -190,7 +190,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- Disk Temperature Range -->
         <tr>
-          <td style="cursor: help;" title="Fan runs at the configured minimum speed if the highest selected disk temperature is at or below the Low Temp. Fan ramps up linearly and reaches maximum speed at or above the High Temp.">Disk Temperature Range:</td>
+          <td style="cursor: help;"title="Fan runs at minimum speed at or below Low Temp, and maximum speed at or above High Temp. See chart for details.">Disk Temperature Range:</td>
           <td>
             <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
 
@@ -250,7 +250,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- CPU Temp Range -->
         <tr class="cpu-control cpu-control-<?=$i?>">
-          <td class="cpu-label" style="cursor: help;" title="Fan runs at the configured minimum speed if the CPU temperature is at or below the Low Temp. Fan ramps up linearly and reaches maximum speed at or above the High Temp.">CPU Temperature Range:</td>
+          <td class="cpu-label" style="cursor: help;" title="Fan runs at minimum speed at or below Low Temp, and maximum speed at or above High Temp. See chart for details.">CPU Temperature Range:</td>
           <td>
             <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
               <input type="text"
