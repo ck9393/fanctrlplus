@@ -5,7 +5,7 @@
   <PluginAuthor>ck9393</PluginAuthor>
   <Category>Tools:System</Category>
   <Name>FanCtrl Plus</Name>
-  <Description>FanCtrl Plus provides automatic fan speed control based on HDD/NVMe/Unassigned Devices temperatures, with fully customizable fan-to-disk mapping and UI.</Description>
+  <Description>FanCtrl Plus provides automatic fan speed control based on HDD, NVMe, Unassigned Devices, and optional CPU temperatures, with fully customizable fan-to-disk mapping and UI.</Description>
   <MinVer>6.9.0</MinVer>
   <Support>https://forums.unraid.net/topic/191722-plugin-fancrtl-plus/</Support>
   <Icon>https://raw.githubusercontent.com/ck9393/fanctrlplus/main/images/fanctrlplus.png</Icon>
