@@ -1,7 +1,7 @@
 # **FanCtrl Plus**
 
-**FanCtrl Plus** is an Unraid plugin that provides automatic fan control based on the temperatures of HDDs, NVMe drives, and Unassigned Devices.
-Each fan configuration can monitor specific drives, define a temperature range, and scale fan speed automatically using a linear control algorithm.
+**FanCtrl Plus** is an Unraid plugin that provides automatic fan control based on the temperatures of HDDs, NVMe drives, Unassigned Devices, and optionally the CPU.  
+Each fan configuration can monitor specific drives or the CPU, define a temperature range, and scale fan speed automatically using a linear control algorithm.  
 Configuration is done through a user-friendly interface, with custom thresholds, intervals, and labels available per fan.
 
 ## ✨ Features
@@ -11,8 +11,8 @@ Configuration is done through a user-friendly interface, with custom thresholds,
 - Automatically starts with the Unraid array for hands-free operation
 - Set custom thresholds and intervals per fan
 - Control multiple PWM fans independently
-- Monitor temps from array disks, NVMe, and unassigned devices
-– Uses a linear control algorithm to smoothly adjust fan speed (PWM) based on the current disk temperature between your defined low/high values
+- Monitor temps from array disks, NVMe, unassigned devices, and optionally the CPU
+- Uses a linear control algorithm to smoothly adjust fan speed (PWM) based on the current temperature (disk or CPU) between your defined low/high values
 - Identify and label PWM controllers to match physical fans easily
 - Dashboard tile and system integration
 - Drag and drop fan configuration boxes to reorder them as you like. The new order is saved and reflected in both the UI and Dashboard.
