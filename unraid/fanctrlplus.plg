@@ -1,13 +1,13 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.3.1">
+<!ENTITY version "1.3.1a">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/unraid/&name;.plg">
 <!ENTITY source "/boot/config/plugins/&name;">
 <!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">
-<!ENTITY MD5 "4c955cd2de9fab04eec8e50e84d09919">
+<!ENTITY MD5 "99b43e6cf37c0a8d65e04f12c9850024">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://forums.unraid.net/topic/191722-plugin-fancrtl-plus">
@@ -18,6 +18,7 @@
 
 <CHANGES>
 ###&version;
+- v1.3.1a Only updated notes for Include Disk(s) and Help &amp; Tips to clarify CPU-only monitoring option.
 - Added CPU temperature monitoring support.
 - Automatically selects the most reliable CPU sensor by default (can be overridden manually if needed).
 - When both Disk and CPU temperature rules are configured for a fan, the fan speed is determined using the higher PWM result from either source.
