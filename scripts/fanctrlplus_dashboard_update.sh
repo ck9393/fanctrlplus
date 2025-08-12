@@ -1,6 +1,5 @@
 #!/bin/bash
-# fanctrlplus_dashboard_update.sh - 实时更新 Dashboard 所需的 RPM 和上次温度
-
+# fanctrlplus_dashboard_update.sh - 实时更新 Dashboard 所需的 RPM
 plugin="fanctrlplus"
 cfg_path="/boot/config/plugins/$plugin"
 tmp_path="/var/tmp/$plugin"
@@ -27,14 +26,8 @@ while true; do
     rpm="-"
     [[ -f "$fan_path" ]] && rpm=$(< "$fan_path")
 
-    # ✅ 正确读取 loop.sh 写入的缓存温度文件
-    temp="-"
-    temp_file="/var/tmp/${plugin}/temp_${plugin}_${custom}"
-    [[ -f "$temp_file" ]] && temp=$(< "$temp_file")
-
     # ✅ 写入 Dashboard 所需文件
     echo "$rpm" > "$tmp_path/rpm_${plugin}_${custom}"
-    echo "$temp" > "$tmp_path/temp_${plugin}_${custom}"
 
     # ✅ 状态判断
     if [[ "$rpm" =~ ^[0-9]+$ ]] && (( rpm > 0 )); then

@@ -8,6 +8,8 @@ echo <<<HTML
 <link rel="stylesheet" type="text/css" href="/webGui/styles/jquery.switchbutton.css">
 <link rel="stylesheet" href="/plugins/fanctrlplus/css/sweetalert2.min.css">
 <script src="/plugins/fanctrlplus/js/sweetalert2.min.js"></script>
+<script src="/plugins/fanctrlplus/js/chart.min.js"></script>
+<script src="/plugins/fanctrlplus/include/chart-handler.js"></script>
 HTML;
 ?>
 
@@ -43,7 +45,23 @@ $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
 if (empty($cfg_files)) {
   $temp_file = "$cfg_dir/{$plugin}_temp_0.cfg";
   if (!file_exists($temp_file)) {
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"");
+file_put_contents($temp_file, <<<INI
+custom=""
+service="1"
+controller=""
+pwm="102"
+max="255"
+low="40"
+high="60"
+interval="2"
+disks=""
+syslog="1"
+cpu_enable="0"
+cpu_sensor=""
+cpu_min_temp=""
+cpu_max_temp=""
+INI
+);
   }
   // 重新加载 cfg_files
   $cfg_files = glob("$cfg_dir/{$plugin}_*.cfg");
@@ -116,6 +134,8 @@ foreach ($cfg_files as $path) {
 $pwms = list_pwm();
 $disks = list_valid_disks_by_id();
 $width = 300;
+$cpu_sensors = detect_cpu_sensors();
+
 ?>
 
 <style>
@@ -338,6 +358,19 @@ dt.containerSettingsDt {
 }
 .fan-block.draggable { cursor: move !important; }
 .fan-block.ui-sortable-helper { cursor: grabbing !important; }
+
+.cpu-label.disabled {
+  opacity: 0.5;
+}
+
+.subhead {
+  font-weight: bold;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  padding-top: 6px;
+  padding-bottom: 0px;
+  text-transform: uppercase;
+}
 </style>
 
 <div class="fanctrl-header">
@@ -516,9 +549,21 @@ $(function() {
         if (frame) frame.setAttribute('fill', frameColor);
         if (hub)   hub.setAttribute('fill', hubColor);
 
+        const cpuEnabled = block.find('select[name^="cpu_enable["]').val() === "1";
+        const hasDisks = block.find('select[name^="disks["] option:selected').length > 0;
         const container = fanSvg.closest('.fan-svg-container');
         if (container) {
-          container.title = `Fan control: ${isRunning ? 'Active (based on disk temperature)' : 'Inactive (not automatically controlled)'}`;
+          const sources = [];
+          if (cpuEnabled) sources.push("CPU");
+          if (hasDisks) sources.push("Disk");
+
+          const sourceText = sources.length
+            ? ` (based on ${sources.join(" and ")} temperature)`
+            : '';
+
+          container.title = `Fan control: ${isRunning
+            ? `Active${sourceText}`
+            : 'Inactive (not automatically controlled)'}`;
         }
       });
     }).fail(function (jqXHR, textStatus, errorThrown) {
@@ -626,8 +671,15 @@ $(function() {
           { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
           { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
           { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
+          { selector: 'input[id^="cpu_low_temp_input_"]', unit: '°C', min: 1, max: 95 },
+          { selector: 'input[id^="cpu_high_temp_input_"]', unit: '°C', min: 1, max: 110 },
           { selector: 'input[id^="interval_input_"]', unit: ' min', min: 1, max: 60 }
         ]);
+
+        $html.find('select[id^="cpu-enable-"]').each(function () {
+          const index = this.id.replace('cpu-enable-', '');
+          window.handleCpuEnableChange(this, index);
+        });
 
         bindFanSpeedEvents();
       }, 100);
@@ -718,6 +770,8 @@ $(function() {
       { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
       { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
       { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
+      { selector: 'input[id^="cpu_low_temp_input_"]', unit: '°C', min: 1, max: 95 },
+      { selector: 'input[id^="cpu_high_temp_input_"]', unit: '°C', min: 1, max: 110 },
       { selector: 'input[id^="interval_input_"]', unit: ' min', min: 1, max: 60 }
     ]);
     loadPWMOptions();
@@ -988,7 +1042,11 @@ $(function() {
       low: stripUnit($block.find('input[name^="low["]').val()),
       high: stripUnit($block.find('input[name^="high["]').val()),
       interval: stripUnit($block.find('input[name^="interval["]').val()),
-      disks: $block.find('select[name^="disks["]').val()
+      disks: $block.find('select[name^="disks["]').val(),
+      cpu_enable: $block.find('select[name^="cpu_enable["]').val(),
+      cpu_sensor: $block.find('select[name^="cpu_sensor["]').val(),
+      cpu_min_temp: stripUnit($block.find('input[name^="cpu_min_temp["]').val()),
+      cpu_max_temp: stripUnit($block.find('input[name^="cpu_max_temp["]').val())
     };
     $block.data('original', original);
   }
@@ -1008,8 +1066,13 @@ $(function() {
         low: stripUnit($block.find('input[name^="low["]').val()),
         high: stripUnit($block.find('input[name^="high["]').val()),
         interval: stripUnit($block.find('input[name^="interval["]').val()),
-        disks: $block.find('select[name^="disks["]').val()
+        disks: $block.find('select[name^="disks["]').val(),
+        cpu_enable: $block.find('select[name^="cpu_enable["]').val(),
+        cpu_sensor: $block.find('select[name^="cpu_sensor["]').val(),
+        cpu_min_temp: stripUnit($block.find('input[name^="cpu_min_temp["]').val()),
+        cpu_max_temp: stripUnit($block.find('input[name^="cpu_max_temp["]').val())
       };
+
       if (JSON.stringify(original) !== JSON.stringify(current)) {
         dirty = true;
       }
@@ -1117,16 +1180,24 @@ $(function() {
       const highTemp = parseInt(stripUnit(block.find('input[name^="high["]').val()));
       const pwmMin = parseInt(stripUnit(block.find('input[name^="pwm_percent["]').val()));
       const pwmMax = parseInt(stripUnit(block.find('input[name^="max_percent["]').val()));
+      const cpuLow = parseInt(stripUnit(block.find('input[name^="cpu_min_temp["]').val()));
+      const cpuHigh = parseInt(stripUnit(block.find('input[name^="cpu_max_temp["]').val()));
       const name = block.find('.custom-name-input').val() || `#${$(this).index() + 1}`;
 
-      if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp > highTemp) {
-        alert(`Fan configuration "${name}": Low Temp cannot be higher than High Temp.`);
+      if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp >= highTemp) {
+        alert(`Fan configuration "${name}": Disk Low Temp cannot exceed High Temp.`);
+        rangeValid = false;
+        return false;
+      }
+
+        if (!isNaN(cpuLow) && !isNaN(cpuHigh) && cpuLow >= cpuHigh) {
+        alert(`Fan configuration "${name}": CPU Low Temp cannot exceed High Temp.`);
         rangeValid = false;
         return false;
       }
 
       if (!isNaN(pwmMin) && !isNaN(pwmMax) && pwmMin > pwmMax) {
-        alert(`Fan configuration "${name}": Minimum fan speed cannot be higher than Maximum.`);
+        alert(`Fan configuration "${name}": Minimum fan speed cannot exceed Maximum.`);
         rangeValid = false;
         return false;
       }
@@ -1141,6 +1212,10 @@ $(function() {
     }
 
     $('.interval-input, .low-temp-input, .high-temp-input, .pwm-percent-input, .max-percent-input').each(function(){
+      this.value = stripUnit(this.value);
+    });
+
+    $('.cpu-low-temp-input, .cpu-high-temp-input').each(function(){
       this.value = stripUnit(this.value);
     });
 
@@ -1386,7 +1461,60 @@ $(function() {
       }
     }
   updatePwmDropdowns();    
-});
+
+  window.handleCpuEnableChange = function(selectEl, index) {
+    const enabled = selectEl.value === "1";
+
+    // 选中所有 CPU 控制相关的 tr（包含 sensor 和 temp）
+    const rows = document.querySelectorAll(`.cpu-control-${index}`);
+    rows.forEach(row => {
+      row.querySelectorAll('.cpu-input').forEach(el => {
+        el.disabled = !enabled;
+        el.classList.toggle('disabled', !enabled);
+      });
+    });
+
+    document.querySelectorAll(`.cpu-control-${index} .cpu-label`).forEach(label => {
+      label.classList.toggle('disabled', !enabled);
+    });
+
+    // 若启用且输入为空，则填入默认温度
+    if (enabled) {
+      const lowInput  = document.querySelector(`#cpu_low_temp_input_${index}`);
+      const highInput = document.querySelector(`#cpu_high_temp_input_${index}`);
+
+      if (lowInput && lowInput.value.trim() === '') {
+        lowInput.value = '40°C';
+      }
+      if (highInput && highInput.value.trim() === '') {
+        highInput.value = '70°C';
+      }
+    }
+  };
+
+  // 初始化所有 block 的状态，并绑定 onchange
+  window.addEventListener('load', function () {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('select[id^="cpu-enable-"]').forEach(select => {
+        const index = select.id.replace('cpu-enable-', '');
+        window.handleCpuEnableChange(select, index);  // 初始状态应用
+
+        select.addEventListener('change', function () {
+          window.handleCpuEnableChange(this, index);
+        });
+      });
+    });
+  });
+  setTimeout(() => {
+    document.querySelectorAll('select[id^="cpu-enable-"]').forEach(select => {
+      const index = select.id.replace('cpu-enable-', '');
+      const enabled = select.value === "1";
+      document.querySelectorAll(`.cpu-control-${index} .cpu-label`).forEach(label => {
+        label.classList.toggle('disabled', !enabled);
+      });
+    });
+  }, 10);
+});  
 </script>
 
 <form id="fan-form" method="POST" action="/update.php" target="progressFrame">
@@ -1402,7 +1530,7 @@ $(function() {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
           $all_cfg[] = $cfg;
-          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels);
+          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels, $cpu_sensors);
         }
       }
       ?>
@@ -1415,7 +1543,7 @@ $(function() {
           $cfg = parse_ini_file($path);
           $cfg['file'] = $file;
           $all_cfg[] = $cfg;
-          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels);
+          echo render_fan_block($cfg, $i++, $pwms, $disks, $pwm_labels, $cpu_sensors);
         }
       }
       ?>
@@ -1433,7 +1561,7 @@ $(function() {
       $cfg = parse_ini_file($path);
       $cfg['file'] = $basename;
       $all_cfg[] = $cfg;
-      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels));
+      $html = addslashes(render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors));
       if ($count_left <= $count_right) {
         $target = '#fan-column-left';
         $count_left++;
@@ -1466,39 +1594,94 @@ $(function() {
   <blockquote class="inline_help">
     <p><strong>Usage Guide:</strong></p>
 
-    <p><strong>Overview:</strong> Each fan block allows you to assign a PWM controller, set temperature thresholds, and specify which disks to monitor. Use the “Identify” feature to label physical fans, then assign appropriate names for clarity (e.g. Rear Fan, HDD Fan).</p>
+    <p><strong>Overview:</strong> Each fan block allows you to assign a PWM controller, set temperature thresholds, and specify which disks to monitor. You can also enable CPU temperature monitoring for finer control. 
+        Use the “Identify” feature to label physical fans, then assign appropriate names for clarity (e.g. Rear Fan, HDD Fan).
+    </p>
 
     <p><strong>Custom Name:</strong> This label will be used in logs, UI, and configuration files. Choose a clear name like “HDD_Bay” or “Rear” to identify each block. A valid name is required to save settings.</p>
 
-    <p><strong>Fan Control:</strong> Enables or disables the selected fan configuration. When disabled, temperature monitoring and fan speed control for that configuration will stop. In contrast, the <strong>Stop</strong> button fully halts the fanctrlplus service, stopping all fan updates and logging across all configurations.</p>
+    <p><strong>Fan Control:</strong> Enables or disables the selected fan configuration. When disabled, temperature monitoring and fan speed control for that configuration will stop. 
+        In contrast, the <strong>Stop</strong> button fully halts the fanctrlplus service, stopping all fan updates and logging across all configurations.
+    </p>
 
     <p><strong>PWM Controller:</strong> Each fan is controlled by a specific PWM controller (e.g. <code>pwm1</code>, <code>pwm2</code>, etc). Select the controller that corresponds to the physical fan you want to manage.</p>
 
     <p>If the selected PWM hasn't been labeled yet, the system will automatically open the <strong>Identify PWM Controller</strong> popup to help you locate which fan it controls by temporarily pausing it for 30 seconds.</p>
 
-    <p>It's strongly recommended to <strong>label each PWM</strong> after identification for future reference. If you're not ready to label it now, simply click <strong>Close</strong> to continue setting up. You can use the <strong>Identify PWM Controller</strong> section below at any time to perform this task later.</p>
+    <p>It's strongly recommended to <strong>label each PWM</strong> after identification for future reference. If you're not ready to label it now, simply click <strong>Close</strong> to continue setting up. 
+       You can use the <strong>Identify PWM Controller</strong> section below at any time to perform this task later.
+    </p>
 
-    <p><strong>Fan Speed Range:</strong> This sets the minimum and maximum PWM duty cycle values. For example, a range of 40–80% means the fan will never go below 40% even when cool, and will cap at 80% under high temperatures.</p>
+    <p style="color:red;">
+      <strong>Note:</strong> Since v1.3.1, FanCtrl&nbsp;Plus supports CPU temperature monitoring.  
+      However, it is <strong>not recommended</strong> to use FanCtrl&nbsp;Plus to control your CPU fan.  
+      Please proceed at your own risk.
+    </p>
 
-    <p><strong>Temperature Range:</strong> These define the temperature range (°C) within which the fan will scale its speed. Below the Low Temp, the fan runs at the <strong>Min Speed %</strong>. Above the High Temp, it ramps up to the <strong>Max Speed %</strong>. Between these two values, the speed increases smoothly and <strong>linearly</strong>.</p>
+    <p><strong>Fan Speed Range:</strong> This sets the minimum and maximum PWM duty cycle values. For example, setting the range to 40–80% means the fan will always run at least 40% speed when cool, and will not exceed 80% speed even at high temperatures.</p>
 
-      <p style="margin: 10px 0 6px 0; font-weight: bold;">Example:</p>
-      <p style="margin: 4px 0 10px 0; padding: 8px 12px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; line-height: 1.6;">
-      <strong>How it works:</strong> The plugin uses a simple linear fan control <strong>algorithm</strong> to calculate the speed between your defined temperature points.<br><br>
-      <strong>Your setting:</strong><br>
-      Low Temp = 30°C, Min Speed = 40%<br>
-      High Temp = 50°C, Max Speed = 100%<br><br>
-      The fan speed will automatically scale <strong>linearly</strong> between these two:<br>
-      • 30°C → 40%<br>
-      • 35°C → 55%<br>
-      • 40°C → 70%<br>
-      • 45°C → 85%<br>
-      • 50°C → 100%
-      </p>
-
-    <p><strong>Interval:</strong> How often the plugin checks disk temperatures and adjusts fan speed accordingly. Shorter intervals provide more responsive cooling but may result in more frequent fan changes.</p>
+    <p><strong>Interval:</strong> How often the plugin checks disk (and, if enabled, CPU) temperatures and adjusts fan speed accordingly. Shorter intervals provide more responsive cooling but may result in more frequent fan changes.</p>  
 
     <p><strong>Run Now:</strong> Immediately applies the current fan setting based on the latest temperature. Useful for testing or verifying PWM control and fan response without waiting for the next scheduled check.</p>
+
+    <p><strong>Disk Temperature Settings:</strong>  
+        Controls fan speed based on the <strong>highest temperature</strong> among the selected disks.<br>
+        Below the Low Temp, the fan runs at the <strong>Min Speed %</strong>.<br>
+        Above the High Temp, it ramps up to the <strong>Max Speed %</strong>.<br>
+        Between these points, the speed increases smoothly and <strong>linearly</strong>.<br>
+        Only the disks selected in <strong>Include Disk(s)</strong> are monitored for this fan. Multiple fans can monitor the same disk(s), and a disk can be assigned to multiple fans.
+    </p>
+
+    <p><strong>CPU Temperature Settings:</strong>  
+        Works the same way as Disk Temperature Settings, but uses the CPU temperature as the source.<br>
+        The <strong>CPU Sensor</strong> is automatically set to the most reliable reading; change only if necessary.<br>
+    </p>
+
+    <p><strong>Chart:</strong> Click the <strong>Chart</strong> button in a fan block to preview the fan speed curve based on your current settings.  
+        Since <strong>v1.3.1</strong>, CPU temperature can also be used as a control source.  
+        The chart will show separate curves for <strong>Disk</strong> and <strong>CPU</strong> rules (if both are enabled) and highlight the current operating point in real time.
+    </p>
+
+    <p style="margin: 10px 0 6px 0; font-weight: bold;">How it works:</p>
+
+    <div style="margin: 4px 0 10px 0; padding: 8px 12px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; line-height: 1.6;">
+
+      <p>The fan controller always calculates a target speed from each enabled temperature source, then applies the <strong>highest</strong> value to ensure sufficient cooling.</p>
+
+      <ul style="margin: 6px 0 10px 16px;">
+        <li><strong>Only Disk enabled:</strong> Uses the highest temperature among the selected disks.</li>
+        <li><strong>Only CPU enabled:</strong> Uses the CPU temperature.</li>
+        <li><strong>Disk + CPU enabled:</strong> Calculates fan speed from both rules and applies whichever result is higher.</li>
+      </ul>
+
+      <p style="margin: 10px 0 6px 0; font-weight: bold;">Example:</p>
+
+      <p><strong>Disk rule:</strong> Low Temp = 30°C → 40%, High Temp = 50°C → 100%</p>
+      <ul style="margin: 4px 0 8px 16px;">
+        <li>30°C → 40%</li>
+        <li>35°C → 55%</li>
+        <li>40°C → 70%</li>
+        <li>45°C → 85%</li>
+        <li>50°C → 100%</li>
+      </ul>
+
+      <p><strong>CPU rule:</strong> Low Temp = 50°C → 40%, High Temp = 80°C → 100%</p>
+      <ul style="margin: 4px 0 8px 16px;">
+        <li>50°C → 40%</li>
+        <li>60°C → 55%</li>
+        <li>70°C → 70%</li>
+        <li>80°C → 100%</li>
+      </ul>
+
+      <p><strong>Combined result:</strong> When both Disk and CPU control are enabled, the fan uses the <strong>higher</strong> calculated value.</p>
+      <ul style="margin: 4px 0 8px 16px;">
+        <li>Disk 35°C → 55%, CPU 45°C → 40% → Result = <strong>55%</strong> (Disk)</li>
+        <li>Disk 32°C → 46%, CPU 60°C → 55% → Result = <strong>55%</strong> (CPU)</li>
+        <li>Disk 48°C → 94%, CPU 70°C → 70% → Result = <strong>94%</strong> (Disk)</li>
+      </ul>
+
+      <p style="margin-top: 8px;"><em>Tip:</em> For CPU-based control, consider setting a <strong>shorter interval</strong> (e.g. 1&nbsp;minute) for better responsiveness.</p>
+    </div>
 
     <p><strong>Disks:</strong> Only the selected disks will be monitored to control this fan. Multiple fans can monitor overlapping disks, and one disk can be assigned to multiple fans.</p>
 
@@ -1512,9 +1695,15 @@ $(function() {
 
     <p><strong>Notes:</strong></p>
     <ul>
+    <li style="color:red;">
+      <strong>CPU Fan Warning:</strong> CPU temperature can change rapidly (within seconds).  
+      FanCtrl&nbsp;Plus checks temperatures at most once per minute, so it cannot react as fast as BIOS or hardware fan control.  
+      It is strongly recommended to leave your CPU fan under BIOS/firmware control.  
+      If you still choose to control CPU fan via FanCtrl&nbsp;Plus, monitor behavior closely and proceed at your own risk.
+    </li>
       <li>When setting low <strong>Min Speed %</strong>, always observe how your fan behaves. Some fans may stall or report 0 RPM if the PWM is too low.</li>
       <li>Fan response to PWM 0 varies: some fans continue spinning slowly (e.g. 100–200 RPM), while others stop completely. This is determined by hardware, not software.</li>
-      <li>The temperature shown in syslog and the Dashboard tile is the <strong>highest</strong> among the selected disks, because the fan algorithm always uses the hottest one to determine the speed.</li>
+      <li>The temperature shown in syslog and the Dashboard tile is the <strong>highest</strong> among the selected disks, or the CPU temperature — whichever is driving the current fan speed.</li>
       <li>When the <strong>Stop</strong> button is clicked, all configured fans are set to 50% speed to prevent stalling or uncontrolled RPM spikes.</li>
       <li>If you clicked <strong>Stop</strong> before rebooting, <strong>FanCtrl Plus</strong> will auto-start after the array is started. To fully disable fan control on reboot, either <strong>uninstall the plugin</strong> or <strong>disable all fan configurations</strong>.</li>
       <li>If you uninstall <strong>FanCtrl Plus</strong>, it's recommended to reboot Unraid to restore fan control to the motherboard or BIOS defaults.</li>
@@ -1565,7 +1754,7 @@ $(function() {
           </tr>
           <tr>
             <td style="padding-right: 50px; padding-top: 12px; text-align: right;"><label for="pwm-label-input">Custom Label:</label></td>
-            <td><input type="text" id="identify-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px;"></td>
+            <td><input type="text" id="identify-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px; margin: 0 10px 0 0;"></td>
           </tr>
         </table>
 

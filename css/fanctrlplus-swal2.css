@@ -106,3 +106,31 @@ input:focus {
   font-size: 13px;
   line-height: 28px;
 }
+
+.swal2-popup.chart-swal {
+  width: 700px !important;
+  max-width: 90vw;
+  padding: 20px 30px;
+  font-size: 14px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+  --fan-grid:  rgba(0,0,0,0.10);  /* 网格线：浅灰 */
+  --fan-tick:  rgba(0,0,0,0.60);  /* 坐标/标题 */
+  --fan-cross: rgba(0,0,0,0.50);  /* 十字线：比网格略深 */
+  --fan-dot:   #444444;           /* 中心点 */
+}
+
+/* 十字线 & 黑点 */
+.chart-vline,
+.chart-hline {
+  background: var(--fan-cross, rgba(0,0,0,0.40)) !important;
+}
+
+.chart-dot {
+  background: var(--fan-dot, #444444) !important;
+}
+
+/* 顶部Current */
+.chart-current {
+  color: #000 !important;
+}

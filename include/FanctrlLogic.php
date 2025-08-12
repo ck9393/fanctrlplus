@@ -41,74 +41,6 @@ function scan_dir($dir) {
 $op = $_GET['op'] ?? $_POST['op'] ?? '';
 
 switch ($op) {
-  case 'detect':
-    $pwm = $_GET['pwm'] ?? '';
-    if (is_file($pwm)) {
-      $pwm_enable = $pwm . "_enable";
-      $default_method = @file_get_contents($pwm_enable);
-      $default_rpm = @file_get_contents($pwm);
-      @file_put_contents($pwm_enable, "1");
-      @file_put_contents($pwm, "150");
-      sleep(3);
-      $init_fans = list_fan();
-      @file_put_contents($pwm, "255");
-      sleep(3);
-      $final_fans = list_fan();
-      @file_put_contents($pwm, $default_rpm);
-      @file_put_contents($pwm_enable, $default_method);
-      for ($i = 0; $i < count($final_fans); $i++) {
-        if (($final_fans[$i]['rpm'] - $init_fans[$i]['rpm']) > 0) {
-          echo $init_fans[$i]['sensor'];
-          exit;
-        }
-      }
-    }
-    exit;
-
-  case 'pwm':
-    $pwm = $_GET['pwm'] ?? '';
-    $fan = $_GET['fan'] ?? '';
-    if (is_file($pwm) && is_file($fan)) {
-      $autofan = "$docroot/plugins/$plugin/scripts/rc.fanctrlplus";
-      exec("$autofan stop >/dev/null");
-
-      $fan_min = explode("_", $fan)[0] . "_min";
-      $default_method = @file_get_contents($pwm . "_enable");
-      $default_pwm = @file_get_contents($pwm);
-      $default_fan_min = @file_get_contents($fan_min);
-
-      @file_put_contents($pwm . "_enable", "1");
-      @file_put_contents($fan_min, "0");
-      @file_put_contents($pwm, "0");
-      sleep(5);
-
-      $min_rpm = @file_get_contents($fan);
-      for ($i = 0; $i <= 20; $i++) {
-        $val = $i * 5;
-        @file_put_contents($pwm, "$val");
-        sleep(2);
-        if ((@file_get_contents($fan) - $min_rpm) > 15) {
-          $is_lowest = true;
-          for ($j = 0; $j <= 10; $j++) {
-            if (@file_get_contents($fan) == 0) {
-              $is_lowest = false;
-              break;
-            }
-            sleep(1);
-          }
-          if ($is_lowest) {
-            echo $val;
-            break;
-          }
-        }
-      }
-
-      @file_put_contents($pwm, $default_pwm);
-      @file_put_contents($fan_min, $default_fan_min);
-      @file_put_contents($pwm . "_enable", $default_method);
-      exec("$autofan start >/dev/null");
-    }
-    exit;
     
   case 'pause':
     $pwm = $_GET['pwm'] ?? '';
@@ -178,7 +110,23 @@ switch ($op) {
     }
 
     $temp_file = "$cfg_dir/{$plugin}_temp_$index_cfg.cfg";
-    file_put_contents($temp_file, "custom=\"\"\nservice=\"1\"\ncontroller=\"\"\npwm=\"102\"\nmax=\"255\"\nlow=\"40\"\nhigh=\"60\"\ninterval=\"2\"\ndisks=\"\"\nsyslog=\"1\"");
+    file_put_contents($temp_file, <<<INI
+    custom=""
+    service="1"
+    controller=""
+    pwm="102"
+    max="255"
+    low="40"
+    high="60"
+    interval="2"
+    disks=""
+    syslog="1"
+    cpu_enable="0"
+    cpu_sensor=""
+    cpu_min_temp=""
+    cpu_max_temp=""
+    INI
+    );
 
     require_once "$docroot/plugins/$plugin/include/FanBlockRender.php";
     $cfg = parse_ini_file($temp_file);
@@ -188,9 +136,10 @@ switch ($op) {
     $page_index = intval($_REQUEST['index'] ?? 99);
     $pwms = list_pwm();
     $disks = list_valid_disks_by_id();
+    $cpu_sensors = detect_cpu_sensors();
 
     header('Content-Type: text/html; charset=utf-8');
-    echo render_fan_block($cfg, $page_index, $pwms, $disks, $pwm_labels);
+    echo render_fan_block($cfg, $page_index, $pwms, $disks, $pwm_labels, $cpu_sensors); 
     exit;
 
   case 'setsyslog':
@@ -335,5 +284,19 @@ switch ($op) {
     }
     json_response($pwms);
     break;
+
+  case 'read_temp_rpm':
+    $custom = $_GET['custom'] ?? '';
+    $custom = basename($custom); // 安全过滤
+
+    $plugin = 'fanctrlplus';
+    $temp_file = "/var/tmp/$plugin/temp_${plugin}_$custom";
+    $rpm_file  = "/var/tmp/$plugin/rpm_${plugin}_$custom";
+
+    $temp = is_file($temp_file) ? trim(file_get_contents($temp_file)) : '*';
+    $rpm  = is_file($rpm_file)  ? trim(file_get_contents($rpm_file))  : '?';
+
+    echo "$temp|$rpm";  // 示例："48 (CPU)|1150"
+    exit;  
 }
 ?>

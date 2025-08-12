@@ -78,6 +78,29 @@ echo <<<STYLE
   display: inline-block;
   margin-bottom: 6px;
 }
+
+.fp-temp-val {
+    display: inline-block;
+    min-width: 16px;
+    text-align: right;
+  }
+.fp-temp-unit {
+  display: inline-block;
+  opacity: 0.9;
+}
+.fp-temp-origin {
+  display: inline-block;
+  min-width: 55px;
+  text-align: center;
+  font-size: 90%;
+  opacity: 0.6;
+}
+.fp-origin-placeholder {
+  display: inline-block;
+  min-width: 85px;
+  text-align: center;
+  color: inherit;
+}
 </style>
 STYLE;
 
@@ -98,7 +121,7 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 <tr class="header">
   <td>
     <span class="w26">NAME</span>
-    <span class="w18">TEMP</span>
+    <span class="w18">TEMP (SOURCE)</span>
     <span class="w18">RPM</span>
     <span class="w18">STATUS</span>
     <span class="w18">RUN</span>
@@ -130,51 +153,74 @@ function updateFanctrlplusTile() {
 
       // 更新每个风扇的 Temp / RPM / 状态
       data.fans.forEach(f => {
-        const label = f.label;
-        const tempEl = tile.querySelector(`.fanctrlplus-temp[data-label="${label}"]`);
-        const rpmEl = tile.querySelector(`.fanctrlplus-rpm[data-label="${label}"]`);
-        const statusEl = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
-        if (tempEl) tempEl.textContent = f.temp;
-        if (rpmEl) rpmEl.textContent = f.rpm;
-        if (statusEl) statusEl.innerHTML = f.status;
+        const label    = f.label;
+        const tempEl   = tile.querySelector(`.fanctrlplus-temp[data-label="${label}"]`);
+        const rpmEl    = tile.querySelector(`.fanctrlplus-rpm[data-label="${label}"]`);
+        const statEl   = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
+        const val      = f.temp_raw;
+        const origin   = f.temp_origin;
+
+        // 温度显示：分段样式渲染
+if (tempEl) {
+  if (val === "*") {
+    tempEl.innerHTML = `
+      <span class="fp-temp-val">*</span>
+      <span class="fp-temp-origin">${origin ? `(${origin})` : `<span class="fp-origin-placeholder">-</span>`}</span>
+    `;
+  } else if (val) {
+    tempEl.innerHTML = `
+      <span class="fp-temp-val">${val}</span>
+      <span class="fp-temp-unit">°C</span>
+      <span class="fp-temp-origin">${origin ? `(${origin})` : `<span class="fp-origin-placeholder">-</span>`}</span>
+    `;
+  } else {
+    tempEl.innerHTML = `
+      <span class="fp-temp-val">-</span>
+      <span class="fp-temp-origin"><span class="fp-origin-placeholder">-</span></span>
+    `;
+  }
+}
+
+        if (rpmEl) rpmEl.textContent = f.rpm ?? "-";
+        if (statEl) statEl.innerHTML = f.status ?? "-";
       });
     })
     .catch(() => {
       const statusSpan = document.querySelector(".fanctrlplus-status");
       if (statusSpan) statusSpan.textContent = "Status: Loading...";
-    
-      // 清空风扇数据
+
       document.querySelectorAll(".fanctrlplus-temp, .fanctrlplus-rpm, .fanctrlplus-fanstatus").forEach(el => {
         el.textContent = "--";
       });
     });
 }
 
+// ✅ 注册页面加载与按钮事件
 document.addEventListener("DOMContentLoaded", function () {
   setTimeout(updateFanctrlplusTile, 200);
   setInterval(updateFanctrlplusTile, 5000);
 
-  // 用事件代理监听所有刷新按钮
-  document.getElementById("fanctrlplus-dashboard")?.addEventListener("click", function(e) {
-    const btn = e.target.closest('.fanctrlplus-refresh');
-    if (!btn) return;
+  // 按钮刷新
+  const dashboard = document.getElementById("fanctrlplus-dashboard");
+  if (dashboard) {
+    dashboard.addEventListener("click", function(e) {
+      const btn = e.target.closest('.fanctrlplus-refresh');
+      if (!btn) return;
 
-    const label = btn.getAttribute('data-label');
-    btn.style.color = '#aaa';
-    btn.classList.add('fa-spin');
-    refreshSingleFan(label);
-    setTimeout(() => {
-      btn.style.color = 'var(--blue-800)';
-      btn.classList.remove('fa-spin');
-    }, 1800);
+      const label = btn.getAttribute('data-label');
+      btn.style.color = '#aaa';
+      btn.classList.add('fa-spin');
 
-    e.preventDefault();
-    e.stopPropagation();
-  });
-});
+      refreshSingleFan(label);
 
-document.addEventListener("DOMContentLoaded", function () {
-  setTimeout(updateFanctrlplusTile, 200);
-  setInterval(updateFanctrlplusTile, 5000);
+      setTimeout(() => {
+        btn.style.color = 'var(--blue-800)';
+        btn.classList.remove('fa-spin');
+      }, 1800);
+
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  }
 });
 </script>
