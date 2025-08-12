@@ -1,13 +1,13 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.3.0">
+<!ENTITY version "1.3.1">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/unraid/&name;.plg">
 <!ENTITY source "/boot/config/plugins/&name;">
 <!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">
-<!ENTITY MD5 "bfd974979f28ecd853dea388a66d2cca">
+<!ENTITY MD5 "f3029d523873a0bd313cd214d11da457">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://forums.unraid.net/topic/191722-plugin-fancrtl-plus">
@@ -18,6 +18,20 @@
 
 <CHANGES>
 ###&version;
+- Added CPU temperature monitoring support.
+- Automatically selects the most reliable CPU sensor by default (can be overridden manually if needed).
+- When both Disk and CPU temperature rules are configured for a fan, the fan speed is determined using the higher PWM result from either source.
+- Dashboard now displays the temperature source (`Disk` / `CPU`).
+- Syslog now includes the temperature source (`Disk` / `CPU`) in its output.
+- "Run Now" button now supports CPU temperature.
+- Added chart popup to preview the fan configuration's temperature curves.
+- Added real-time temperature and RPM display with crosshair overlay in the chart popup.
+- Chart popup includes temperature source detection and status hints.
+- Improved Fan Configuration UI for a clearer and more intuitive setup process. (Yes, the blocks are bigger now — but that’s extra space for clarity.)
+- Fixed an issue where renaming a fan's Custom Name with only a letter case change (e.g. `Back` → `BACK`) would not correctly update the .cfg file, potentially causing data loss.
+- Fixed: Spin-down disks were incorrectly logged and displayed on the Dashboard as `Temp=0`; now correctly shown as `Temp=*`.
+
+###1.3.0
 - Replaced “Min PWM” with Fan Speed Range to allow setting both minimum and maximum fan speed
 - UI now automatically converts PWM values to 0–100%, with tooltips showing both % and raw PWM for reference
 - Added fallback protection: if input field is left empty, Fan Speed Range will default to 40%–100%.
