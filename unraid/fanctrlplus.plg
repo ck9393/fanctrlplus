@@ -128,7 +128,10 @@
 <FILE Run="/bin/bash">
 <INLINE>
 #!/bin/bash
-rm -f &source;/fanctrlplus-*.txz 2>/dev/null || true
+MD5=$(md5sum &txz; 2>/dev/null | grep -Po '^\S+')
+if [[ $MD5 != &MD5; ]]; then
+  rm -f &source;/*.txz
+fi
 </INLINE>
 </FILE>
 
