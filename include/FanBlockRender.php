@@ -169,7 +169,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- Include Disk(s) -->
         <tr>
-          <td style="cursor: help;" title="Select disks, NVMe drives, or other block devices to monitor for this fan.">Include Disk(s):</td>
+          <td style="cursor: help;" title="Select disks, NVMe drives, or other block devices to monitor for this fan. If you only want to monitor CPU temperature for this fan, leave all disks unchecked.">Include Disk(s):</td>
           <td>
             <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:300px;">
               <?php
