@@ -134,3 +134,17 @@ input:focus {
 .chart-current {
   color: #000 !important;
 }
+
+/* Identify 模态：语义类，替代内联样式 */
+.fcp-swal-intro { font-size:13px; margin-bottom:12px; line-height:1.5; }
+
+/* 表单布局的小工具类 */
+.fcp-td-right { text-align:right; padding-right:12px; }
+.fcp-pt-12   { padding-top:12px; }
+.fcp-field-220 { width:100%; max-width:220px; }
+
+/* 动作区（Identify / Save Label） */
+.fcp-swal-actions { text-align:center; margin-top:16px; }
+
+/* 焦点陷阱，替代 dummy 的行内样式 */
+.fcp-focus-trap { position:absolute; opacity:0; width:1px; height:1px; overflow:hidden; }
