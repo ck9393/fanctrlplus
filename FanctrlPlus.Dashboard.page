@@ -196,11 +196,6 @@ $mytiles[$pluginname]['column2'] = <<<EOT
 EOT;
 ?>
 <script>
-function refreshSingleFan(custom) {
-  fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(custom)}`)
-    .then(() => setTimeout(updateFanctrlplusTile, 2000)); // 2秒后刷新界面
-}
-
 // 设置温度与来源。支持 *, --，以及无来源时用占位“-”
 function setTempCell(label, val, origin) {
   const tile = document.getElementById('fanctrlplus-dashboard');
@@ -265,6 +260,12 @@ function updateFanctrlplusTile() {
       tile?.querySelectorAll('.fcp-col-temp .fp-origin').forEach(n => n.textContent = '');
       tile?.querySelectorAll('.fanctrlplus-rpm, .fanctrlplus-fanstatus').forEach(n => n.textContent = '--');
     });
+}
+
+// 单风扇立即执行 (Run Now)
+function refreshSingleFan(custom) {
+  fetch(`/plugins/fanctrlplus/include/FanctrlLogic.php?op=refresh_single&custom=${encodeURIComponent(custom)}`)
+    .then(() => setTimeout(updateFanctrlplusTile, 2000)); // 2秒后刷新界面
 }
 
 document.addEventListener("DOMContentLoaded", function () {
