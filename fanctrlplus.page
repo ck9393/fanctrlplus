@@ -1513,28 +1513,28 @@ $(function() {
         </blockquote>
 
         <!-- Form -->
- <div class="fcp-formgrid">
-    <label for="identify-pwm-select" class="fcp-formgrid-label">Select PWM Controller:</label>
-    <select id="identify-pwm-select" class="fcp-select fcp-w-200"></select>
+        <div class="fcp-formgrid">
+            <label for="identify-pwm-select" class="fcp-formgrid-label">Select PWM Controller:</label>
+            <select id="identify-pwm-select" class="fcp-select fcp-w-200"></select>
 
-    <label for="identify-label-input" class="fcp-formgrid-label">Custom Label:</label>
-    <input id="identify-label-input" type="text" class="fcp-input fcp-w-200" placeholder="Label (e.g. Rear Fan)">
-  </div>
+            <label for="identify-label-input" class="fcp-formgrid-label">Custom Label:</label>
+            <input id="identify-label-input" type="text" class="fcp-input fcp-w-200" placeholder="Label (e.g. Rear Fan)">
+          </div>
 
-  <!-- Actions -->
-  <div class="fcp-actions">
-    <button type="button" class="btn"
-      onclick="pauseFan($('#identify-pwm-select').val(), this)"
-      title="Pause this fan for 30 seconds to identify it.">Identify</button>
+          <!-- Actions -->
+          <div class="fcp-actions">
+            <button type="button" class="btn"
+              onclick="pauseFan($('#identify-pwm-select').val(), this)"
+              title="Pause this fan for 30 seconds to identify it.">Identify</button>
 
-    <button type="button" class="btn"
-      onclick="savePWMLabel('identify-pwm-select','identify-label-input','identify-label-tip')"
-      title="Save the label, or clear it by leaving the input empty and clicking again.">Save Label</button>
+            <button type="button" class="btn"
+              onclick="savePWMLabel('identify-pwm-select','identify-label-input','identify-label-tip')"
+              title="Save the label, or clear it by leaving the input empty and clicking again.">Save Label</button>
 
-    <span id="identify-label-tip" class="save-tip fcp-save-tip"></span>
-  </div>
+            <span id="identify-label-tip" class="save-tip fcp-save-tip"></span>
+          </div>
+        </div>
       </div>
-    </div>
 
     <!-- 右侧：Syslog Switch -->
     <div class="fcp-card-480">

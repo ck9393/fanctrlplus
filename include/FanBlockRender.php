@@ -72,9 +72,19 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
       <table class="fcp-w-100">
         <!-- Custom Name -->
         <tr>
-          <td class="fcp-help-cursor" title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">Custom Name</td>
+          <td class="fcp-help-cursor" 
+              title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">
+            Custom Name
+          </td>
           <td>
-            <input type="text" name="custom[<?=$i?>]" class="custom-name-input" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
+            <div style="max-width:300px;">
+              <input type="text"
+                    name="custom[<?=$i?>]"
+                    class="custom-name-input"
+                    value="<?=htmlspecialchars($cfg['custom'] ?? '')?>"
+                    placeholder="Required (e.g. HDDBay)"
+                    required>
+            </div>
           </td>
         </tr>
 
@@ -82,7 +92,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
         <tr>
           <td class="fcp-help-cursor" title="Enable or disable this fan controller">Fan Control:</td>
           <td>
-            <select name="service[<?=$i?>]">
+            <select name="service[<?=$i?>]" class="fcp-enable-select">
               <option value="0" <?=($cfg['service'] ?? '') == '0' ? 'selected' : ''?>>Disabled</option>
               <option value="1" <?=($cfg['service'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
             </select>
@@ -225,7 +235,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
         <tr>
           <td class="fcp-help-cursor" title="Enable or disable monitoring CPU temperature for this fan.">CPU Temp Monitor:</td>
           <td>
-            <select id="cpu-enable-<?=$i?>" name="cpu_enable[<?=$i?>]" onchange="handleCpuEnableChange(this, <?=$i?>);">
+            <select id="cpu-enable-<?=$i?>" name="cpu_enable[<?=$i?>]" class="fcp-enable-select" onchange="handleCpuEnableChange(this, <?=$i?>);">
               <option value="0" <?=($cfg['cpu_enable'] ?? '') != '1' ? 'selected' : ''?>>Disabled</option>
               <option value="1" <?=($cfg['cpu_enable'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
             </select>

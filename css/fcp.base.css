@@ -52,6 +52,18 @@
 /* 表格左列帮助光标 */
 .fcp-help-cursor { cursor: help; }
 
+.custom-name-input {
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+}
+
+.fcp-enable-select {
+  width: 166px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* 区间一行：左输入 ~ 中间符号 ~ 右输入 */
 .fcp-range-grid {
   display: grid;
@@ -207,7 +219,7 @@
   margin-left: -14px;
   width: 28px;
   height: 2px;
-  background-color: transparent !important; /* 修正了 !important 的位置 */
+  background-color: transparent !important;
   border-radius: 4px;
   transition: all 0.25s ease-in-out;
   pointer-events: none;

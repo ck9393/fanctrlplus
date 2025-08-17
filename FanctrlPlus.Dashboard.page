@@ -47,87 +47,151 @@ foreach ($all_cfg as $cfg) {
   $file = $cfg['file'];
   $label = $cfg['custom'] ?? $file;
 
-  // ✅ 跳过未命名的风扇（custom 名为空）
+  // 跳过未命名的风扇（custom 名为空）
   if (empty($cfg['custom'])) continue;
 
   $fan_rows .= <<<ROW
-<tr>
-  <td>
-    <span class="w26">$label</span>
-    <span class="w18 fanctrlplus-temp" data-label="$label">--</span>
-    <span class="w18 fanctrlplus-rpm" data-label="$label">--</span>
-    <span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
-    <span class="w18">
-      <span class="fa fa-refresh fanctrlplus-refresh"
-        data-label="$label"
-        style="cursor:pointer;font-size:13px;color:var(--blue-800);vertical-align:middle;"
-        title="Manual Run: Read current temperature and set fan speed immediately"></span>
-    </span>
-  </td>
-</tr>
-ROW;
+  <tr>
+    <td>
+      <span class="w26">$label</span>
+      <span class="w18 fcp-col-temp" data-label="$label">
+        <span class="fp-tval">--</span>
+        <span class="fp-origin"></span>
+      </span>
+      <span class="w18 fanctrlplus-rpm" data-label="$label">--</span>
+      <span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
+      <span class="w18">
+        <span class="fa fa-refresh fanctrlplus-refresh"
+          data-label="$label"
+          style="cursor:pointer;font-size:13px;color:var(--blue-800);vertical-align:middle;"
+          title="Manual Run: Read current temperature and set fan speed immediately"></span>
+      </span>
+    </td>
+  </tr>
+  ROW;
 }
 
 // 样式输出
 echo '<link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">' . PHP_EOL;
 echo <<<STYLE
 <style>
-.fanctrlplus-status {
+/* ====== 顶部状态（保留原样） ====== */
+.fanctrlplus-status{
   font-weight: normal;
   font-size: 12px;
   display: inline-block;
   margin-bottom: 6px;
 }
 
-.fp-temp-val {
-    display: inline-block;
-    min-width: 16px;
-    text-align: right;
+/* ====== 表头：桌面全称，≤1080px 用短写 ====== */
+#fanctrlplus-dashboard .fcp-col-head .mobile{ display:none; }
+@media (max-width:1080px){
+  #fanctrlplus-dashboard .fcp-col-head .full  { display:none; }
+  #fanctrlplus-dashboard .fcp-col-head .mobile{ display:inline; }
+}
+
+/* ====== 温度列（新结构）====== */
+/* 外层容器：桌面一行排列 */
+#fanctrlplus-dashboard .fcp-col-temp{
+  display:inline-flex; gap:6px; align-items:baseline;
+}
+
+/* 数值部分 */
+#fanctrlplus-dashboard .fcp-col-temp .fp-tval{
+  display:inline-block;
+  min-width:16px;
+  text-align:right;
+}
+
+/* 单位（兼容旧 */
+#fanctrlplus-dashboard .fcp-col-temp{
+  display:inline-block;
+  opacity:0.9;
+}
+
+/* 来源 */
+#fanctrlplus-dashboard .fcp-col-temp .fp-origin{
+  display:inline-block;
+  min-width:55px;
+  text-align:center;
+  font-size:90%;
+  opacity:.65;
+}
+
+/* 无来源时的占位（与来源宽度匹配，避免跳动） */
+#fanctrlplus-dashboard .fcp-col-temp .fp-origin-placeholder{
+  display:inline-block;
+  min-width:85px;
+  text-align:center;
+  color:inherit;
+  opacity:.65;
+}
+
+/* ====== ≤1080px：两行布局，避免 w18 溢出 ====== */
+@media (max-width:1080px){
+  #fanctrlplus-dashboard .fcp-col-temp{
+    display:block; line-height:1.1;
   }
-.fp-temp-unit {
-  display: inline-block;
-  opacity: 0.9;
-}
-.fp-temp-origin {
-  display: inline-block;
-  min-width: 55px;
-  text-align: center;
-  font-size: 90%;
-  opacity: 0.6;
-}
-.fp-origin-placeholder {
-  display: inline-block;
-  min-width: 85px;
-  text-align: center;
-  color: inherit;
+  #fanctrlplus-dashboard .fcp-col-temp .fp-tval{
+    display:inline-block;         /* 上行：温度 */
+  }
+  #fanctrlplus-dashboard .fcp-col-temp .fp-origin{
+    display:block;             /* 下行：来源 */
+    font-size:80%;
+    opacity:.65;
+    margin-top:2px;
+    min-width:0;
+    text-align:left;
+  }
+  #fanctrlplus-dashboard .fcp-col-temp .fp-origin-placeholder{
+    display:block;
+    min-width:0;
+    margin-top:2px;
+    margin-left:10px;
+    text-align:left;
+    opacity:.65;
+  }
 }
 </style>
 STYLE;
 
 // 输出 tile
 $mytiles[$pluginname]['column2'] = <<<EOT
-<tbody id="fanctrlplus-dashboard" class="sortable" title="FanCtrl Plus">
-<tr>
-  <td>
-    <i class="icon-fanctrlplus f32"></i>
-    <div class="section">FanCtrl Plus<br>
-      <span class="$status_color fanctrlplus-status">Status: $status_text</span>
-    </div>
-    <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
-      <i class="fa fa-fw fa-cog control"></i>
-    </a>
-  </td>
-</tr>
-<tr class="header">
-  <td>
-    <span class="w26">NAME</span>
-    <span class="w18">TEMP (SOURCE)</span>
-    <span class="w18">RPM</span>
-    <span class="w18">STATUS</span>
-    <span class="w18">RUN</span>
-  </td>
-</tr>
-$fan_rows
+<tbody id="fanctrlplus-dashboard" title="FanCtrl Plus">
+  <tr>
+    <td>
+      <span class="tile-header">
+        <span class="tile-header-left">
+          <i class="icon-fanctrlplus f32"></i>
+          <div class="section">
+            FanCtrl Plus<br>
+            <span class="fanctrlplus-status $status_color">Status: $status_text</span>
+          </div>
+        </span>
+        <span class="tile-header-right">
+          <span class="tile-header-right-controls">
+            <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+              <i class="fa fa-fw fa-cog control"></i>
+            </a>
+        </span>
+      </span>
+    </td>
+  </tr>
+
+  <tr class="header">
+    <td>
+      <span class="w26">NAME</span>
+      <span class="w18 fcp-col-head">
+        <span class="full">TEMP (SOURCE)</span>
+        <span class="mobile">TEMP</span>
+      </span>
+      <span class="w18">RPM</span>
+      <span class="w18">STATUS</span>
+      <span class="w18">RUN</span>
+    </td>
+  </tr>
+
+  $fan_rows
 </tbody>
 EOT;
 ?>
@@ -137,6 +201,37 @@ function refreshSingleFan(custom) {
     .then(() => setTimeout(updateFanctrlplusTile, 2000)); // 2秒后刷新界面
 }
 
+// 设置温度与来源。支持 *, --，以及无来源时用占位“-”
+function setTempCell(label, val, origin) {
+  const tile = document.getElementById('fanctrlplus-dashboard');
+  if (!tile) return;
+
+  // 保险：label 里若有特殊字符，避免 querySelector 失效
+  const key = (window.CSS && CSS.escape) ? CSS.escape(label) : String(label).replace(/"/g, '\\"');
+
+  const wrap = tile.querySelector(`.fcp-col-temp[data-label="${key}"]`);
+  if (!wrap) return;
+
+  const t = wrap.querySelector('.fp-tval');
+  const o = wrap.querySelector('.fp-origin');
+
+  // 温度文本
+  let show;
+  if (val === '*') show = '*';
+  else if (val == null || val === '-' || val === '--') show = '--';
+  else show = `${val} °C`;
+  if (t) t.textContent = show;
+
+  // 来源：有就 (CPU)/(Disk)，没有就插入占位 span，确保列宽不跳
+  if (o) {
+    if (origin && String(origin).trim()) {
+      o.textContent = `(${origin})`;
+    } else {
+      o.innerHTML = `<span class="fp-origin-placeholder">-</span>`;
+    }
+  }
+}
+
 function updateFanctrlplusTile() {
   const tile = document.getElementById("fanctrlplus-dashboard");
   if (!tile) return;
@@ -144,63 +239,38 @@ function updateFanctrlplusTile() {
   fetch("/plugins/fanctrlplus/FanctrlDashboard.php")
     .then(res => res.json())
     .then(data => {
-      // 更新顶部状态
+      // 顶部状态
       const statusSpan = tile.querySelector(".fanctrlplus-status");
       if (statusSpan) {
-        statusSpan.textContent = "Status: " + data.status;
+        statusSpan.textContent = `Status: ${data.status}`;
         statusSpan.className = "fanctrlplus-status " + (data.status === "Running" ? "green-text" : "red-text");
       }
 
-      // 更新每个风扇的 Temp / RPM / 状态
-      data.fans.forEach(f => {
-        const label    = f.label;
-        const tempEl   = tile.querySelector(`.fanctrlplus-temp[data-label="${label}"]`);
-        const rpmEl    = tile.querySelector(`.fanctrlplus-rpm[data-label="${label}"]`);
-        const statEl   = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${label}"]`);
-        const val      = f.temp_raw;
-        const origin   = f.temp_origin;
+      // 行数据（仅新结构）
+      (data.fans || []).forEach(f => {
+        setTempCell(f.label, f.temp_raw, f.temp_origin);
 
-        // 温度显示：分段样式渲染
-if (tempEl) {
-  if (val === "*") {
-    tempEl.innerHTML = `
-      <span class="fp-temp-val">*</span>
-      <span class="fp-temp-origin">${origin ? `(${origin})` : `<span class="fp-origin-placeholder">-</span>`}</span>
-    `;
-  } else if (val) {
-    tempEl.innerHTML = `
-      <span class="fp-temp-val">${val}</span>
-      <span class="fp-temp-unit">°C</span>
-      <span class="fp-temp-origin">${origin ? `(${origin})` : `<span class="fp-origin-placeholder">-</span>`}</span>
-    `;
-  } else {
-    tempEl.innerHTML = `
-      <span class="fp-temp-val">-</span>
-      <span class="fp-temp-origin"><span class="fp-origin-placeholder">-</span></span>
-    `;
-  }
-}
-
-        if (rpmEl) rpmEl.textContent = f.rpm ?? "-";
-        if (statEl) statEl.innerHTML = f.status ?? "-";
+        const rpmEl  = tile.querySelector(`.fanctrlplus-rpm[data-label="${f.label}"]`);
+        const statEl = tile.querySelector(`.fanctrlplus-fanstatus[data-label="${f.label}"]`);
+        if (rpmEl)  rpmEl.textContent = (f.rpm ?? "-");
+        if (statEl) statEl.innerHTML  = (f.status ?? "-");
       });
     })
     .catch(() => {
-      const statusSpan = document.querySelector(".fanctrlplus-status");
+      const statusSpan = tile?.querySelector(".fanctrlplus-status");
       if (statusSpan) statusSpan.textContent = "Status: Loading...";
 
-      document.querySelectorAll(".fanctrlplus-temp, .fanctrlplus-rpm, .fanctrlplus-fanstatus").forEach(el => {
-        el.textContent = "--";
-      });
+      // 仅复位新结构
+      tile?.querySelectorAll('.fcp-col-temp .fp-tval').forEach(n => n.textContent = '--');
+      tile?.querySelectorAll('.fcp-col-temp .fp-origin').forEach(n => n.textContent = '');
+      tile?.querySelectorAll('.fanctrlplus-rpm, .fanctrlplus-fanstatus').forEach(n => n.textContent = '--');
     });
 }
 
-// ✅ 注册页面加载与按钮事件
 document.addEventListener("DOMContentLoaded", function () {
   setTimeout(updateFanctrlplusTile, 200);
   setInterval(updateFanctrlplusTile, 5000);
 
-  // 按钮刷新
   const dashboard = document.getElementById("fanctrlplus-dashboard");
   if (dashboard) {
     dashboard.addEventListener("click", function(e) {
