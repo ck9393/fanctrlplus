@@ -156,16 +156,22 @@ echo <<<STYLE
 STYLE;
 
 // 输出 tile
+$isResponsiveWebgui = version_compare((parse_ini_file('/etc/unraid-version')['version'] ?? '0.0.0'), '7.2.0-beta', '>=');
+$tbodyClass = $isResponsiveWebgui ? 'mixed' : 'sortable';
+
+$headerSection = $isResponsiveWebgui
+  ? "<h3 class='tile-header-main'>FanCtrl Plus</h3>\n<span class='fanctrlplus-status $status_color'>Status: $status_text</span>"
+  : "FanCtrl Plus<br>\n<span class='fanctrlplus-status $status_color'>Status: $status_text</span><br>";
+
 $mytiles[$pluginname]['column2'] = <<<EOT
-<tbody id="fanctrlplus-dashboard" title="FanCtrl Plus">
+<tbody id="fanctrlplus-dashboard" class="$tbodyClass" title="FanCtrl Plus">
   <tr>
     <td>
       <span class="tile-header">
         <span class="tile-header-left">
           <i class="icon-fanctrlplus f32"></i>
           <div class="section">
-            FanCtrl Plus<br>
-            <span class="fanctrlplus-status $status_color">Status: $status_text</span>
+            $headerSection
           </div>
         </span>
         <span class="tile-header-right">
