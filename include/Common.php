@@ -94,19 +94,31 @@ function detect_cpu_sensors(): array {
     }
   }
 
-  // 映射 /dev/sdX → 非 ZFS Pool（btrfs, xfs）名（通过挂载点）
+  // 映射 /dev/sdX ↔ 非 ZFS Pool (btrfs, xfs) 名（通过挂载点）
   $dev_to_pool_fs = [];
-  $mounts = shell_exec("findmnt -rn -o SOURCE,TARGET,FSTYPE | grep -E 'btrfs|xfs'");
-  foreach (explode("\n", $mounts) as $line) {
-    $parts = preg_split('/\s+/', $line);
-    if (count($parts) === 3) {
-      [$dev, $mount, $fstype] = $parts;
-      $base = preg_replace('#[0-9]+$#', '', $dev); // /dev/sdj1 → /dev/sdj
-      // 过滤掉 array 的 mdX 磁盘
+  $mounts = @shell_exec("findmnt -rn -o SOURCE,TARGET,FSTYPE | grep -E 'btrfs|xfs' 2>/dev/null");
+  $mounts = is_string($mounts) ? $mounts : '';
+
+  // 安全按行切分，忽略空行
+  $lines = preg_split("/\r\n|\n|\r/", trim($mounts));
+  foreach ($lines as $line) {
+      $line = trim($line);
+      if ($line === '') continue;
+
+      // SOURCE TARGET FSTYPE 以空白切分，确保有3段
+      $parts = preg_split('/\s+/', $line);
+      if (count($parts) < 3) continue;
+
+      // 只取前3列，避免多余空白/列影响
+      list($dev, $mount, $fstype) = array_slice($parts, 0, 3);
+
+      // /dev/sdX1 -> /dev/sdX
+      $base = preg_replace('/\d+$/', '', $dev);
+
+      // 过滤 array 的 mdX 磁盘与 loop 设备，防止从挂载路径推断 pool 名
       if (strpos($base, '/dev/md') === 0 || strpos($base, '/dev/loop') === 0) continue;
-      $pool_name = basename($mount); // 从挂载路径推断 pool 名
+      $pool_name = basename($mount);
       $dev_to_pool_fs[$base] = ucfirst($pool_name);
-    }
   }
 
   // boot device
