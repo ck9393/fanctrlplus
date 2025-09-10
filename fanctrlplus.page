@@ -1096,12 +1096,12 @@ $(function() {
       .then(() => {
         setTimeout(() => {
           if (icon) icon.classList.remove('fa-spin');
-          btn.style.color = '#0088cc';
+          btn.style.color = 'var(--blue-800)';
           btn.style.pointerEvents = '';
         }, 1800);
       })
       .catch(err => {
-        btn.style.color = '#0088cc';
+        btn.style.color = 'var(--blue-800)';
         if (icon) icon.classList.remove('fa-spin');
         btn.style.pointerEvents = '';
         alert("Manual Run failed: " + err.message);
@@ -1562,48 +1562,48 @@ $(function() {
         </blockquote>
       </div>
 
-<div id="syslog-settings-area">
-  <div class="tablesorter syslog-table-wrap">
-    <table class="syslog-table tablesorter">
-      <thead>
-        <tr>
-          <th class="name">Configured Fan</th>
-          <th class="switch">Syslog Switch</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php
-        $custom_seen = [];
-        foreach ($all_cfg as $cfg):
-          if (empty($cfg['custom']) || strpos($cfg['file'], '_temp_') !== false) continue;
-          if (in_array($cfg['custom'], $custom_seen, true)) continue;
-          $custom_seen[] = $cfg['custom'];
-          $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
-          $is_on = ($cfg['syslog'] ?? "1") != "0";
-        ?>
-        <tr class="sortable" id="syslog-row-<?= $custom_id ?>">
-          <td class="name"><?= htmlspecialchars($cfg['custom']) ?></td>
-          <td class="switch">
-            <span class="switch-area">
-              <div class="switch-button-background<?= $is_on ? ' checked' : '' ?>"
-                   data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>">
-                <div class="switch-button-button"></div>
-              </div>
-              <input type="checkbox"
-                     id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-                     class="syslog-switch"
-                     data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
-                     <?= $is_on ? 'checked' : '' ?>>
-              <span class="switch-button-label on">ON</span>
-              <span class="switch-button-label off">OFF</span>
-            </span>
-          </td>
-        </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
+      <div id="syslog-settings-area">
+        <div class="tablesorter syslog-table-wrap">
+          <table class="syslog-table tablesorter">
+            <thead>
+              <tr>
+                <th class="name">Configured Fan</th>
+                <th class="switch">Syslog Switch</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php
+              $custom_seen = [];
+              foreach ($all_cfg as $cfg):
+                if (empty($cfg['custom']) || strpos($cfg['file'], '_temp_') !== false) continue;
+                if (in_array($cfg['custom'], $custom_seen, true)) continue;
+                $custom_seen[] = $cfg['custom'];
+                $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
+                $is_on = ($cfg['syslog'] ?? "1") != "0";
+              ?>
+              <tr class="sortable" id="syslog-row-<?= $custom_id ?>">
+                <td class="name"><?= htmlspecialchars($cfg['custom']) ?></td>
+                <td class="switch">
+                  <span class="switch-area">
+                    <div class="switch-button-background<?= $is_on ? ' checked' : '' ?>"
+                        data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>">
+                      <div class="switch-button-button"></div>
+                    </div>
+                    <input type="checkbox"
+                          id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+                          class="syslog-switch"
+                          data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
+                          <?= $is_on ? 'checked' : '' ?>>
+                    <span class="switch-button-label on">ON</span>
+                    <span class="switch-button-label off">OFF</span>
+                  </span>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </form>
