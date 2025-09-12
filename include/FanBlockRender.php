@@ -77,7 +77,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
             Custom Name
           </td>
           <td>
-            <div style="max-width:300px;">
+            <div>
               <input type="text"
                     name="custom[<?=$i?>]"
                     class="custom-name-input"

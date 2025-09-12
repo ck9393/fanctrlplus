@@ -80,21 +80,41 @@
 /* 居中（用于 ~ 符号） */
 .fcp-center { text-align: center; }
 
-/* Interval 输入 */
+/* 默认：小屏（手机 ≤1080px），Interval 全宽，Run Now 换行 */
 #fan-form .fcp-interval-input {
-  width: 225px; 
-  display: inline-block;
-  margin-right: 1px;
+  width: 100%;
+  max-width: 300px;
+  display: block;
+  margin-right: 0;
   text-align: left;
 }
 
-/* “Run Now” 触发器样式 */
 .fcp-runnow {
+  display: block;
+  margin-top: 4px;
+  white-space: normal;
+  text-align: left;
   cursor: pointer;
   font-size: 13px;
   color: var(--blue-800);
   margin-left: 1px;
-  vertical-align: middle;
+}
+
+/* 大屏（桌面 >1080px）：Interval 固定宽度 + Run Now 同排 */
+@media (min-width: 1086px) {
+  #fan-form .fcp-interval-input {
+    width: 225px;
+    display: inline-block;
+    margin-right: 1px;
+  }
+
+  .fcp-runnow {
+    display: inline-block;
+    margin-left: 6px;
+    margin-top: 0;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
 }
 
 /* 统一 13px（内部图标等） */
@@ -138,7 +158,6 @@
 .pwm-controller,
 .ui-dropdownchecklist-selector-wrapper {
   max-width: 300px !important;
-  width: 300px !important;
   box-sizing: border-box;
   padding-right: 24px;
   overflow: hidden;
@@ -278,18 +297,16 @@ dt.containerSettingsDt {
 
 /* ===== Columns / blocks ===== */
 #fan-area {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 16px;
-  align-items: flex-start;
   padding: 8px;
+  align-items: start;
 }
 .fan-column {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 16px;
-  flex: 1;
-  min-width: 340px;
-}
+}  
 .fan-block {
   position: relative;
   width: 100%;
@@ -376,7 +393,7 @@ dt.containerSettingsDt {
 /* --- 卡片尺寸：原 flex:1 1 480px; min-width:380px --- */
 .fcp-card-480{
   flex: 1 1 480px;
-  min-width: 380px;
+  width: 100%;
 }
 
 .fcp-title-left{
@@ -389,8 +406,8 @@ dt.containerSettingsDt {
 /* 表单网格：左标签右输入，间距更紧凑、对齐更稳 */
 .fcp-formgrid{
   display:grid;
-  grid-template-columns: 180px 220px;
-  gap:10px 24px;
+  grid-template-columns: 140px auto;
+  gap:10px 16px;
   justify-content:center;
   margin: 24px auto 10px auto;
 }
@@ -461,3 +478,186 @@ dt.containerSettingsDt {
 .switch-button-label.on{ display: none; }
 .switch-button-background.checked ~ .switch-button-label.on{ display: inline; }
 .switch-button-background.checked ~ .switch-button-label.off{ display: none; }
+
+/* 针对窄屏手机的 fan-block 进一步优化 */
+/* ===== Mobile overrides for FanCtrl Plus ===== */
+@media (min-width: 768px) {
+  #fan-area {
+    grid-template-columns: 1fr 1fr;  /* 横屏或平板 → 两列 */
+    align-items: start;
+  }
+}
+
+@media (max-width: 1399px) {
+  /* fan block & fieldset 自适应全宽 */
+  .fan-block,
+  .fan-fieldset {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    padding-bottom: 8px;
+  }
+
+  /* 让 fieldset 支持内部 flex 布局 */
+  .fan-fieldset {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .fcp-fan-tools {
+    order: 99 !important;          /* 永远在最后 */
+    margin-top: auto !important;   /* 推到底部 */
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  .fcp-fan-icon-wrap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .fcp-fan-icon {
+    width: 34px;
+    height: 34px;
+    display: block;
+    margin: auto;
+  }
+
+  /* 覆盖下拉框行内 300px 宽度 */
+  .ui-dropdownchecklist-selector,
+  .ui-dropdownchecklist-selector-wrapper,
+  .cpu-input {
+    width: 100% !important;
+    max-width: 300px !important;
+    display: block !important;
+  }
+  .ui-dropdownchecklist-text {
+    white-space: normal !important;
+    text-overflow: initial !important;
+  }
+}
+  
+@media (max-width: 1024px) {
+  /* fan block & fieldset 自适应全宽 */
+  .fan-block,
+  .fan-fieldset {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    padding-bottom: 8px;
+  }
+
+  /* 让 fieldset 支持内部 flex 布局 */
+  .fan-fieldset {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .fcp-fan-tools {
+    order: 99 !important;          /* 永远在最后 */
+    margin-top: auto !important;   /* 推到底部 */
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  .fcp-fan-icon-wrap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .fcp-fan-icon {
+    width: 32px;
+    height: 32px;
+    display: block;
+    margin: auto;
+  }
+
+  /* 覆盖掉固定宽度的 input / select / dropdown */
+  .custom-name-input,
+  .fcp-enable-select,
+  .pwm-controller,
+  .ui-dropdownchecklist-selector-wrapper,
+  #fan-form .fcp-w-200{
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+
+  /* 覆盖下拉框行内 300px 宽度 */
+  .ui-dropdownchecklist-selector,
+  .ui-dropdownchecklist-selector-wrapper,
+  .cpu-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+  .ui-dropdownchecklist-text {
+    white-space: normal !important;
+    text-overflow: initial !important;
+  }
+
+  /* Disk / CPU Temp Range 输入框 grid 自适应 */
+  .fcp-range-grid {
+    grid-template-columns: 1fr auto 1fr !important; /* 左输入框 ~ 右输入框 */
+    gap: 4px !important;
+  }
+  .fcp-range-grid input[type="text"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 768px) {
+  .fcp-fan-icon-wrap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .fcp-fan-icon {
+    width: 30px;
+    height: 30px;
+    display: block;
+    margin: auto;
+  }
+
+  #fan-form .fcp-interval-input {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    margin-right: 0;
+    text-align: left;
+  }
+
+  .fcp-runnow {
+    display: block;
+    margin-top: 4px;
+    white-space: normal;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--blue-800);
+    margin-left: 1px;
+  }
+}
