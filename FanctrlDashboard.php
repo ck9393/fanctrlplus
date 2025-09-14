@@ -31,31 +31,41 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $status = '<span class="red-text">Inactive</span>';
 
   if ($enabled && $daemon_running) {
-    $temp_raw = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
-    $rpm_raw  = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
+      $temp_raw = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
+      $rpm_raw  = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
+      $pwm_raw  = trim(@file_get_contents("$tmp_path/pwm_{$plugin}_$custom"));
 
-    // ✅ 解析温度（数字）
-    if (preg_match('/^([0-9]+)\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
-      $temp_val = $matches[1];
-      $temp_origin = $matches[2];
-    }
-    // ✅ 解析温度为 * 的情形
-    elseif (preg_match('/^\*\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
-      $temp_val = "*";
-      $temp_origin = $matches[1];
-    }
+      // ✅ 解析温度（数字）
+      if (preg_match('/^([0-9]+)\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
+        $temp_val = $matches[1];
+        $temp_origin = $matches[2];
+      }
+      elseif (preg_match('/^\*\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
+        $temp_val = "*";
+        $temp_origin = $matches[1];
+      }
 
-    $rpm = ($rpm_raw !== "" && is_numeric($rpm_raw)) ? $rpm_raw : "-";
-    $status = '<span class="green-text">Active</span>';
+      $rpm = ($rpm_raw !== "" && is_numeric($rpm_raw)) ? $rpm_raw : "-";
+      $status = '<span class="green-text">Active</span>';
+
+      // ✅ 计算百分比
+      $percent = "-";
+      if ($pwm_raw !== "" && is_numeric($pwm_raw)) {
+        $percent = round($pwm_raw / 255 * 100);
+      }
+
+      $rpm_val = $rpm;
+      $pct_val = $percent;
   }
 
   $fans[] = [
-    'label'        => $label,
-    'temp' => ($temp_val === "*" ? "*" : "{$temp_val}°C"),
-    'temp_raw'     => $temp_val,
-    'temp_origin'  => $temp_origin,
-    'rpm'          => $rpm,
-    'status'       => $status
+    'label'       => $label,
+    'temp'        => ($temp_val === "*" ? "*" : "{$temp_val}°C"),
+    'temp_raw'    => $temp_val,
+    'temp_origin' => $temp_origin,
+    'rpm_val'     => $rpm_val,
+    'percent'     => $pct_val,
+    'status'      => $status
   ];
 }
 

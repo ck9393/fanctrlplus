@@ -367,34 +367,40 @@ $(function() {
     });
   };
 
-  window.pauseFan = function(pwm, btn) {
+  window.identifyFan = function(pwm, mode, btn) {
     if (!pwm) {
       alert('Please select a PWM controller.');
       return;
     }
     if (!btn) return;
+
     const $btn = $(btn);
-    const origText = $btn.data('orig') || $btn.text();  // 用 data 存原始文本防止二次卡死
+    const origText = $btn.data('orig') || $btn.text();
     $btn.data('orig', origText);
-    $btn.prop('disabled', true).text("Pausing...");
+    $btn.prop('disabled', true).text("Identifying...");
+
     $.ajax({
       url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
       method: 'GET',
-      data: {op: 'pause', pwm: pwm},
+      data: { op: 'identify', pwm: pwm, mode: mode },
       timeout: 1000,
-      success: function(data) {
-        let seconds = 30;
+      success: function() {
+        let seconds = (mode === 'pulse') ? 40 : 30;
         const interval = setInterval(() => {
           if (seconds <= 0) {
             clearInterval(interval);
             $btn.text($btn.data('orig')).prop('disabled', false);
           } else {
-            $btn.text(`Paused (${seconds}s)`);
+            // 显示不同模式的倒计时提示
+            let label = mode === 'pause' ? 'Paused'
+                      : mode === 'max'   ? 'Max'
+                      : 'Pulse';
+            $btn.text(`${label} (${seconds}s)`);
             seconds--;
           }
         }, 1000);
       },
-      error: function(xhr, status, err) {
+      error: function() {
         $btn.text($btn.data('orig')).prop('disabled', false);
       }
     });
@@ -578,11 +584,10 @@ $(function() {
   function showIdentifyModal(pwm = '') {
     const html = `
       <div class="fcp-swal-intro">
-        You’ve selected a PWM controller that hasn’t been labeled yet.
-        <br>
-        To help identify which physical fan it controls, you can click <b>Identify</b> to <b>pause it for 30 seconds</b> and observe which fan stops.
-        <br>
-        Then enter a custom label for future reference.
+        You’ve selected a PWM controller that hasn’t been labeled yet.<br>
+        To help identify which physical fan it controls, first choose an <b>Identify Mode</b> (<b>Pause</b>, <b>Max</b>, or <b>Pulse</b>), then click <b>Identify</b> and observe how the fan reacts.
+        <br><br>
+        <em>Note:</em> some fans have a built-in minimum RPM; with <b>Pause</b> they may slow to their minimum instead of fully stopping.
         <br><br>
         If you don’t need to identify it now, just click <b>Close</b> to continue setting up.<br>
         This feature is also available anytime in the <b>Identify PWM Controller</b> section below.
@@ -597,6 +602,20 @@ $(function() {
             <select id="identify-modal-select" class="fcp-field-220"></select>
           </td>
         </tr>
+
+        <tr>
+          <td class="fcp-td-right fcp-pt-12">
+            <label for="identify-modal-mode-select">Identify Mode:</label>
+          </td>
+          <td class="fcp-pt-12">
+            <select id="identify-modal-mode-select" class="fcp-field-220">
+              <option value="pause" selected>Pause (30s)</option>
+              <option value="max">Max Speed (30s)</option>
+              <option value="pulse">Pulse (40s)</option>
+            </select>
+          </td>
+        </tr>
+
         <tr>
           <td class="fcp-td-right fcp-pt-12">
             <label for="identify-modal-label-input">Custom Label:</label>
@@ -621,7 +640,7 @@ $(function() {
       cancelButtonText: 'Close',
       customClass: 'wide-swal',
       didOpen: () => {
-        // 焦点陷阱：用类代替内联
+        // 焦点陷阱
         const dummy = document.createElement('div');
         dummy.tabIndex = -1;
         dummy.className = 'fcp-focus-trap';
@@ -635,11 +654,14 @@ $(function() {
           loadPWMOptions('identify-modal-select');
         }
 
-        // 事件绑定
+        // 事件绑定：Identify
         $('#identify-btn').off('click').on('click', function () {
-          const pwmVal = $('#identify-modal-select').val();
-          pauseFan(pwmVal, this);
+          const pwmVal  = $('#identify-modal-select').val();
+          const modeVal = $('#identify-modal-mode-select').val();
+          identifyFan(pwmVal, modeVal, this);  // 使用你已实现的 identifyFan()
         });
+
+        // 事件绑定：保存标签
         $('#save-label-btn').off('click').on('click', function () {
           savePWMLabel('identify-modal-select', 'identify-modal-label-input', 'identify-modal-label-tip');
         });
@@ -1500,7 +1522,15 @@ $(function() {
           </p>
           <ol>
             <li>Select a <strong>PWM controller</strong> from the dropdown.</li>
-            <li>Click <strong>Identify</strong> to pause the fan for 30 seconds — locate the fan by observing which one stops.</li>
+            <li>Choose an <strong>Identify Mode</strong>:
+              <ul>
+                <li><strong>Pause 30s</strong>: stops the fan for 30 seconds.</li>
+                  <em>Note: some fans have a built-in minimum RPM and may keep spinning slowly instead of stopping completely.</em>
+                <li><strong>Max 30s</strong>: runs the fan at full speed for 30 seconds.</li>
+                <li><strong>Pulse 40s</strong>: alternates in 10-second steps (pause → max → pause → max) for 40 seconds.</li>
+              </ul>
+            </li>
+            <li>Click <strong>Identify</strong> — locate the fan by observing which one reacts according to the chosen mode.</li>
             <li>Once identified, enter a clear label (e.g. <em>Rear Fan</em>, <em>Top Fan</em>) in the text field.</li>
             <li>Click <strong>Save Label</strong> to store the name for future reference.</li>
           </ol>
@@ -1517,6 +1547,13 @@ $(function() {
             <label for="identify-pwm-select" class="fcp-formgrid-label">Select PWM Controller:</label>
             <select id="identify-pwm-select" class="fcp-select fcp-w-200"></select>
 
+            <label for="identify-mode-select" class="fcp-formgrid-label">Identify Mode:</label>
+            <select id="identify-mode-select" class="fcp-select fcp-w-200">
+              <option value="pause">Pause (30s)</option>
+              <option value="max">Max Speed (30s)</option>
+              <option value="pulse">Pulse (40s)</option>
+            </select>
+
             <label for="identify-label-input" class="fcp-formgrid-label">Custom Label:</label>
             <input id="identify-label-input" type="text" class="fcp-input fcp-w-200" placeholder="Label (e.g. Rear Fan)">
           </div>
@@ -1524,8 +1561,12 @@ $(function() {
           <!-- Actions -->
           <div class="fcp-actions">
             <button type="button" class="btn"
-              onclick="pauseFan($('#identify-pwm-select').val(), this)"
-              title="Pause this fan for 30 seconds to identify it.">Identify</button>
+              onclick="identifyFan(
+                $('#identify-pwm-select').val(),
+                $('#identify-mode-select').val(),
+                this
+              )"
+              title="Identify this fan by Pause, Max, or Pulse for 30 seconds.">Identify </button>
 
             <button type="button" class="btn"
               onclick="savePWMLabel('identify-pwm-select','identify-label-input','identify-label-tip')"

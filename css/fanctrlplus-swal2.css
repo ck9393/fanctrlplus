@@ -70,6 +70,7 @@
 .swal2-popup label {
   color: #000000 !important;
   font-weight: 500;
+  font-size: 1.3rem;
 }
 
 .swal2-popup table {

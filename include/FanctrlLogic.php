@@ -42,21 +42,47 @@ $op = $_GET['op'] ?? $_POST['op'] ?? '';
 
 switch ($op) {
     
-  case 'pause':
-    $pwm = $_GET['pwm'] ?? '';
+  case 'identify':
+    $pwm  = $_GET['pwm']  ?? '';
+    $mode = $_GET['mode'] ?? 'pause';  // 默认 pause
     if (is_file($pwm)) {
       $original_pwm  = trim(@file_get_contents($pwm));
       $pwm_enable    = $pwm . "_enable";
       $original_mode = is_file($pwm_enable) ? trim(@file_get_contents($pwm_enable)) : '2';
-  
+
+      // 强制切到手动
       @file_put_contents($pwm_enable, "1");
-      @file_put_contents($pwm, "0");
-  
-      $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
-                     " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      if ($mode === 'pause') {
+        // 直接停
+        @file_put_contents($pwm, "0");
+        $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
+                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      } elseif ($mode === 'max') {
+        // 拉满
+        @file_put_contents($pwm, "255");
+        $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
+                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      } elseif ($mode === 'pulse') {
+        // 10s 停 -> 10s 满速 -> 10s 停 -> 10s 满速
+        $restore_cmd = 
+          "echo 0   > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo 255 > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo 0   > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo 255 > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
+                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      } else {
+        json_response(['status' => 'error', 'message' => 'Unknown identify mode']);
+        break;
+      }
+
       exec("nohup bash -c \"$restore_cmd\" >/dev/null 2>&1 &");
-  
-      json_response(['status' => 'ok', 'message' => 'Fan paused for 30 seconds']);
+      json_response(['status' => 'ok', 'message' => "Fan identify ($mode) started"]);
+
     } else {
       json_response(['status' => 'error', 'message' => 'Invalid PWM path']);
     }
