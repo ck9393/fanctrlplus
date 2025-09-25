@@ -27,10 +27,10 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
     <input type="hidden" name="#file[<?=$i?>]" value="<?=htmlspecialchars($cfg['file'])?>" class="cfg-file">
 
     <fieldset class="fan-fieldset">
-      <div style="position:absolute; top:10px; right:10px; width:36px; height:36px;">
-        <div class="fan-svg-container" style="position:absolute; top:0; left:0; width:100%; height:100%;">
-          <div style="position:absolute; top:0; left:0; width:100%; height:100%; cursor:help; z-index:1;"></div>
-          <svg id="fan-icon-<?=$i?>" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="width:36px; height:36px; display:block; margin:auto;">
+      <div class="fcp-fan-icon-wrap">
+        <div class="fan-svg-container fcp-abs-fill">
+          <div class="fcp-abs-fill-help"></div>
+          <svg class="fcp-fan-icon" id="fan-icon-<?=$i?>" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="flameGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="5%" stop-color="#FFD700"/>
@@ -62,27 +62,37 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
       </div> 
 
       <!-- 放在每个风扇 fan-block 内部 -->
-      <div class="fan-tools" style="position:absolute; bottom:10px; right:10px; display:flex; flex-direction:column; width: 86px; height: 96px">
+      <div class="fan-tools fcp-fan-tools">
         <button type="button" class="show-chart-btn" onclick="showFanChart(this)" title="Preview this fan's speed curve based on current Disk/CPU settings">
           <i class="fa fa-line-chart" style= "color: var(--blue-800); font:"></i> Chart
         </button>
-        <button type="button" class="delete-btn" title="Delete this fan configuration">DELETE</button>
+        <button type="button" class="delete-btn" title="Delete this fan configuration">Delete</button>
       </div>
 
-      <table style="width:100%;">
+      <table class="fcp-w-100">
         <!-- Custom Name -->
         <tr>
-          <td style="cursor: help;" title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">Custom Name</td>
+          <td class="fcp-help-cursor" 
+              title="Enter a unique name for this fan configuration. Avoid spaces or special characters.">
+            Custom Name
+          </td>
           <td>
-            <input type="text" name="custom[<?=$i?>]" class="custom-name-input" value="<?=htmlspecialchars($cfg['custom'] ?? '')?>" placeholder="Required (e.g. HDDBay)" required>
+            <div>
+              <input type="text"
+                    name="custom[<?=$i?>]"
+                    class="custom-name-input"
+                    value="<?=htmlspecialchars($cfg['custom'] ?? '')?>"
+                    placeholder="Required (e.g. HDDBay)"
+                    required>
+            </div>
           </td>
         </tr>
 
         <!-- Fan Control Dropdown -->
         <tr>
-          <td style="cursor: help;" title="Enable or disable this fan controller">Fan Control:</td>
+          <td class="fcp-help-cursor" title="Enable or disable this fan controller">Fan Control:</td>
           <td>
-            <select name="service[<?=$i?>]">
+            <select name="service[<?=$i?>]" class="fcp-enable-select">
               <option value="0" <?=($cfg['service'] ?? '') == '0' ? 'selected' : ''?>>Disabled</option>
               <option value="1" <?=($cfg['service'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
             </select>
@@ -93,7 +103,7 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- PWM Controller -->
         <tr>
-          <td style="cursor: help;" title="Each fan corresponds to a PWM controller (pwm1, pwm2, etc). Select the one controlling this fan. You can use the Identify section below to locate and label each fan.">PWM Controller:</td>
+          <td class="fcp-help-cursor" title="Each fan corresponds to a PWM controller (pwm1, pwm2, etc). Select the one controlling this fan. You can use the Identify section below to locate and label each fan.">PWM Controller:</td>
           <td>
             <select name="controller[<?=$i?>]" class="pwm-controller">
               <option value="">-- Select PWM Controller --</option>
@@ -112,30 +122,30 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- Fan Speed Range -->
         <tr>
-          <td style="cursor: help;" title="Set the minimum and maximum fan speed (0–100%). % will be automatically converted to PWM. Hover to see actual values.">Fan Speed Range:</td>
+          <td class="fcp-help-cursor" title="Set the minimum and maximum fan speed (0–100%). % will be automatically converted to PWM. Hover to see actual values.">Fan Speed Range:</td>
           <td>
-            <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
+            <div class="fcp-range-grid">
 
               <!-- 左侧 Min -->
               <input type="text"
                     id="pwm_percent_input_<?=$i?>"
                     name="pwm_percent[<?=$i?>]"
                     inputmode="numeric"
-                    style="width: 100%; text-align: left;"
+                    class="fcp-input-fullleft"
                     value="<?=$pwm_pct?>"
                     title="Minimum speed: <?=$pwm_pct?> = <?=htmlspecialchars($pwm_raw)?> PWM"
                     placeholder="Min %">
 
 
               <!-- 中间波浪号 -->
-              <span style="text-align: center;">~</span>
+              <span class="fcp-center">~</span>
 
               <!-- 右侧 Max -->
               <input type="text"
                     id="max_percent_input_<?=$i?>"
                     name="max_percent[<?=$i?>]"
                     inputmode="numeric"
-                    style="width: 100%; text-align: left;"
+                    class="fcp-input-fullleft"
                     value="<?=$max_pct?>"
                     title="Maximum speed: <?=$max_pct?> = <?=htmlspecialchars($max_raw)?> PWM"
                     placeholder="Max %">
@@ -145,22 +155,20 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- Interval -->
         <tr>
-          <td style="cursor: help;" title="Check temperature and adjust fan speed every X minutes.">Interval:</td>
+          <td class="fcp-help-cursor" title="Check temperature and adjust fan speed every X minutes.">Interval:</td>
           <td>
             <input type="text"
                   id="interval_input_<?=$i?>"
                   name="interval[<?=$i?>]"
-                  class="interval-input"
+                  class="interval-input fcp-interval-input" 
                   inputmode="numeric"
                   value="<?=htmlspecialchars(($cfg['interval'] ?? '') . ' min')?>"
-                  placeholder="Recommended: 1–5 min"
-                  style="width: 225px; display: inline-block; margin-right: 1px; text-align: left;">
+                  placeholder="Recommended: 1–5 min">
 
-            <span class="fanctrlplus-interval-refresh"
-                  style="cursor: pointer; font-size: 13px; color: var(--blue-800); margin-left: 1px; vertical-align: middle;"
+            <span class="fanctrlplus-interval-refresh fcp-runnow"
                   title="Manual Run: Read current temperature and set fan speed immediately"
                   data-label="<?=htmlspecialchars($cfg['custom'] ?? '')?>">
-              <span class="fa fa-refresh" style="font-size: 13px;"></span> Run Now
+              <span class="fa fa-refresh fcp-fs-13"></span> Run Now
             </span>
           </td>
         </tr>
@@ -169,9 +177,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- Include Disk(s) -->
         <tr>
-          <td style="cursor: help;" title="Select disks, NVMe drives, or other block devices to monitor for this fan. If you only want to monitor CPU temperature for this fan, leave all disks unchecked.">Include Disk(s):</td>
+          <td class="fcp-help-cursor" title="Select disks, NVMe drives, or other block devices to monitor for this fan. If you only want to monitor CPU temperature for this fan, leave all disks unchecked.">Include Disk(s):</td>
           <td>
-            <select class="disk-select" name="disks[<?=$i?>][]" multiple style="width:300px;">
+            <select class="disk-select fcp-w-300" name="disks[<?=$i?>][]" multiple>
               <?php
               $selected = explode(',', $cfg['disks'] ?? '');
               foreach ($disks as $group => $entries):
@@ -190,31 +198,29 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- Disk Temperature Range -->
         <tr>
-          <td style="cursor: help;"title="Fan runs at minimum speed at or below Low Temp, and maximum speed at or above High Temp. See chart for details.">Disk Temperature Range:</td>
+          <td class="fcp-help-cursor" title="Fan runs at minimum speed at or below Low Temp, and maximum speed at or above High Temp. See chart for details.">Disk Temperature Range:</td>
           <td>
-            <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
+            <div class="fcp-range-grid">
 
               <!-- 左侧 Low Temp -->
               <input type="text"
                     id="low_temp_input_<?=$i?>"
                     name="low[<?=$i?>]"
-                    class="low-temp-input"
+                    class="low-temp-input fcp-input-fullleft"
                     inputmode="numeric"
-                    style="width: 100%; text-align: left;"
                     value="<?=$low?>°C"
                     title="Low Temp: <?=intval($cfg['low'] ?? 40)?>°C"
                     placeholder="Low °C">
 
               <!-- 中间波浪号 -->
-              <span style="text-align: center;">~</span>
+              <span class="fcp-center">~</span>
 
               <!-- 右侧 High Temp -->
               <input type="text"
                     id="high_temp_input_<?=$i?>"
                     name="high[<?=$i?>]"
-                    class="high-temp-input"
+                    class="high-temp-input fcp-input-fullleft"
                     inputmode="numeric"
-                    style="width: 100%; text-align: left;"
                     value="<?=$high?>°C"
                     title="High Temp: <?=intval($cfg['high'] ?? 60)?>°C"
                     placeholder="High °C">
@@ -227,9 +233,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- CPU Temp Monitoring Dropdown -->
         <tr>
-          <td style="cursor: help;" title="Enable or disable monitoring CPU temperature for this fan.">CPU Temp Monitor:</td>
+          <td class="fcp-help-cursor" title="Enable or disable monitoring CPU temperature for this fan.">CPU Temp Monitor:</td>
           <td>
-            <select id="cpu-enable-<?=$i?>" name="cpu_enable[<?=$i?>]" onchange="handleCpuEnableChange(this, <?=$i?>);">
+            <select id="cpu-enable-<?=$i?>" name="cpu_enable[<?=$i?>]" class="fcp-enable-select" onchange="handleCpuEnableChange(this, <?=$i?>);">
               <option value="0" <?=($cfg['cpu_enable'] ?? '') != '1' ? 'selected' : ''?>>Disabled</option>
               <option value="1" <?=($cfg['cpu_enable'] ?? '') == '1' ? 'selected' : ''?>>Enabled</option>
             </select>
@@ -238,9 +244,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- CPU Sensor -->
         <tr class="cpu-control cpu-control-<?=$i?>">
-          <td class="cpu-label" style="cursor: help;" title="Automatically selected the most reliable CPU temperature sensor. Change only if necessary.">CPU Sensor:</td>
+          <td class="cpu-label fcp-help-cursor" title="Automatically selected the most reliable CPU temperature sensor. Change only if necessary.">CPU Sensor:</td>
           <td>
-            <select name="cpu_sensor[<?=$i?>]" class="cpu-input" style="width: 300px;" <?=($cfg['cpu_enable'] ?? '') != '1' ? 'disabled' : ''?>>
+            <select name="cpu_sensor[<?=$i?>]" class="cpu-input fcp-w-300" <?=($cfg['cpu_enable'] ?? '') != '1' ? 'disabled' : ''?>>
               <?php foreach ($cpu_sensors as $path => $label): ?>
                 <option value="<?=htmlspecialchars($path)?>" <?=($cfg['cpu_sensor'] ?? '') == $path ? 'selected' : ''?>><?=htmlspecialchars($label)?></option>
               <?php endforeach; ?>
@@ -250,28 +256,26 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
 
         <!-- CPU Temp Range -->
         <tr class="cpu-control cpu-control-<?=$i?>">
-          <td class="cpu-label" style="cursor: help;" title="Fan runs at minimum speed at or below Low Temp, and maximum speed at or above High Temp. See chart for details.">CPU Temperature Range:</td>
+          <td class="cpu-label fcp-help-cursor" title="Fan runs at minimum speed at or below Low Temp, and maximum speed at or above High Temp. See chart for details.">CPU Temperature Range:</td>
           <td>
-            <div style="display: grid; grid-template-columns: 130px 40px 130px; align-items: center;">
+            <div class="fcp-range-grid">
               <input type="text"
                     id="cpu_low_temp_input_<?=$i?>"
                     name="cpu_min_temp[<?=$i?>]"
-                    class="cpu-input"
+                    class="cpu-input fcp-input-fullleft"
                     inputmode="numeric"
-                    style="width: 100%; text-align: left;"
                     value="<?=htmlspecialchars(($cfg['cpu_min_temp'] ?? '') . '°C')?>"
                     title="Low Temp: <?=intval($cfg['cpu_min_temp'] ?? 50)?>°C"
                     placeholder="Low °C"
                     <?=($cfg['cpu_enable'] ?? '') != '1' ? 'disabled' : ''?>>
 
-              <span style="text-align: center;">~</span>
+              <span class="fcp-center">~</span>
 
               <input type="text"
                     id="cpu_high_temp_input_<?=$i?>"
                     name="cpu_max_temp[<?=$i?>]"
-                    class="cpu-input"
+                    class="cpu-input fcp-input-fullleft"
                     inputmode="numeric"
-                    style="width: 100%; text-align: left;"
                     value="<?=htmlspecialchars(($cfg['cpu_max_temp'] ?? '') . '°C')?>"
                     title="High Temp: <?=intval($cfg['cpu_max_temp'] ?? 75)?>°C"
                     placeholder="High °C"

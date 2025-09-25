@@ -1,4 +1,159 @@
 <?php
+// =============================
+// Migrate hwmonX cfg 与 label 路径
+// =============================
+function normalize_chip_name(string $chip): string {
+    // 去掉结尾的 .数字
+    $chip = preg_replace('/\.\d+$/', '', $chip);
+    // 去掉 -isa-XXXX 这种片段
+    $chip = preg_replace('/-isa-[0-9a-fA-Fx]+$/', '', $chip);
+    return $chip;
+}
+
+function build_pwm_map(): array {
+    $map = [];
+    foreach (glob("/sys/class/hwmon/hwmon*") as $dir) {
+        $name_file = "$dir/name";
+        if (!is_file($name_file)) continue;
+
+        $chip = normalize_chip_name(trim(file_get_contents($name_file)));
+
+        foreach (glob("$dir/pwm[0-9]") as $pwm_path) {
+            $pwmN = basename($pwm_path);
+            $real = realpath($pwm_path) ?: $pwm_path;
+            $map["$chip:$pwmN"] = $real;
+        }
+    }
+    return $map;
+}
+
+function extract_chip_and_pwm_from_path(string $old_path): ?array {
+    $old_path = trim($old_path, " \t\n\r\0\x0B\"'");
+
+    // 先从路径提取 pwmN
+    preg_match_all('/pwm(\d+)/', $old_path, $pm);
+    if (empty($pm[1])) return null;
+    $pwmN = 'pwm' . end($pm[1]);
+
+    // 先看有没有 platform 节点（nct6775.672 这种）
+    if (preg_match('#/platform/([^/]+)/#', $old_path, $m)) {
+        $platform = $m[1];
+        // 遍历 platform/$platform/hwmon/* 目录，找对应 pwmN
+        foreach (glob("/sys/devices/platform/$platform/hwmon/hwmon*") as $dir) {
+            if (is_file("$dir/$pwmN") && is_file("$dir/name")) {
+                $chip = normalize_chip_name(trim(@file_get_contents("$dir/name")));
+                if ($chip !== '') {
+                    return [$chip, $pwmN];
+                }
+            }
+        }
+    }
+
+    // 如果没 platform，就回退用 hwmonX + /sys/class/hwmon
+    preg_match_all('/hwmon(\d+)/', $old_path, $hm);
+    if (!empty($hm[1])) {
+        $hwmon = 'hwmon' . end($hm[1]);
+        $name_file = "/sys/class/hwmon/$hwmon/name";
+        if (is_file($name_file)) {
+            $chip = normalize_chip_name(trim(@file_get_contents($name_file)));
+            if ($chip !== '') return [$chip, $pwmN];
+        }
+    }
+
+    // 最后兜底：扫描所有 hwmon*
+    foreach (glob("/sys/class/hwmon/hwmon*") as $dir) {
+        if (is_file("$dir/$pwmN") && is_file("$dir/name")) {
+            $chip = normalize_chip_name(trim(@file_get_contents("$dir/name")));
+            if ($chip !== '') return [$chip, $pwmN];
+        }
+    }
+
+    return null;
+}    
+
+function log_migrate(string $msg): void {
+    // 本地独立日志
+    @file_put_contents("/var/log/fanctrlplus-migrate.log",
+        date("c")." ".$msg."\n", FILE_APPEND);
+    // 再打一份到 syslog
+    @exec("logger -t fanctrlplus '$msg'");
+}
+
+function safe_rewrite(string $file, string $content): bool {
+    $content = rtrim($content, "\n") . "\n";
+    $old = @file_get_contents($file);
+    if ($old !== false && rtrim($old, "\n") . "\n" === $content) return false;
+    $tmp = $file . '.tmp';
+    @file_put_contents($tmp, $content, LOCK_EX);
+    @rename($tmp, $file);
+    return true;
+}
+
+function migrate_cfg_and_labels(string $plugin): void {
+    $cfgpath   = "/boot/config/plugins/$plugin";
+    $labelFile = "$cfgpath/pwm_labels.cfg";
+    $pwm_map   = build_pwm_map();
+
+    // --- labels ---
+    if (is_file($labelFile)) {
+        $lines = file($labelFile, FILE_IGNORE_NEW_LINES) ?: [];
+        $changed = false; $out = [];
+        foreach ($lines as $line) {
+            if (!preg_match('/^(.+?)=(.*)$/', $line, $m)) { $out[]=$line; continue; }
+            $old_path = trim($m[1], " \t\n\r\0\x0B\"'");
+            $label    = $m[2];
+
+            $pair = extract_chip_and_pwm_from_path($old_path);
+            if (!$pair) { log_migrate("migrate label: skip (unparsable) $old_path"); $out[]=$line; continue; }
+            [$chip,$pwmN] = $pair;
+            $key = "$chip:$pwmN";
+            if (!isset($pwm_map[$key])) { log_migrate("migrate label: no match for $chip:$pwmN, keep $old_path"); $out[]=$line; continue; }
+
+            $new_path = $pwm_map[$key];
+            if ($new_path !== $old_path) {
+                if (preg_match('#/(hwmon\d+)/#', $old_path, $o) && preg_match('#/(hwmon\d+)/#', $new_path, $n)) {
+                    log_migrate("migrate label: $old_path → $new_path ({$o[1]} → {$n[1]})");
+                } else {
+                    log_migrate("migrate label: $old_path → $new_path");
+                }
+                $changed = true;
+                $out[] = $new_path.'='.$label;
+            } else {
+                $out[] = $line;
+            }
+        }
+        if ($changed) safe_rewrite($labelFile, implode("\n", $out));
+    }
+
+    // --- cfgs ---
+    foreach (glob("$cfgpath/{$plugin}_*.cfg") ?: [] as $cfgfile) {
+        $ini = @parse_ini_file($cfgfile);
+        if (!$ini || !isset($ini['controller'])) continue;
+
+        $old_path = trim((string)$ini['controller'], " \t\n\r\0\x0B\"'");
+        $pair = extract_chip_and_pwm_from_path($old_path);
+        if (!$pair) { log_migrate("migrate cfg: skip (unparsable) $cfgfile controller=$old_path"); continue; }
+        [$chip,$pwmN] = $pair;
+        $key = "$chip:$pwmN";
+        if (!isset($pwm_map[$key])) { log_migrate("migrate cfg: no match for $cfgfile ($chip:$pwmN), keep $old_path"); continue; }
+
+        $new_path = $pwm_map[$key];
+        if ($new_path === $old_path) continue;
+
+        if (preg_match('#/(hwmon\d+)/#', $old_path, $o) && preg_match('#/(hwmon\d+)/#', $new_path, $n)) {
+            log_migrate("migrate cfg: $cfgfile controller: $old_path → $new_path ({$o[1]} → {$n[1]})");
+        } else {
+            log_migrate("migrate cfg: $cfgfile controller: $old_path → $new_path");
+        }
+
+        $ini['controller'] = $new_path;
+        $buf=''; foreach ($ini as $k=>$v){ $v=str_replace('"','',(string)$v); $buf.=$k.'="'.$v."\"\n"; }
+        safe_rewrite($cfgfile, $buf);
+    }
+}
+// ================================
+// END: Migrate hwmonX (cfg+labels)
+// ================================
 
 function list_pwm() {
   $out = [];
@@ -94,19 +249,31 @@ function detect_cpu_sensors(): array {
     }
   }
 
-  // 映射 /dev/sdX → 非 ZFS Pool（btrfs, xfs）名（通过挂载点）
+  // 映射 /dev/sdX ↔ 非 ZFS Pool (btrfs, xfs) 名（通过挂载点）
   $dev_to_pool_fs = [];
-  $mounts = shell_exec("findmnt -rn -o SOURCE,TARGET,FSTYPE | grep -E 'btrfs|xfs'");
-  foreach (explode("\n", $mounts) as $line) {
-    $parts = preg_split('/\s+/', $line);
-    if (count($parts) === 3) {
-      [$dev, $mount, $fstype] = $parts;
-      $base = preg_replace('#[0-9]+$#', '', $dev); // /dev/sdj1 → /dev/sdj
-      // 过滤掉 array 的 mdX 磁盘
+  $mounts = @shell_exec("findmnt -rn -o SOURCE,TARGET,FSTYPE | grep -E 'btrfs|xfs' 2>/dev/null");
+  $mounts = is_string($mounts) ? $mounts : '';
+
+  // 安全按行切分，忽略空行
+  $lines = preg_split("/\r\n|\n|\r/", trim($mounts));
+  foreach ($lines as $line) {
+      $line = trim($line);
+      if ($line === '') continue;
+
+      // SOURCE TARGET FSTYPE 以空白切分，确保有3段
+      $parts = preg_split('/\s+/', $line);
+      if (count($parts) < 3) continue;
+
+      // 只取前3列，避免多余空白/列影响
+      list($dev, $mount, $fstype) = array_slice($parts, 0, 3);
+
+      // /dev/sdX1 -> /dev/sdX
+      $base = preg_replace('/\d+$/', '', $dev);
+
+      // 过滤 array 的 mdX 磁盘与 loop 设备，防止从挂载路径推断 pool 名
       if (strpos($base, '/dev/md') === 0 || strpos($base, '/dev/loop') === 0) continue;
-      $pool_name = basename($mount); // 从挂载路径推断 pool 名
+      $pool_name = basename($mount);
       $dev_to_pool_fs[$base] = ucfirst($pool_name);
-    }
   }
 
   // boot device

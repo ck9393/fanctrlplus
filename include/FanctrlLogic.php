@@ -42,21 +42,47 @@ $op = $_GET['op'] ?? $_POST['op'] ?? '';
 
 switch ($op) {
     
-  case 'pause':
-    $pwm = $_GET['pwm'] ?? '';
+  case 'identify':
+    $pwm  = $_GET['pwm']  ?? '';
+    $mode = $_GET['mode'] ?? 'pause';  // 默认 pause
     if (is_file($pwm)) {
       $original_pwm  = trim(@file_get_contents($pwm));
       $pwm_enable    = $pwm . "_enable";
       $original_mode = is_file($pwm_enable) ? trim(@file_get_contents($pwm_enable)) : '2';
-  
+
+      // 强制切到手动
       @file_put_contents($pwm_enable, "1");
-      @file_put_contents($pwm, "0");
-  
-      $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
-                     " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      if ($mode === 'pause') {
+        // 直接停
+        @file_put_contents($pwm, "0");
+        $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
+                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      } elseif ($mode === 'max') {
+        // 拉满
+        @file_put_contents($pwm, "255");
+        $restore_cmd = "sleep 30 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
+                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      } elseif ($mode === 'pulse') {
+        // 10s 停 -> 10s 满速 -> 10s 停 -> 10s 满速
+        $restore_cmd = 
+          "echo 0   > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo 255 > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo 0   > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo 255 > " . escapeshellarg($pwm) . " && " .
+          "sleep 10 && echo " . escapeshellarg($original_mode) . " > " . escapeshellarg($pwm_enable) .
+                      " && echo " . escapeshellarg($original_pwm) . " > " . escapeshellarg($pwm);
+
+      } else {
+        json_response(['status' => 'error', 'message' => 'Unknown identify mode']);
+        break;
+      }
+
       exec("nohup bash -c \"$restore_cmd\" >/dev/null 2>&1 &");
-  
-      json_response(['status' => 'ok', 'message' => 'Fan paused for 30 seconds']);
+      json_response(['status' => 'ok', 'message' => "Fan identify ($mode) started"]);
+
     } else {
       json_response(['status' => 'error', 'message' => 'Invalid PWM path']);
     }
@@ -290,13 +316,42 @@ switch ($op) {
     $custom = basename($custom); // 安全过滤
 
     $plugin = 'fanctrlplus';
-    $temp_file = "/var/tmp/$plugin/temp_${plugin}_$custom";
-    $rpm_file  = "/var/tmp/$plugin/rpm_${plugin}_$custom";
+    $temp_file = "/var/tmp/{$plugin}/temp_{$plugin}_{$custom}";
+    $rpm_file  = "/var/tmp/{$plugin}/rpm_{$plugin}_{$custom}";
 
     $temp = is_file($temp_file) ? trim(file_get_contents($temp_file)) : '*';
     $rpm  = is_file($rpm_file)  ? trim(file_get_contents($rpm_file))  : '?';
 
     echo "$temp|$rpm";  // 示例："48 (CPU)|1150"
-    exit;  
+    exit;
+
+  case 'fcp_airflow_toggle':
+    
+      $cfg_dir     = "/boot/config/plugins/fanctrlplus";
+      $labels_file = $cfg_dir.'/pwm_labels.cfg';
+
+      $enabled = (($_POST['enabled'] ?? '0') === '1');
+      $lines   = is_file($labels_file) ? file($labels_file, FILE_IGNORE_NEW_LINES) : [];
+      $found   = false;
+
+      foreach ($lines as &$ln) {
+          $t = trim($ln);
+          if ($t === '' || $t[0] === '#') continue;
+          if (preg_match('/^__FCP_AIRFLOW__\s*=/', $t)) {
+              $ln = "__FCP_AIRFLOW__=" . ($enabled ? '1' : '0');
+              $found = true;
+              break;
+          }
+      }
+      unset($ln);
+
+      if (!$found) $lines[] = "__FCP_AIRFLOW__=" . ($enabled ? '1' : '0');
+
+      @mkdir($cfg_dir, 0777, true);
+      file_put_contents($labels_file, implode("\n", $lines) . "\n");
+
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['ok'=>1, 'enabled'=>$enabled ? 1 : 0]);
+      exit;
 }
 ?>

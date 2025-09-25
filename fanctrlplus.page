@@ -7,6 +7,7 @@ echo <<<HTML
 <link rel="stylesheet" href="/plugins/fanctrlplus/fonts/style.css">
 <link rel="stylesheet" type="text/css" href="/webGui/styles/jquery.switchbutton.css">
 <link rel="stylesheet" href="/plugins/fanctrlplus/css/sweetalert2.min.css">
+<link rel="stylesheet" href="/plugins/fanctrlplus/css/fcp.base.css?v=1.3.1a">
 <script src="/plugins/fanctrlplus/js/sweetalert2.min.js"></script>
 <script src="/plugins/fanctrlplus/js/chart.min.js"></script>
 <script src="/plugins/fanctrlplus/include/chart-handler.js"></script>
@@ -23,8 +24,6 @@ HTML;
     }
   });
 </script>
-
-<link rel="stylesheet" type="text/css" href="/webGui/styles/jquery.switchbutton.css">
 
 <?PHP
 $plugin = "fanctrlplus";
@@ -136,242 +135,22 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 $cpu_sensors = detect_cpu_sensors();
 
-?>
-
-<style>
-:root {
-  --frame-color: #000000;
-  --hub-color: #666666;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --frame-color: #ffffff;
-    --hub-color: #cccccc;
+// === 读取 FCP Airflow 开关 ===
+function fcp_airflow_enabled(string $cfg_dir): bool {
+  $labels_file = $cfg_dir.'/pwm_labels.cfg';
+  if (!is_file($labels_file)) return false;
+  foreach (file($labels_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $ln) {
+    $ln = trim($ln);
+    if ($ln === '' || $ln[0] === '#') continue;
+    if (preg_match('/^__FCP_AIRFLOW__\s*=\s*([01])\s*$/', $ln, $m)) {
+      return $m[1] === '1';
+    }
   }
+  return false;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-.rotating {
-  animation-name: spin;
-  animation-duration: 1.2s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  transform-origin: 50% 50%;
-}
-
-.frame, .hub {
-    transition: fill 0.3s ease;
-}
-
-.switch-button-label {
-  display: inline-block;
-  width: 30px;
-  text-align: center;
-  font-size: 12px;
-}
-
-/* 控制下拉关闭状态时主框宽度 */
-.pwm-controller,
-.ui-dropdownchecklist-selector-wrapper {
-  max-width: 300px !important;
-  width: 300px !important;
-  box-sizing: border-box;
-  padding-right: 24px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-/* 控制显示文字部分不爆边 */
-.ui-dropdownchecklist-text {
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fanctrl-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0 24px;
-}
-
-.fanctrl-indicator-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fanctrl-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #00b300;
-  min-width: 50px;
-  text-align: left;
-  transition: color 0.3s ease;
-}
-
-.fanctrl-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #00b300;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 1s ease, transform 1s ease;
-}
-
-.fanctrl-dot.visible {
-  opacity: 1;
-  transform: scale(1.3);
-}
-
-.fanctrl-stopped .fanctrl-label {
-  color: #cc0000;
-}
-
-.fanctrl-stopped .fanctrl-dot {
-  background-color: #cc0000 !important;
-  opacity: 1 !important;
-  transform: scale(1) !important;
-  transition: none !important;
-}
-
-.fanctrl-sort-toggle {
-  position: relative;
-  text-align: right;
-  font-size: 13px;
-  background: transparent !important;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  padding: 0;
-  box-shadow: none;
-  transition: all 0.25s ease-in-out;
-}
-.fanctrl-sort-toggle:hover {
-  transform: scale(1.1);
-}
-
-.fanctrl-sort-toggle::after {
-  content: "";
-  position: absolute;
-  bottom: -5px;
-  left: 50%;
-  margin-left: -14px;
-  width: 28px;
-  height: 2px;
-  background-color: transparent; !important;
-  border-radius: 4px;
-  transition: all 0.25s ease-in-out;
-  pointer-events: none;
-}
-.fanctrl-sort-toggle:hover::after {
-  background-color: var(--orange-800);
-}
-
-.drag-handle {
-  display: none;
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 2;
-  text-align: center;
-  line-height: 36px;
-  cursor: grab;
-  font-size: 1.3em;
-  transition: all 0.25s ease-in-out;
-}
-.fan-block.draggable .drag-handle {
-  color: var(--orange-300);
-}
-.drag-handle:hover {
-  transform: scale(1.2);
-}  
-
-.sortable-placeholder {  /* 用于Drag Fan Here */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #bbb;
-  margin: 10px;
-  border-radius: 6px;
-  text-align: center;
-  color: #999;
-  font-size: 16px;
-  background-color: #f9f9f9;
-}
-
-.fan-placeholder {   /* 用于拉动时显示Placeholder */
-  border: 1px solid #bbb;
-  border-radius: 6px;
-  background-color: #f9f9f9;
-  width: 98%;
-  box-sizing: border-box;
-  margin: 0 auto;
-  min-height: 180px;
-}
-
-dt.containerSettingsDt {
-  width: auto !important;
-  display: inline-block;
-  vertical-align: middle;
-  float: none;
-}
-
-#fan-area {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  padding: 8px;
-}
-
-.fan-column {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  min-width: 340px;
-}
-
-.fan-block {
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0;
-}
-
-.fan-fieldset {
-  margin: 0;
-  padding: 32px 16px 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  position: relative;
-}
-.fan-block.draggable { cursor: move !important; }
-.fan-block.ui-sortable-helper { cursor: grabbing !important; }
-
-.cpu-label.disabled {
-  opacity: 0.5;
-}
-
-.subhead {
-  font-weight: bold;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
-  padding-top: 6px;
-  padding-bottom: 0px;
-  text-transform: uppercase;
-}
-</style>
+$fcp_airflow_enabled = fcp_airflow_enabled($cfg_dir);
+?>
 
 <div class="fanctrl-header">
   <div class="fanctrl-indicator-container" id="fanctrl-indicator" title="Fan control status">
@@ -603,34 +382,40 @@ $(function() {
     });
   };
 
-  window.pauseFan = function(pwm, btn) {
+  window.identifyFan = function(pwm, mode, btn) {
     if (!pwm) {
       alert('Please select a PWM controller.');
       return;
     }
     if (!btn) return;
+
     const $btn = $(btn);
-    const origText = $btn.data('orig') || $btn.text();  // 用 data 存原始文本防止二次卡死
+    const origText = $btn.data('orig') || $btn.text();
     $btn.data('orig', origText);
-    $btn.prop('disabled', true).text("Pausing...");
+    $btn.prop('disabled', true).text("Identifying...");
+
     $.ajax({
       url: '/plugins/fanctrlplus/include/FanctrlLogic.php',
       method: 'GET',
-      data: {op: 'pause', pwm: pwm},
+      data: { op: 'identify', pwm: pwm, mode: mode },
       timeout: 1000,
-      success: function(data) {
-        let seconds = 30;
+      success: function() {
+        let seconds = (mode === 'pulse') ? 40 : 30;
         const interval = setInterval(() => {
           if (seconds <= 0) {
             clearInterval(interval);
             $btn.text($btn.data('orig')).prop('disabled', false);
           } else {
-            $btn.text(`Paused (${seconds}s)`);
+            // 显示不同模式的倒计时提示
+            let label = mode === 'pause' ? 'Paused'
+                      : mode === 'max'   ? 'Max'
+                      : 'Pulse';
+            $btn.text(`${label} (${seconds}s)`);
             seconds--;
           }
         }, 1000);
       },
-      error: function(xhr, status, err) {
+      error: function() {
         $btn.text($btn.data('orig')).prop('disabled', false);
       }
     });
@@ -813,77 +598,92 @@ $(function() {
   // Identify 弹窗块
   function showIdentifyModal(pwm = '') {
     const html = `
-      <div style="font-size: 13px; margin-bottom: 12px; line-height: 1.5;">
-        You’ve selected a PWM controller that hasn’t been labeled yet.
-        <br>
-        To help identify which physical fan it controls, you can click <b>Identify</b> to <b>pause it for 30 seconds</b> and observe which fan stops.
-        <br>
-        Then enter a custom label for future reference.
+      <div class="fcp-swal-intro">
+        You’ve selected a PWM controller that hasn’t been labeled yet.<br>
+        To help identify which physical fan it controls, first choose an <b>Identify Mode</b> (<b>Pause</b>, <b>Max</b>, or <b>Pulse</b>), then click <b>Identify</b> and observe how the fan reacts.
+        <br><br>
+        <em>Note:</em> some fans have a built-in minimum RPM; with <b>Pause</b> they may slow to their minimum instead of fully stopping.
         <br><br>
         If you don’t need to identify it now, just click <b>Close</b> to continue setting up.<br>
         This feature is also available anytime in the <b>Identify PWM Controller</b> section below.
       </div>
-      <table style="width:100%; margin: 12px 0;">
+
+      <table>
         <tr>
-          <td style="padding-right: 12px; text-align: right;">
+          <td class="fcp-td-right">
             <label for="identify-modal-select">Select PWM Controller:</label>
           </td>
           <td>
-            <select id="identify-modal-select" style="width: 100%; max-width: 220px;"></select>
+            <select id="identify-modal-select" class="fcp-field-220"></select>
           </td>
         </tr>
+
         <tr>
-          <td style="padding-right: 12px; text-align: right; padding-top: 12px;">
+          <td class="fcp-td-right fcp-pt-12">
+            <label for="identify-modal-mode-select">Identify Mode:</label>
+          </td>
+          <td class="fcp-pt-12">
+            <select id="identify-modal-mode-select" class="fcp-field-220">
+              <option value="pause" selected>Pause (30s)</option>
+              <option value="max">Max Speed (30s)</option>
+              <option value="pulse">Pulse (40s)</option>
+            </select>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="fcp-td-right fcp-pt-12">
             <label for="identify-modal-label-input">Custom Label:</label>
           </td>
-          <td style="padding-top: 12px;">
-            <input type="text" id="identify-modal-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 100%; max-width: 220px;">
+          <td class="fcp-pt-12">
+            <input type="text" id="identify-modal-label-input" placeholder="Label (e.g. Rear Fan)" class="fcp-field-220">
           </td>
         </tr>
       </table>
 
-      <div style="text-align:center; margin-top: 16px;">
+      <div class="fcp-swal-actions">
         <button type="button" class="btn" id="identify-btn">Identify</button>
         <button type="button" class="btn" id="save-label-btn">Save Label</button>
-        <span id="identify-modal-label-tip" class="save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
+        <span id="identify-modal-label-tip" class="save-tip"></span>
       </div>`;
 
-      Swal.fire({
-        title: 'Identify PWM Controller',
-        html: html,
-        showCancelButton: true,
-        showConfirmButton: false,
-        cancelButtonText: 'Close',
-        customClass: 'wide-swal',
-        didOpen: () => {
+    Swal.fire({
+      title: 'Identify PWM Controller',
+      html,
+      showCancelButton: true,
+      showConfirmButton: false,
+      cancelButtonText: 'Close',
+      customClass: 'wide-swal',
+      didOpen: () => {
+        // 焦点陷阱
+        const dummy = document.createElement('div');
+        dummy.tabIndex = -1;
+        dummy.className = 'fcp-focus-trap';
+        Swal.getPopup().prepend(dummy);
+        dummy.focus();
 
-          const dummy = document.createElement('div');
-          dummy.tabIndex = -1;
-          dummy.style.position = 'absolute';
-          dummy.style.opacity = 0;
-          Swal.getPopup().prepend(dummy);
-          dummy.focus();
-
-          // 加载并选中 pwm
-          if (pwm) {
-            loadPWMOptions('identify-modal-select', pwm);
-          } else {
-            loadPWMOptions('identify-modal-select');
-          }
-
-          // 绑定按钮事件照旧
-          $('#identify-btn').off('click').on('click', function () {
-            const pwmVal = $('#identify-modal-select').val();
-            pauseFan(pwmVal, this);
-          });
-
-          $('#save-label-btn').off('click').on('click', function () {
-            savePWMLabel('identify-modal-select', 'identify-modal-label-input', 'identify-modal-label-tip');
-          });
+        // 加载并选中 pwm
+        if (pwm) {
+          loadPWMOptions('identify-modal-select', pwm);
+        } else {
+          loadPWMOptions('identify-modal-select');
         }
-      });
-    };
-  window.showIdentifyModal = showIdentifyModal;  
+
+        // 事件绑定：Identify
+        $('#identify-btn').off('click').on('click', function () {
+          const pwmVal  = $('#identify-modal-select').val();
+          const modeVal = $('#identify-modal-mode-select').val();
+          identifyFan(pwmVal, modeVal, this);  // 使用你已实现的 identifyFan()
+        });
+
+        // 事件绑定：保存标签
+        $('#save-label-btn').off('click').on('click', function () {
+          savePWMLabel('identify-modal-select', 'identify-modal-label-input', 'identify-modal-label-tip');
+        });
+      }
+    });
+  }
+  window.showIdentifyModal = showIdentifyModal;
 
   window.loadPWMOptionsIntoElement = function(selector) {
     $.getJSON('/plugins/fanctrlplus/include/FanctrlLogic.php?op=getpwm', function(pwmList) {
@@ -1225,13 +1025,16 @@ $(function() {
     $('#fan-form')[0].submit();
   }); 
 
+  // 通用 click 处理：syslog-switch + fcp-airflow-switch
   $(document).on('click', '.switch-button-background, .switch-button-label', function() {
     var $area = $(this).closest('.switch-area');
-    var $input = $area.find('input.syslog-switch');
+    var $input = $area.find('input[type="checkbox"]');
+    if ($input.length === 0) return;
+
     var checked = !$input.prop('checked');
     $input.prop('checked', checked);
 
-    // 切换class和文本
+    // 切换 class 和文本
     $area.find('.switch-button-label.on').css('display', checked ? '' : 'none');
     $area.find('.switch-button-label.off').css('display', checked ? 'none' : '');
     $area.find('.switch-button-background').toggleClass('checked', checked);
@@ -1239,14 +1042,20 @@ $(function() {
     // 滑块动画
     $area.find('.switch-button-button').css('left', checked ? '12px' : '-1px');
 
-    // 保存到后端
-    var cfgFile = $input.data('cfg');
-    saveSyslogSwitchState(cfgFile, checked);
+    // 根据不同开关调用不同保存逻辑
+    if ($input.hasClass('syslog-switch')) {
+      var cfgFile = $input.data('cfg');
+      saveSyslogSwitchState(cfgFile, checked);
+    } else if ($input.hasClass('fcp-airflow-switch')) {
+      saveAirflowSwitchState(checked);   // ✅ 用 jQuery $.post
+    }
   });
 
-  $(document).on('change', '.syslog-switch', function() {
+  // 通用 change 处理：syslog-switch + fcp-airflow-switch
+  $(document).on('change', '.syslog-switch, .fcp-airflow-switch', function() {
     var checked = $(this).prop('checked');
     var $area = $(this).closest('.switch-area');
+
     $area.find('.switch-button-label.on').css('display', checked ? '' : 'none');
     $area.find('.switch-button-label.off').css('display', checked ? 'none' : '');
 
@@ -1267,6 +1076,13 @@ $(function() {
       cfg: cfgFile,
       enabled: checked ? 1 : 0
     });
+  }
+
+  function saveAirflowSwitchState(checked) {
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+      op: 'fcp_airflow_toggle',
+      enabled: checked ? 1 : 0
+    });  
   }
   
   $(document).on('click', '.delete-btn', function () {
@@ -1333,12 +1149,12 @@ $(function() {
       .then(() => {
         setTimeout(() => {
           if (icon) icon.classList.remove('fa-spin');
-          btn.style.color = '#0088cc';
+          btn.style.color = 'var(--blue-800)';
           btn.style.pointerEvents = '';
         }, 1800);
       })
       .catch(err => {
-        btn.style.color = '#0088cc';
+        btn.style.color = 'var(--blue-800)';
         if (icon) icon.classList.remove('fa-spin');
         btn.style.pointerEvents = '';
         alert("Manual Run failed: " + err.message);
@@ -1575,21 +1391,21 @@ $(function() {
     ?>
   </div>
 
-  <div style="width:100%; text-align:center; margin-top:18px;">
+  <div class="fcp-actions">
     <button type="button" onclick="addFan()">➕ Add Fan</button>
     <button type="button" id="apply-btn">Apply All</button>
     <button type="button" id="toggle-daemon" onclick="toggleDaemon()" disabled>Loading...</button>
   </div>
 
   <!----------------- Help & Tips --------------->
-  <div style="width:100%; text-align:center; margin-top:12px;"> 
-  <dl style="display: inline-block;">
-    <dt style="text-align: center; width: 90px; cursor: help;">
-      <span class="fa fa-info-circle" style="margin-right:4px;"></span>
-      <strong>Help & Tips</strong>
-    </dt>
-    <dd></dd>
-  </dl>
+  <div class="fcp-help-wrap">
+    <dl class="fcp-help-dl">
+      <dt class="fcp-help-dt fcp-help-cursor" title="Helpful notes and usage tips">
+        <span class="fa fa-info-circle fcp-help-icon"></span>
+        <strong>Help & Tips</strong>
+      </dt>
+      <dd></dd>
+    </dl>
   
   <blockquote class="inline_help">
     <p><strong>Usage Guide:</strong></p>
@@ -1645,7 +1461,7 @@ $(function() {
 
     <p style="margin: 10px 0 6px 0; font-weight: bold;">How it works:</p>
 
-    <div style="margin: 4px 0 10px 0; padding: 8px 12px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; line-height: 1.6;">
+    <div class="fc-help-box">
 
       <p>The fan controller always calculates a target speed from each enabled temperature source, then applies the <strong>highest</strong> value to ensure sufficient cooling.</p>
 
@@ -1711,20 +1527,21 @@ $(function() {
     </ul>
   </blockquote>
 </div>
+
   <!----------------- 两栏设置区块 --------------->
-  <div style="display: flex; justify-content: center; gap: 40px; align-items: flex-start; flex-wrap: wrap; margin-top: 20px;">
+  <div class="fcp-block-wrap">
 
     <!-- 左侧：Identify PWM Controller -->
-    <div style="flex: 1 1 480px; min-width: 380px;">
+    <div class="fcp-card-480">
       <div class="title">
-        <span class="fa fa-tag" style="margin-right: 4px;"></span>
-        Identify PWM Controller</span>
+        <span class="fcp-title-left"><i class="fa fa-tag fcp-icon-gap"></i>Identify PWM Controller</span>
       </div>
 
-      <div style="width:100%; text-align:center; margin: 12px;">
-        <dl style="display: inline-block;">
-          <dt style="width:90px; font-size: 13px; cursor: help;">
-            <span class="fa fa-info-circle" style="margin-right:4px;"></span>
+      <!-- Help -->
+      <div class="fcp-help-wrap">
+        <dl class="fcp-help-dl">
+           <dt class="fcp-help-dt fcp-help-cursor">
+            <span class="fa fa-info-circle fcp-help-icon"></span>
             <strong>How to use</strong>
           </dt>
           <dd>&nbsp;</dd>
@@ -1732,51 +1549,124 @@ $(function() {
         <blockquote class="inline_help">
           <p><strong>Usage Guide:</strong></p>
           <p>
-            Use Identify to help locate each physical fan, then assign a custom label so it's easier to recognize later in the Fan Configuration section.
+            Use Identify to help locate each physical fan, then assign a custom label so it's easier to recognize later in the 
+            <strong>Fan Configuration</strong> section or in the <strong>FCP Airflow</strong> tile.
           </p>
-          <ol style="padding-left: 20px; margin-top: 6px;">
+          <ol>
             <li>Select a <strong>PWM controller</strong> from the dropdown.</li>
-            <li>Click <strong>Identify</strong> to pause the fan for 30 seconds — locate the fan by observing which one stops.</li>
+            <li>Choose an <strong>Identify Mode</strong>:
+              <ul>
+                <li><strong>Pause 30s</strong>: stops the fan for 30 seconds.</li>
+                  <em>Note: some fans have a built-in minimum RPM and may keep spinning slowly instead of stopping completely.</em>
+                <li><strong>Max 30s</strong>: runs the fan at full speed for 30 seconds.</li>
+                <li><strong>Pulse 40s</strong>: alternates in 10-second steps (pause → max → pause → max) for 40 seconds.</li>
+              </ul>
+            </li>
+            <li>Click <strong>Identify</strong> — locate the fan by observing which one reacts according to the chosen mode.</li>
             <li>Once identified, enter a clear label (e.g. <em>Rear Fan</em>, <em>Top Fan</em>) in the text field.</li>
             <li>Click <strong>Save Label</strong> to store the name for future reference.</li>
+            <li>
+              Enable the <strong>FCP Airflow</strong> tile — this works similarly to <strong>Unraid’s built-in Airflow</strong> tile,  
+              and makes <strong>PWM Identify</strong> even more useful by showing <strong>all fans</strong> that have been given a <strong>custom label</strong>,  
+              regardless of whether they’re configured in the <strong>Fan Configuration section</strong>.  
+              Unlabeled fans will continue appear as “Fan&nbsp;X”.  
+              If you enable the <strong>FCP Airflow</strong> tile, you can go to <strong>Tile Management</strong> and uncheck  
+              Unraid’s default <strong>Airflow (Fan Information)</strong> tile to avoid duplicate information.
+            </li>
           </ol>
-          <p style="margin-top: 8px;">
+          <p>
             <strong>To remove a label:</strong> select the desired PWM controller, leave the label input empty and click <strong>Save Label</strong>.
           </p>
-          <p style="margin-top: 8px;">
+          <p>
             <strong>Tip:</strong> If you change your hardware (e.g. adding/removing fans or BIOS updates), please re-run Identify to confirm fan mappings.
           </p>
         </blockquote>
 
-        <table style="margin: 30px auto 20px auto;">
-          <tr>
-            <td style="padding-right: 50px; padding-top: 12px; text-align: right;"><label for="pwm-select">Select PWM Controller:</label></td>
-            <td><select id="identify-pwm-select" style="width: 200px; padding-top: 6px;"></select></td>
-          </tr>
-          <tr>
-            <td style="padding-right: 50px; padding-top: 12px; text-align: right;"><label for="pwm-label-input">Custom Label:</label></td>
-            <td><input type="text" id="identify-label-input" placeholder="Label (e.g. Rear Fan)" style="width: 200px; padding-top: 6px; margin: 0 10px 0 0;"></td>
-          </tr>
-        </table>
+        <!-- Form -->
+        <!-- 表单容器（2 列 grid） -->
+        <div class="fcp-section">
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label">Select PWM Controller:</dt>
+            <dd><select id="identify-pwm-select" class="fcp-select fcp-w-200"></select></dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Select a <strong>PWM Controller</strong> you wish to identify or edit its custom label.
+          </blockquote>
 
-        <div style="width: 100%; text-align: center; margin-top: 18px; margin-bottom: 20px; position: relative;">
-          <button type="button" class="btn" onclick="pauseFan($('#identify-pwm-select').val(), this)" title="Click Identify to pause the fan for 30 seconds — locate the fan by observing which one stops.">Identify</button>
-          <button type="button" class="btn" onclick="savePWMLabel('identify-pwm-select', 'identify-label-input', 'identify-label-tip')" title="Click to save the label, or delete it by leaving the input empty and clicking again."">Save Label</button>
-          <span id="identify-label-tip" class="save-tip" style="margin-left: 8px; color: #4caf50; display: inline-block; width: 100px; text-align: left;"></span>
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label">Identify Mode:</dt>
+            <dd>
+              <select id="identify-mode-select" class="fcp-select fcp-w-200">
+                <option value="pause">Pause (30s)</option>
+                <option value="max">Max Speed (30s)</option>
+                <option value="pulse">Pulse (40s)</option>
+              </select>
+            </dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Select your preferred <strong>Identify Mode</strong> to help confirm which fan is controlled by the selected PWM controller.<br>  
+            <em>Pause</em> stops the fan, <em>Max</em> runs it at full speed, and <em>Pulse</em> alternates between the two.  
+          </blockquote>
+
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label">Custom Label:</dt>
+            <dd><input id="identify-label-input" type="text" class="fcp-input fcp-w-200" placeholder="Label (e.g. Rear Fan)"></dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Enter a custom label (e.g. Rear Fan, Top Fan) to add or rename the label,  
+            or leave it empty and click <strong>Save Label</strong> to clear the saved label.
+          </blockquote>
+
+
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label"><strong>Dashboard FCP Airflow Tile:</strong></dt>
+            <dd style="text-align: left;">
+              <span class="switch-area">
+                <div class="switch-button-background <?= $fcp_airflow_enabled ? ' checked' : '' ?>" data-for="fcp-airflow-switch">
+                  <div class="switch-button-button"></div>
+                </div>
+                <input id="fcp-airflow-switch" class="fcp-airflow-switch" type="checkbox" <?= $fcp_airflow_enabled ? 'checked' : '' ?>>
+                <span class="switch-button-label on">ENABLED</span>
+                <span class="switch-button-label off">DISABLED</span>
+              </span>
+            </dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Enable or disable the <strong>FCP Airflow</strong> tile in Dashboard.  
+            Works like Unraid’s Airflow, but uses <strong>custom labels</strong> when available.
+          </blockquote>
+        </div>
+
+          <!-- Actions -->
+          <div class="fcp-actions">
+            <button type="button" class="btn"
+              onclick="identifyFan(
+                $('#identify-pwm-select').val(),
+                $('#identify-mode-select').val(),
+                this
+              )"
+              title="Identify this fan by Pause, Max, or Pulse for 30 seconds.">Identify </button>
+
+            <button type="button" class="btn"
+              onclick="savePWMLabel('identify-pwm-select','identify-label-input','identify-label-tip')"
+              title="Save the label, or clear it by leaving the input empty and clicking again.">Save Label</button>
+
+            <span id="identify-label-tip" class="save-tip fcp-save-tip"></span>
+          </div>
         </div>
       </div>
-    </div>
 
     <!-- 右侧：Syslog Switch -->
-    <div style="flex: 1 1 480px; min-width: 380px;">
+    <div class="fcp-card-480">
       <div class="title">
-        <span class="fa fa-sliders" style="margin-right: 4px;"></span>Syslog Setting
+        <span class="fcp-title-left"><i class="fa fa-tag fcp-icon-gap"></i>Syslog Setting</span>
       </div>
 
-      <div style="width:100%; text-align:center; margin: 12px;">
-        <dl style="display: inline-block;">
-          <dt style="width:90px; font-size: 13px; cursor: help;">
-            <span class="fa fa-info-circle" style="margin-right:4px;"></span>
+      <!-- Help -->
+      <div class="fcp-help-wrap">
+        <dl class="fcp-help-dl">
+          <dt class="fcp-help-dt fcp-help-cursor">
+            <span class="fa fa-info-circle fcp-help-icon"></span>
             <strong>How to use</strong>
           </dt>
           <dd>&nbsp;</dd>
@@ -1784,7 +1674,7 @@ $(function() {
         <blockquote class="inline_help">
           <p><strong>Usage Guide:</strong></p>
           <p>Syslog output is <strong>enabled by default</strong>. When active, each fan will report actions such as:</p>
-          <p style="margin: 4px 0; padding: 6px 10px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 13px;">
+          <p class="fc-help-box">
             [HDDBay] Temp=53 → PWM=255 → RPM=2089
           </p>
           <p>This helps you track fan behavior in real time. However, if a particular fan changes frequently and generates too many log entries, you can <strong>disable logging</strong> for that fan.</p>
@@ -1793,12 +1683,12 @@ $(function() {
       </div>
 
       <div id="syslog-settings-area">
-        <div class="tablesorter" style="margin: 32px auto; max-width: 500px;">
-          <table class="syslog-table tablesorter" style="width:100%;">
+        <div class="tablesorter syslog-table-wrap">
+          <table class="syslog-table tablesorter">
             <thead>
               <tr>
-                <th style="text-align:left;">Configured Fan</th>
-                <th style="text-align:center; width: 20%; padding: 8px;">Syslog Switch</th>
+                <th class="name">Configured Fan</th>
+                <th class="switch">Syslog Switch</th>
               </tr>
             </thead>
             <tbody>
@@ -1809,29 +1699,23 @@ $(function() {
                 if (in_array($cfg['custom'], $custom_seen, true)) continue;
                 $custom_seen[] = $cfg['custom'];
                 $custom_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', $cfg['custom']);
+                $is_on = ($cfg['syslog'] ?? "1") != "0";
               ?>
               <tr class="sortable" id="syslog-row-<?= $custom_id ?>">
-                <td style="padding: 6px 10px;">
-                  <?= htmlspecialchars($cfg['custom']) ?>
-                </td>
-                <td style="text-align:center; padding: 6px;">
-                  <span class="switch-area" style="display: inline-flex; align-items: center;">
-                    <div class="switch-button-background<?= ($cfg['syslog'] ?? "1") != "0" ? ' checked' : '' ?>"
-                      data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-                      style="width: 25px; height: 11px; margin-right: 6px;">
-                      <div class="switch-button-button"
-                        style="width: 12px; height: 11px; left: <?= ($cfg['syslog'] ?? "1") != "0" ? '12px' : '-1px' ?>;"></div>
+                <td class="name"><?= htmlspecialchars($cfg['custom']) ?></td>
+                <td class="switch">
+                  <span class="switch-area">
+                    <div class="switch-button-background<?= $is_on ? ' checked' : '' ?>"
+                        data-for="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>">
+                      <div class="switch-button-button"></div>
                     </div>
                     <input type="checkbox"
-                      id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
-                      class="syslog-switch"
-                      data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
-                      <?= ($cfg['syslog'] ?? "1") != "0" ? "checked" : "" ?>
-                      style="display:none;">
-                    <span class="switch-button-label on"
-                      style="<?= $cfg['syslog'] != "0" ? '' : 'display:none;' ?>; font-size: 12px;">ON</span>
-                    <span class="switch-button-label off"
-                      style="<?= $cfg['syslog'] != "0" ? 'display:none;' : '' ?>; font-size: 12px;">OFF</span>
+                          id="syslog-switch-<?= htmlspecialchars($cfg['custom']) ?>"
+                          class="syslog-switch"
+                          data-cfg="<?= htmlspecialchars($cfg['file']) ?>"
+                          <?= $is_on ? 'checked' : '' ?>>
+                    <span class="switch-button-label on">ON</span>
+                    <span class="switch-button-label off">OFF</span>
                   </span>
                 </td>
               </tr>
@@ -1839,7 +1723,7 @@ $(function() {
             </tbody>
           </table>
         </div>
-      </div>  
+      </div>
     </div>
   </div>
 </form>
