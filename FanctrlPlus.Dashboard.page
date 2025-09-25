@@ -61,7 +61,7 @@ foreach ($all_cfg as $cfg) {
       <span class="w18 fcp-col-rpm" data-label="$label">
         <span class="fp-rval">--</span>
         /
-        <span class="fp-pct">--%</span>
+        <span class="fp-pct">--</span>
       </span>
       <span class="w18 fanctrlplus-fanstatus" data-label="$label">--</span>
       <span class="w18">
@@ -87,6 +87,11 @@ echo <<<STYLE
   margin-bottom: 6px;
 }
 
+.fp-rval, .fp-pct{
+  min-width: 30px;
+  display: inline-block;
+  text-align: center;
+}
 /* ====== 表头：桌面全称，≤1080px 用短写 ====== */
 #fanctrlplus-dashboard .fcp-col-head .mobile{ display:none; }
 @media (max-width:1080px){
@@ -195,7 +200,7 @@ $mytiles[$pluginname]['column2'] = <<<EOT
         <span class="full">TEMP (SOURCE)</span>
         <span class="mobile">TEMP</span>
       </span>
-      <span class="w18">RPM / PWM%</span>
+      <span class="w18" style="text-indent:0.3rem;">RPM / PWM%</span>
       <span class="w18">STATUS</span>
       <span class="w18">RUN</span>
     </td>
@@ -263,7 +268,7 @@ function updateFanctrlplusTile() {
           const pctEl    = rpmWrap.querySelector('.fp-pct');
 
           if (rpmValEl) rpmValEl.textContent = (f.rpm_val ?? "--");
-          if (pctEl)    pctEl.textContent    = (f.percent !== "-" ? f.percent + "%" : "--%");
+          if (pctEl) pctEl.textContent = (f.percent !== "-" ? f.percent : "--");
         }
 
         if (statEl) statEl.innerHTML = (f.status ?? "-");

@@ -316,13 +316,42 @@ switch ($op) {
     $custom = basename($custom); // 安全过滤
 
     $plugin = 'fanctrlplus';
-    $temp_file = "/var/tmp/$plugin/temp_${plugin}_$custom";
-    $rpm_file  = "/var/tmp/$plugin/rpm_${plugin}_$custom";
+    $temp_file = "/var/tmp/{$plugin}/temp_{$plugin}_{$custom}";
+    $rpm_file  = "/var/tmp/{$plugin}/rpm_{$plugin}_{$custom}";
 
     $temp = is_file($temp_file) ? trim(file_get_contents($temp_file)) : '*';
     $rpm  = is_file($rpm_file)  ? trim(file_get_contents($rpm_file))  : '?';
 
     echo "$temp|$rpm";  // 示例："48 (CPU)|1150"
-    exit;  
+    exit;
+
+  case 'fcp_airflow_toggle':
+    
+      $cfg_dir     = "/boot/config/plugins/fanctrlplus";
+      $labels_file = $cfg_dir.'/pwm_labels.cfg';
+
+      $enabled = (($_POST['enabled'] ?? '0') === '1');
+      $lines   = is_file($labels_file) ? file($labels_file, FILE_IGNORE_NEW_LINES) : [];
+      $found   = false;
+
+      foreach ($lines as &$ln) {
+          $t = trim($ln);
+          if ($t === '' || $t[0] === '#') continue;
+          if (preg_match('/^__FCP_AIRFLOW__\s*=/', $t)) {
+              $ln = "__FCP_AIRFLOW__=" . ($enabled ? '1' : '0');
+              $found = true;
+              break;
+          }
+      }
+      unset($ln);
+
+      if (!$found) $lines[] = "__FCP_AIRFLOW__=" . ($enabled ? '1' : '0');
+
+      @mkdir($cfg_dir, 0777, true);
+      file_put_contents($labels_file, implode("\n", $lines) . "\n");
+
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['ok'=>1, 'enabled'=>$enabled ? 1 : 0]);
+      exit;
 }
 ?>

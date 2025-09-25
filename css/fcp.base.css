@@ -59,8 +59,8 @@
 }
 
 .fcp-enable-select {
-  width: 166px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 166px;
   box-sizing: border-box;
 }
 
@@ -403,20 +403,45 @@ dt.containerSettingsDt {
 
 .fcp-icon-gap{ margin-right: 8px; }
 
+.fcp-section{
+  padding-top: 2rem;
+}
+
 /* 表单网格：左标签右输入，间距更紧凑、对齐更稳 */
 .fcp-formgrid{
   display:grid;
-  grid-template-columns: 140px auto;
-  gap:10px 16px;
-  justify-content:center;
-  margin: 24px auto 10px auto;
+  grid-template-columns: 50% 1fr;
+  padding: 1rem 0;
+  gap: 1.5rem 2rem;
 }
 .fcp-formgrid-label{ text-align:right; padding-top:6px; }
 
 /* 输入控件统一宽度（避免被系统样式拉满宽） */
-#fan-form .fcp-w-200{ width:200px; }
+#fan-form .fcp-w-200{ width: 100%; max-width: 200px;}
 #fan-form .fcp-input{ padding-top:6px; }
 #fan-form .fcp-select{ padding-top:6px; }
+
+/* dt dd不被 7.1.4或以下版本影响 */
+.fcp-formgrid dt,
+.fcp-formgrid dd{
+  float: none !important;
+  width: auto !important;
+  clear: none !important;
+  margin: 0;
+  padding: 0;
+}
+
+.fcp-formgrid dt{
+  grid-column: 1;
+  text-align: right;
+  padding-top: 6px;
+  font-weight: 600;
+}
+.fcp-formgrid dd{
+  grid-column: 2;
+  align-items: baseline;
+  display: flex;
+}  
 
 /* 底部按钮与保存提示 */
 .fcp-actions{
@@ -446,11 +471,12 @@ dt.containerSettingsDt {
 .syslog-table th.switch{ text-align: center; width: 20%; padding: 8px; }
 .syslog-table td.switch{ text-align: center; padding: 6px; }
 
-/* --- 开关按钮 --- */
+/* --- syslog开关按钮 --- */
 .switch-area{
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding-top: 6px
 }
 
 .switch-button-background{
@@ -473,6 +499,7 @@ dt.containerSettingsDt {
   left: 12px;
 }
 
+.fcp-airflow-switch{ display: none; }
 .syslog-switch{ display: none; }
 .switch-button-label{ font-size: 12px; }
 .switch-button-label.on{ display: none; }
@@ -592,14 +619,12 @@ dt.containerSettingsDt {
 
   /* 覆盖掉固定宽度的 input / select / dropdown */
   .custom-name-input,
-  .fcp-enable-select,
+
   .pwm-controller,
-  .ui-dropdownchecklist-selector-wrapper,
-  #fan-form .fcp-w-200{
+  .ui-dropdownchecklist-selector-wrapper {
     width: 100% !important;
     max-width: 100% !important;
   }
-
 
   /* 覆盖下拉框行内 300px 宽度 */
   .ui-dropdownchecklist-selector,

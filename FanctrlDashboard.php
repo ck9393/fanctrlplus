@@ -10,7 +10,7 @@ $status_text = $daemon_running ? "Running" : "Stopped";
 
 $fans = [];
 
-if ($_GET['op'] == 'refresh' && !empty($_GET['custom'])) {
+if (isset($_GET['op']) && $_GET['op'] === 'refresh' && !empty($_GET['custom'])) {
     $custom = escapeshellarg($_GET['custom']);
     $script = "/usr/local/emhttp/plugins/fanctrlplus/scripts/fanctrlplus_refresh_single.sh $custom";
     shell_exec($script . " > /dev/null 2>&1 &");
@@ -64,7 +64,7 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
     'temp_raw'    => $temp_val,
     'temp_origin' => $temp_origin,
     'rpm_val'     => $rpm_val,
-    'percent'     => $pct_val,
+    'percent' => ($pct_val === "-" ? "-" : "{$pct_val} %"),
     'status'      => $status
   ];
 }

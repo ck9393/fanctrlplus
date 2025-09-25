@@ -1,0 +1,91 @@
+Menu="Dashboard:0"
+Cond="version_compare(parse_ini_file('/etc/unraid-version')['version'],'6.11.9','>') && is_file('/boot/config/plugins/fanctrlplus/pwm_labels.cfg') && strpos(file_get_contents('/boot/config/plugins/fanctrlplus/pwm_labels.cfg'),'__FCP_AIRFLOW__=1')!==false"
+---
+<?php
+$pluginname = "fanctrlplus";
+
+// Unraid 7.2+ 使用 mixed；旧版用 sortable（与官方一致）
+$isResponsiveWebgui = version_compare((parse_ini_file('/etc/unraid-version')['version'] ?? '0.0.0'), '7.2.0-beta', '>=');
+$tbodyClass = $isResponsiveWebgui ? 'mixed' : 'sortable';
+
+// 没有任何 PWM 文件则不渲染本 tile（按你的要求隐藏）
+$hasPwm = false;
+foreach (glob('/sys/class/hwmon/hwmon*/pwm*') as $p) {
+  if (is_file($p)) { $hasPwm = true; break; }
+}
+if (!$hasPwm) return;
+
+// 头部在 7.2+ 与旧版排版略不同（照你现有 tile 的做法）
+$headerSection = $isResponsiveWebgui
+  ? "<h3 class='tile-header-main'>FCP Airflow</h3>\n<span id='fcp-airflow-count'><i class=\"ups fa fa-sort-amount-asc\"></i>Fan count: --</span>"
+  : "FCP Airflow<br>\n<span id='fcp-airflow-count'><i class=\"ups fa fa-sort-amount-asc\"></i>Fan count: --</span><br>";
+
+$mytiles[$pluginname]['column2'] .= <<<EOT
+<tbody id="fcp-airflow-dashboard" class="$tbodyClass" title="FCP Airflow">
+  <tr>
+    <td>
+      <span class="tile-header">
+        <span class="tile-header-left">
+          <i class="icon-fan f32"></i>
+          <div class="section">
+            $headerSection
+          </div>
+        </span>
+        <span class="tile-header-right">
+          <span class="tile-header-right-controls">
+            <a href="/Settings/fanctrlplus" title="Go to FanCtrl Plus settings">
+              <i class="fa fa-fw fa-cog control"></i>
+            </a>
+          </span>
+        </span>
+      </span>
+    </td>
+  </tr>
+
+  <!-- 内容：与官方 Airflow 一样，上排名字、下排数值、每组三个 -->
+  <tr>
+    <td>
+      <div id="fcp-airflow-grid"></div>
+    </td>
+  </tr>
+</tbody>
+
+<script>
+(function() {
+  const grid  = document.getElementById('fcp-airflow-grid');
+  const count = document.getElementById('fcp-airflow-count');
+
+  function esc(s){ return String(s ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\\'': '&#39;'}[m])); }
+
+  async function getData(){
+    const r = await fetch('/plugins/fanctrlplus/include/FcpAirflow.php', {cache:'no-store'});
+    if(!r.ok) throw new Error('http ' + r.status);
+    return await r.json();
+  }
+
+  function render(d){
+    const fans = d.fans || [];
+    count.innerHTML = '<i class="ups fa fa-sort-amount-asc"></i>Fan count: ' + fans.length;
+
+    // 三列分组：名字行 / 数值行 / 空行
+    let html = '';
+    for (let i=0; i<fans.length; i+=3) {
+      const group = fans.slice(i, i+3);
+
+      group.forEach(f => { html += '<span class="fan">'+esc(f.name)+'</span>'; });
+      html += '<br>';
+      group.forEach(f => { html += '<span class="fan" id="'+esc(f.dom_id)+'">'+esc(f.rpm_text)+'</span>'; });
+      html += '<br>';
+      if (i+3 < fans.length) html += '<br>';
+    }
+    if (!fans.length) { html = '<span class="muted">No fans detected.</span>'; }
+    grid.innerHTML = html;
+  }
+
+  async function tick(){ try { render(await getData()); } catch(e){} }
+  tick();
+  setInterval(tick, 5000);
+})();
+</script>
+EOT;
+?>

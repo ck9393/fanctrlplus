@@ -135,6 +135,21 @@ $disks = list_valid_disks_by_id();
 $width = 300;
 $cpu_sensors = detect_cpu_sensors();
 
+// === 读取 FCP Airflow 开关 ===
+function fcp_airflow_enabled(string $cfg_dir): bool {
+  $labels_file = $cfg_dir.'/pwm_labels.cfg';
+  if (!is_file($labels_file)) return false;
+  foreach (file($labels_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $ln) {
+    $ln = trim($ln);
+    if ($ln === '' || $ln[0] === '#') continue;
+    if (preg_match('/^__FCP_AIRFLOW__\s*=\s*([01])\s*$/', $ln, $m)) {
+      return $m[1] === '1';
+    }
+  }
+  return false;
+}
+
+$fcp_airflow_enabled = fcp_airflow_enabled($cfg_dir);
 ?>
 
 <div class="fanctrl-header">
@@ -1010,13 +1025,16 @@ $(function() {
     $('#fan-form')[0].submit();
   }); 
 
+  // 通用 click 处理：syslog-switch + fcp-airflow-switch
   $(document).on('click', '.switch-button-background, .switch-button-label', function() {
     var $area = $(this).closest('.switch-area');
-    var $input = $area.find('input.syslog-switch');
+    var $input = $area.find('input[type="checkbox"]');
+    if ($input.length === 0) return;
+
     var checked = !$input.prop('checked');
     $input.prop('checked', checked);
 
-    // 切换class和文本
+    // 切换 class 和文本
     $area.find('.switch-button-label.on').css('display', checked ? '' : 'none');
     $area.find('.switch-button-label.off').css('display', checked ? 'none' : '');
     $area.find('.switch-button-background').toggleClass('checked', checked);
@@ -1024,14 +1042,20 @@ $(function() {
     // 滑块动画
     $area.find('.switch-button-button').css('left', checked ? '12px' : '-1px');
 
-    // 保存到后端
-    var cfgFile = $input.data('cfg');
-    saveSyslogSwitchState(cfgFile, checked);
+    // 根据不同开关调用不同保存逻辑
+    if ($input.hasClass('syslog-switch')) {
+      var cfgFile = $input.data('cfg');
+      saveSyslogSwitchState(cfgFile, checked);
+    } else if ($input.hasClass('fcp-airflow-switch')) {
+      saveAirflowSwitchState(checked);   // ✅ 用 jQuery $.post
+    }
   });
 
-  $(document).on('change', '.syslog-switch', function() {
+  // 通用 change 处理：syslog-switch + fcp-airflow-switch
+  $(document).on('change', '.syslog-switch, .fcp-airflow-switch', function() {
     var checked = $(this).prop('checked');
     var $area = $(this).closest('.switch-area');
+
     $area.find('.switch-button-label.on').css('display', checked ? '' : 'none');
     $area.find('.switch-button-label.off').css('display', checked ? 'none' : '');
 
@@ -1052,6 +1076,13 @@ $(function() {
       cfg: cfgFile,
       enabled: checked ? 1 : 0
     });
+  }
+
+  function saveAirflowSwitchState(checked) {
+    $.post('/plugins/fanctrlplus/include/FanctrlLogic.php', {
+      op: 'fcp_airflow_toggle',
+      enabled: checked ? 1 : 0
+    });  
   }
   
   $(document).on('click', '.delete-btn', function () {
@@ -1518,7 +1549,8 @@ $(function() {
         <blockquote class="inline_help">
           <p><strong>Usage Guide:</strong></p>
           <p>
-            Use Identify to help locate each physical fan, then assign a custom label so it's easier to recognize later in the Fan Configuration section.
+            Use Identify to help locate each physical fan, then assign a custom label so it's easier to recognize later in the 
+            <strong>Fan Configuration</strong> section or in the <strong>FCP Airflow</strong> tile.
           </p>
           <ol>
             <li>Select a <strong>PWM controller</strong> from the dropdown.</li>
@@ -1533,6 +1565,14 @@ $(function() {
             <li>Click <strong>Identify</strong> — locate the fan by observing which one reacts according to the chosen mode.</li>
             <li>Once identified, enter a clear label (e.g. <em>Rear Fan</em>, <em>Top Fan</em>) in the text field.</li>
             <li>Click <strong>Save Label</strong> to store the name for future reference.</li>
+            <li>
+              Enable the <strong>FCP Airflow</strong> tile — this works similarly to <strong>Unraid’s built-in Airflow</strong> tile,  
+              and makes <strong>PWM Identify</strong> even more useful by showing <strong>all fans</strong> that have been given a <strong>custom label</strong>,  
+              regardless of whether they’re configured in the <strong>Fan Configuration section</strong>.  
+              Unlabeled fans will continue appear as “Fan&nbsp;X”.  
+              If you enable the <strong>FCP Airflow</strong> tile, you can go to <strong>Tile Management</strong> and uncheck  
+              Unraid’s default <strong>Airflow (Fan Information)</strong> tile to avoid duplicate information.
+            </li>
           </ol>
           <p>
             <strong>To remove a label:</strong> select the desired PWM controller, leave the label input empty and click <strong>Save Label</strong>.
@@ -1543,20 +1583,59 @@ $(function() {
         </blockquote>
 
         <!-- Form -->
-        <div class="fcp-formgrid">
-            <label for="identify-pwm-select" class="fcp-formgrid-label">Select PWM Controller:</label>
-            <select id="identify-pwm-select" class="fcp-select fcp-w-200"></select>
+        <!-- 表单容器（2 列 grid） -->
+        <div class="fcp-section">
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label">Select PWM Controller:</dt>
+            <dd><select id="identify-pwm-select" class="fcp-select fcp-w-200"></select></dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Select a <strong>PWM Controller</strong> you wish to identify or edit its custom label.
+          </blockquote>
 
-            <label for="identify-mode-select" class="fcp-formgrid-label">Identify Mode:</label>
-            <select id="identify-mode-select" class="fcp-select fcp-w-200">
-              <option value="pause">Pause (30s)</option>
-              <option value="max">Max Speed (30s)</option>
-              <option value="pulse">Pulse (40s)</option>
-            </select>
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label">Identify Mode:</dt>
+            <dd>
+              <select id="identify-mode-select" class="fcp-select fcp-w-200">
+                <option value="pause">Pause (30s)</option>
+                <option value="max">Max Speed (30s)</option>
+                <option value="pulse">Pulse (40s)</option>
+              </select>
+            </dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Select your preferred <strong>Identify Mode</strong> to help confirm which fan is controlled by the selected PWM controller.<br>  
+            <em>Pause</em> stops the fan, <em>Max</em> runs it at full speed, and <em>Pulse</em> alternates between the two.  
+          </blockquote>
 
-            <label for="identify-label-input" class="fcp-formgrid-label">Custom Label:</label>
-            <input id="identify-label-input" type="text" class="fcp-input fcp-w-200" placeholder="Label (e.g. Rear Fan)">
-          </div>
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label">Custom Label:</dt>
+            <dd><input id="identify-label-input" type="text" class="fcp-input fcp-w-200" placeholder="Label (e.g. Rear Fan)"></dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Enter a custom label (e.g. Rear Fan, Top Fan) to add or rename the label,  
+            or leave it empty and click <strong>Save Label</strong> to clear the saved label.
+          </blockquote>
+
+
+          <dl class="fcp-formgrid">
+            <dt class="fcp-formgrid-label"><strong>Dashboard FCP Airflow Tile:</strong></dt>
+            <dd style="text-align: left;">
+              <span class="switch-area">
+                <div class="switch-button-background <?= $fcp_airflow_enabled ? ' checked' : '' ?>" data-for="fcp-airflow-switch">
+                  <div class="switch-button-button"></div>
+                </div>
+                <input id="fcp-airflow-switch" class="fcp-airflow-switch" type="checkbox" <?= $fcp_airflow_enabled ? 'checked' : '' ?>>
+                <span class="switch-button-label on">ENABLED</span>
+                <span class="switch-button-label off">DISABLED</span>
+              </span>
+            </dd>
+          </dl>
+          <blockquote class="inline_help fcp-help-wide">
+            Enable or disable the <strong>FCP Airflow</strong> tile in Dashboard.  
+            Works like Unraid’s Airflow, but uses <strong>custom labels</strong> when available.
+          </blockquote>
+        </div>
 
           <!-- Actions -->
           <div class="fcp-actions">
