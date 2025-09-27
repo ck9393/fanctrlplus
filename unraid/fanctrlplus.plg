@@ -162,8 +162,17 @@ if [ -f "$src" ]; then
 ln -sf "$src" "$dst"
 fi
 
+# 清理旧缓存，避免残留数据导致 tile 不更新
+mkdir -p /var/tmp/&name;
+rm -f /var/tmp/&name;/*
+
 # 杀掉旧的 array_monitor 实例
 pkill -f "/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
+
+# 强制重启 fanctrlplus 主守护
+if [ -x "$dst" ]; then
+  "$dst" restart
+fi
 
 # 启动新的 array_monitor 守护脚本
 script="/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"
