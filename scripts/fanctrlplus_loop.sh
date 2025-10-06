@@ -6,6 +6,27 @@ cfg_file="$1"
 source "$cfg_file"
 max="${max:-255}"
 
+# ===== Fan Speed on Idle (ABS) =====
+# 最小档（绝对值）：cfg 里的 pwm 就是 Min
+min_pwm_abs="${pwm:-0}"
+
+if [[ -n "${idle:-}" ]]; then
+  idle_pwm_abs="$idle"
+elif [[ -n "${idle_percent:-}" ]]; then
+  idle_pwm_abs=$(( (idle_percent * 255 + 50) / 100 ))
+else
+  idle_pwm_abs=0
+fi
+
+# 基本夹值到 [0, max]
+(( idle_pwm_abs < 0 )) && idle_pwm_abs=0
+(( idle_pwm_abs > max )) && idle_pwm_abs="$max"
+
+# Idle 不高于 Min
+if (( idle_pwm_abs > min_pwm_abs )); then
+  idle_pwm_abs="$min_pwm_abs"
+fi
+
 plugin="fanctrlplus"
 custom="${custom:-$(basename "$cfg_file" .cfg)}"
 controller_enable="${controller}_enable"
@@ -109,6 +130,12 @@ while true; do
   if [[ ! "$max_temp" =~ ^[0-9]+$ ]]; then
     max_temp="*"
     temp_origin=""
+  fi
+
+  # 若无任何有效温度源 → 覆盖为 idle，并标注来源
+  if [[ "$max_temp" == "*" ]]; then
+    pwm_val="$idle_pwm_abs"
+    temp_origin="(Idle)"
   fi
 
   # 每轮都写入 Dashboard 缓存

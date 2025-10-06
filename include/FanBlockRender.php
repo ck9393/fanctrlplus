@@ -21,6 +21,9 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
   $low = isset($cfg['low']) && is_numeric($cfg['low']) ? intval($cfg['low']) : 40;
   $high = isset($cfg['high']) && is_numeric($cfg['high']) ? intval($cfg['high']) : 60;
 
+  $idle_abs = isset($cfg['idle']) && is_numeric($cfg['idle']) ? (int)$cfg['idle'] : 0;
+  $idle_pct = round($idle_abs * 100 / 255) . '%';
+
   ob_start();
   ?>
   <div class="fan-block" data-index="<?=$i?>" data-file="<?=htmlspecialchars($cfg['file'])?>">
@@ -150,6 +153,23 @@ function render_fan_block($cfg, $i, $pwms, $disks, $pwm_labels, $cpu_sensors) {
                     title="Maximum speed: <?=$max_pct?> = <?=htmlspecialchars($max_raw)?> PWM"
                     placeholder="Max %">
             </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="fcp-help-cursor"
+              title="Fan speed used when there is no temperature source (all HDDs are spun down and CPU monitoring is not enabled).&#10;Must be ≤ the Min value in Fan Speed Range.&#10;Default 0% = completely stopped.">
+            Fan Speed on Idle:
+          </td>
+          <td>
+            <input type="text"
+                  id="idle_percent_input_<?=$i?>"
+                  name="idle_percent[<?=$i?>]"
+                  inputmode="numeric"
+                  class="fcp-input-idle"
+                  value="<?=$idle_pct?>"
+                  title="Idle speed: <?=$idle_pct?> = <?=htmlspecialchars($idle_abs)?> PWM"
+                  placeholder="Idle %">
           </td>
         </tr>
 

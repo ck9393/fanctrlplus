@@ -69,7 +69,7 @@ function extract_chip_and_pwm_from_path(string $old_path): ?array {
     }
 
     return null;
-}    
+}
 
 function log_migrate(string $msg): void {
     // 本地独立日志
@@ -103,6 +103,11 @@ function migrate_cfg_and_labels(string $plugin): void {
             $old_path = trim($m[1], " \t\n\r\0\x0B\"'");
             $label    = $m[2];
 
+            if (preg_match('/^__FCP_[A-Z0-9_]+__$/', $old_path)) {
+                $out[] = $line;
+                continue;
+            }
+
             $pair = extract_chip_and_pwm_from_path($old_path);
             if (!$pair) { log_migrate("migrate label: skip (unparsable) $old_path"); $out[]=$line; continue; }
             [$chip,$pwmN] = $pair;
@@ -128,14 +133,25 @@ function migrate_cfg_and_labels(string $plugin): void {
     // --- cfgs ---
     foreach (glob("$cfgpath/{$plugin}_*.cfg") ?: [] as $cfgfile) {
         $ini = @parse_ini_file($cfgfile);
-        if (!$ini || !isset($ini['controller'])) continue;
+        if (!$ini) continue;
 
-        $old_path = trim((string)$ini['controller'], " \t\n\r\0\x0B\"'");
+        $old_path = trim((string)($ini['controller'] ?? ''), " \t\n\r\0\x0B\"'");
+
+        if ($old_path === '' || !preg_match('#/hwmon\d+/pwm\d+$#', $old_path)) {
+            continue;
+        }
+
         $pair = extract_chip_and_pwm_from_path($old_path);
-        if (!$pair) { log_migrate("migrate cfg: skip (unparsable) $cfgfile controller=$old_path"); continue; }
+        if (!$pair) { 
+            log_migrate("migrate cfg: skip (unparsable) $cfgfile controller=$old_path"); 
+            continue; 
+        }
         [$chip,$pwmN] = $pair;
         $key = "$chip:$pwmN";
-        if (!isset($pwm_map[$key])) { log_migrate("migrate cfg: no match for $cfgfile ($chip:$pwmN), keep $old_path"); continue; }
+        if (!isset($pwm_map[$key])) { 
+            log_migrate("migrate cfg: no match for $cfgfile ($chip:$pwmN), keep $old_path"); 
+            continue; 
+        }
 
         $new_path = $pwm_map[$key];
         if ($new_path === $old_path) continue;

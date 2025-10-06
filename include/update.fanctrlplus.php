@@ -46,7 +46,32 @@ foreach ($_POST['#file'] as $i => $file) {
   $low_temp = is_numeric($l = preg_replace('/[^0-9]/', '', $low_raw)) ? intval($l) : 40;
   $high_temp = is_numeric($h = preg_replace('/[^0-9]/', '', $high_raw)) ? intval($h) : 60;
 
-  // ✅ CPU fallback
+  // ===== Fan Speed on Idle (%) → cfg: idle(0..255) =====
+  // 1) 读取 Idle 百分比（默认 0）
+  $idle_percent_raw = $_POST['idle_percent'][$i] ?? '0';
+  $idle_percent_val = preg_replace('/[^0-9]/', '', $idle_percent_raw);
+  $idle_percent     = ($idle_percent_val !== '' && is_numeric($idle_percent_val)) ? intval($idle_percent_val) : 0;
+  $idle_percent     = max(0, min(100, $idle_percent));
+
+  // 2) 已有的最小值（“Min Speed”）就是 pwm_percent
+  if ($idle_percent > $pwm_percent) {
+    ob_clean();
+    echo json_encode([
+      'status'  => 'error',
+      'message' => "Idle Speed (%) must be ≤ Min Speed (%). (Block #".($i+1).")",
+      'block'   => $i
+    ]);
+    exit;
+  }
+
+  // 3) 百分比 → 绝对 PWM（你的体系按 255 做基准）
+  $idle_abs = (int) round($idle_percent * 255 / 100);
+
+  // 4) 夹到 [0, $pwm]（双保险；保存层已拦，但再保一次）
+  if ($idle_abs > $pwm) $idle_abs = $pwm;
+  if ($idle_abs < 0)    $idle_abs = 0;
+
+  // CPU fallback
   $cpu_enable = $_POST['cpu_enable'][$i] ?? '0';
   $cpu_sensor = $_POST['cpu_sensor'][$i] ?? '';
 
@@ -160,6 +185,7 @@ foreach ($_POST['#file'] as $i => $file) {
     'controller' => $controller,
     'pwm'        => $pwm,
     'max'        => $max_pwm,
+    'idle'       => (string)$idle_abs,
     'low'        => $low_temp,
     'high'       => $high_temp,
     'interval'   => $_POST['interval'][$i] ?? '',

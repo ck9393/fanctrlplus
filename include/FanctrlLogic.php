@@ -142,6 +142,7 @@ switch ($op) {
     controller=""
     pwm="102"
     max="255"
+    idle="0"
     low="40"
     high="60"
     interval="2"

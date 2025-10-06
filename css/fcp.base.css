@@ -52,6 +52,7 @@
 /* 表格左列帮助光标 */
 .fcp-help-cursor { cursor: help; }
 
+.fcp-input-idle,
 .custom-name-input {
   width: 100%;
   max-width: 300px;
@@ -519,8 +520,8 @@ dt.containerSettingsDt {
   /* fan block & fieldset 自适应全宽 */
   .fan-block,
   .fan-fieldset {
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
     padding-bottom: 8px;
   }
@@ -577,8 +578,8 @@ dt.containerSettingsDt {
   /* fan block & fieldset 自适应全宽 */
   .fan-block,
   .fan-fieldset {
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
     padding-bottom: 8px;
   }
@@ -619,7 +620,7 @@ dt.containerSettingsDt {
 
   /* 覆盖掉固定宽度的 input / select / dropdown */
   .custom-name-input,
-
+  .fcp-input-idle,
   .pwm-controller,
   .ui-dropdownchecklist-selector-wrapper {
     width: 100% !important;

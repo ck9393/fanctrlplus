@@ -25,37 +25,36 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
   $enabled = ($cfg['service'] ?? '0') === '1';
 
   // 初始化字段
-  $temp_val = "*";
+  $temp_val    = "*";
   $temp_origin = "";
-  $rpm = "-";
-  $status = '<span class="red-text">Inactive</span>';
+  $rpm         = "-";
+  $rpm_val     = "-";
+  $pct_val     = "-";
+  $status      = '<span class="red-text">Inactive</span>';
 
   if ($enabled && $daemon_running) {
       $temp_raw = trim(@file_get_contents("$tmp_path/temp_{$plugin}_$custom"));
       $rpm_raw  = trim(@file_get_contents("$tmp_path/rpm_{$plugin}_$custom"));
       $pwm_raw  = trim(@file_get_contents("$tmp_path/pwm_{$plugin}_$custom"));
 
-      // ✅ 解析温度（数字）
-      if (preg_match('/^([0-9]+)\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
-        $temp_val = $matches[1];
-        $temp_origin = $matches[2];
-      }
-      elseif (preg_match('/^\*\s+\((CPU|Disk)\)$/', $temp_raw, $matches)) {
-        $temp_val = "*";
-        $temp_origin = $matches[1];
+      // 通用解析：数字或 *，以及括号里的来源（CPU/Disk/Idle/未来扩展）
+      if ($temp_raw !== '') {
+        if (preg_match('/^(\*|\d+)\s+\(([^)]+)\)$/', $temp_raw, $m)) {
+          $temp_val    = $m[1];
+          $temp_origin = $m[2];
+        } elseif (preg_match('/^\d+$/', $temp_raw)) {
+          $temp_val = $temp_raw;
+        }
       }
 
       $rpm = ($rpm_raw !== "" && is_numeric($rpm_raw)) ? $rpm_raw : "-";
       $status = '<span class="green-text">Active</span>';
 
-      // ✅ 计算百分比
-      $percent = "-";
+      // 计算百分比
       if ($pwm_raw !== "" && is_numeric($pwm_raw)) {
-        $percent = round($pwm_raw / 255 * 100);
+        $pct_val = round($pwm_raw / 255 * 100);
       }
-
       $rpm_val = $rpm;
-      $pct_val = $percent;
   }
 
   $fans[] = [
@@ -64,7 +63,7 @@ foreach (glob("$cfg_path/{$plugin}_*.cfg") as $file) {
     'temp_raw'    => $temp_val,
     'temp_origin' => $temp_origin,
     'rpm_val'     => $rpm_val,
-    'percent' => ($pct_val === "-" ? "-" : "{$pct_val} %"),
+    'percent'     => ($pct_val === "-" ? "-" : "{$pct_val} %"),
     'status'      => $status
   ];
 }

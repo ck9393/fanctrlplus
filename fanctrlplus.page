@@ -298,8 +298,6 @@ $(function() {
     });
   }
   
-  let sortableUnlocked = false;
-
   function updateAllFanStatus() {
     $.get('/plugins/fanctrlplus/include/FanctrlLogic.php', { op: 'status_all' }, function (statusMap) {
       $('.fan-block').each(function () {
@@ -445,6 +443,7 @@ $(function() {
 
       updateAllFanStatus();
       ensureColumnDroppable();
+      applySortableState();
       updatePwmDropdowns();
       bindPWMChangeHandlers();
 
@@ -454,6 +453,7 @@ $(function() {
         bindUnitInputs([
           { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
           { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
+          { selector: `#idle_percent_input_${index}`, unit: '%',  min: 0, max: 100 },
           { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
           { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
           { selector: 'input[id^="cpu_low_temp_input_"]', unit: '°C', min: 1, max: 95 },
@@ -467,6 +467,7 @@ $(function() {
         });
 
         bindFanSpeedEvents();
+        bindIdleEvents();
       }, 100);
     });
   };
@@ -483,24 +484,33 @@ $(function() {
     return parseInt(String(str).replace('%', '').replace(/\D/g, '') || '0', 10);
   }
 
+  // 在更新 PWM 显示时，连带更新 input 的 title 提示
   function updateFanSpeedDisplay(i) {
     const $minInput = $(`#pwm_percent_input_${i}`);
     const $maxInput = $(`#max_percent_input_${i}`);
 
-    let minVal = sanitizePercent($minInput.val());
-    let maxVal = sanitizePercent($maxInput.val());
+    let rawMin = stripUnit($minInput.val());
+    let rawMax = stripUnit($maxInput.val());
+
+    if (!rawMin && !rawMax) return;
+
+    let minVal = parseInt(rawMin || 0);
+    let maxVal = parseInt(rawMax || 0);
 
     minVal = Math.min(Math.max(minVal, 0), 100);
     maxVal = Math.min(Math.max(maxVal, 0), 100);
 
-    $minInput.val(`${minVal}%`);
-    $maxInput.val(`${maxVal}%`);
+    if (rawMin) $minInput.val(`${minVal}%`);
+    if (rawMax) $maxInput.val(`${maxVal}%`);
 
     const pwmMin = Math.round(minVal * 255 / 100);
     const pwmMax = Math.round(maxVal * 255 / 100);
 
-    $minInput.attr('title', `Minimum speed: ${minVal}% → ${pwmMin} PWM`);
-    $maxInput.attr('title', `Maximum speed: ${maxVal}% → ${pwmMax} PWM`);
+    $(`#pwm_display_min_${i}`).text(rawMin ? `（${pwmMin} PWM）` : '');
+    $(`#pwm_display_max_${i}`).text(rawMax ? `（${pwmMax} PWM）` : '');
+
+    $minInput.attr('title', rawMin ? `Minimum speed: ${minVal}% = ${pwmMin} PWM` : '');
+    $maxInput.attr('title', rawMax ? `Maximum speed: ${maxVal}% = ${pwmMax} PWM` : '');
   }
 
   function bindFanSpeedEvents() {
@@ -509,11 +519,52 @@ $(function() {
       updateFanSpeedDisplay(i);
       $(`#pwm_percent_input_${i}, #max_percent_input_${i}`).on('input', function () {
         updateFanSpeedDisplay(i);
+        updateIdleDisplay(i);
       });
     });
   }
 
+  function updateIdleDisplay(i) {
+    const $idleInput = $(`#idle_percent_input_${i}`);
+    const $minInput  = $(`#pwm_percent_input_${i}`);
+
+    const rawIdle = stripUnit($idleInput.val());
+    if (!rawIdle) {
+      $idleInput.attr('title', '');
+      return;
+    }
+
+    let idleVal = Math.min(100, Math.max(0, parseInt(rawIdle, 10)));
+
+    // 软夹到 Min（若 Min 有值）
+    const rawMin = stripUnit($minInput.val());
+    if (rawMin) {
+      const minVal = Math.min(100, Math.max(0, parseInt(rawMin, 10)));
+      if (!Number.isNaN(minVal)) idleVal = Math.min(idleVal, minVal);
+    }
+
+    $idleInput.val(`${idleVal}%`);
+    const pwmIdle = Math.round(idleVal * 255 / 100);
+    $idleInput.attr('title', `Idle speed: ${idleVal}% = ${pwmIdle} PWM`);
+  }
+
+  function bindIdleEvents() {
+    $('input[id^="idle_percent_input_"]').each(function () {
+      const i = this.id.split('_').pop();
+      const $idle = $(`#idle_percent_input_${i}`);
+
+      $idle.off('input change').on('input change', function () {
+        updateIdleDisplay(i);
+        setApplyAllButtonState();
+      });
+
+      updateIdleDisplay(i);
+    });
+  }
+
   $(document).ready(bindFanSpeedEvents);
+  $(document).ready(bindIdleEvents); 
+  $(document).ready(applySortableState);
 
   function bindUnitInputs(unitConfigs) {
     unitConfigs.forEach(({ selector, unit, min = 0, max = 100 }) => {
@@ -553,6 +604,7 @@ $(function() {
     bindUnitInputs([
       { selector: 'input[id^="pwm_percent_input_"]', unit: '%', min: 0, max: 100 },
       { selector: 'input[id^="max_percent_input_"]', unit: '%', min: 0, max: 100 },
+      { selector: 'input[id^="idle_percent_input_"]', unit: '%',  min: 0, max: 100 },
       { selector: 'input[id^="low_temp_input_"]', unit: '°C', min: 1, max: 100 },
       { selector: 'input[id^="high_temp_input_"]', unit: '°C', min: 1, max: 100 },
       { selector: 'input[id^="cpu_low_temp_input_"]', unit: '°C', min: 1, max: 95 },
@@ -567,34 +619,6 @@ $(function() {
     return (val ?? '').toString().replace(/\s*(min|°C|%)/gi, '').trim();
   }
 
-  // ✅ 在更新 PWM 显示时，连带更新 input 的 title 提示
-  function updateFanSpeedDisplay(i) {
-    const $minInput = $(`#pwm_percent_input_${i}`);
-    const $maxInput = $(`#max_percent_input_${i}`);
-
-    let rawMin = stripUnit($minInput.val());
-    let rawMax = stripUnit($maxInput.val());
-
-    if (!rawMin && !rawMax) return;
-
-    let minVal = parseInt(rawMin || 0);
-    let maxVal = parseInt(rawMax || 0);
-
-    minVal = Math.min(Math.max(minVal, 0), 100);
-    maxVal = Math.min(Math.max(maxVal, 0), 100);
-
-    if (rawMin) $minInput.val(`${minVal}%`);
-    if (rawMax) $maxInput.val(`${maxVal}%`);
-
-    const pwmMin = Math.round(minVal * 255 / 100);
-    const pwmMax = Math.round(maxVal * 255 / 100);
-
-    $(`#pwm_display_min_${i}`).text(rawMin ? `（${pwmMin} PWM）` : '');
-    $(`#pwm_display_max_${i}`).text(rawMax ? `（${pwmMax} PWM）` : '');
-
-    $minInput.attr('title', rawMin ? `Minimum speed: ${minVal}% = ${pwmMin} PWM` : '');
-    $maxInput.attr('title', rawMax ? `Maximum speed: ${maxVal}% = ${pwmMax} PWM` : '');
-  }
   // Identify 弹窗块
   function showIdentifyModal(pwm = '') {
     const html = `
@@ -839,6 +863,7 @@ $(function() {
       controller: $block.find('select[name^="controller["]').val(),
       pwm_percent: stripUnit($block.find('input[name^="pwm_percent["]').val()),
       max_percent: stripUnit($block.find('input[name^="max_percent["]').val()),
+      idle_percent: stripUnit($block.find('input[name^="idle_percent["]').val() || '0'),
       low: stripUnit($block.find('input[name^="low["]').val()),
       high: stripUnit($block.find('input[name^="high["]').val()),
       interval: stripUnit($block.find('input[name^="interval["]').val()),
@@ -863,6 +888,7 @@ $(function() {
         controller: $block.find('select[name^="controller["]').val(),
         pwm_percent: stripUnit($block.find('input[name^="pwm_percent["]').val()),
         max_percent: stripUnit($block.find('input[name^="max_percent["]').val()),
+        idle_percent: stripUnit($block.find('input[name^="idle_percent["]').val() || '0'),
         low: stripUnit($block.find('input[name^="low["]').val()),
         high: stripUnit($block.find('input[name^="high["]').val()),
         interval: stripUnit($block.find('input[name^="interval["]').val()),
@@ -899,6 +925,57 @@ $(function() {
       $('.sortable-placeholder').css('min-height', blockHeight + 'px');
     });
   }
+
+  // 全局：默认上锁
+  let sortableUnlocked = false;
+
+  // 锁 = destroy，解锁 = 重新 sortable(opts)
+  function applySortableState() {
+    const $cols = $('#fan-column-left, #fan-column-right');
+
+    $cols.each(function () {
+      const inst = $(this).sortable('instance');
+      if (inst) $(this).sortable('destroy');
+    });
+
+    if (!sortableUnlocked) {
+      $cols.removeClass('ui-sortable ui-sortable-disabled');
+      $cols.find('.fan-block').removeClass('ui-sortable-handle');
+      return;
+    }
+
+    // 解锁：重建实例
+    const hasHandle = $cols.find('.fcp-drag-handle').length > 0;
+    const opts = {
+      items: '> .fan-block:not(.sortable-placeholder)',
+      tolerance: 'pointer',
+      placeholder: 'fan-placeholder',
+      start: function (e, ui) { ui.placeholder.height(ui.item.outerHeight()); },
+      over:  function () { $(this).find('.sortable-placeholder').remove(); },
+      out:   function () {
+        const $col = $(this);
+        const hasReal = $col.children('.fan-block:not(.sortable-placeholder)').length > 0;
+        if (!hasReal && $col.find('.sortable-placeholder').length === 0) {
+          const h = $('.fan-block:not(.sortable-placeholder):first').outerHeight() || 100;
+          $('<div class="fan-block sortable-placeholder">Drag Fan Configuration Here</div>')
+            .css('min-height', h + 'px').appendTo($col);
+        }
+      },
+      update: function () { ensureColumnDroppable(); saveFanOrder(); },
+
+      cancel: 'input,textarea,select,button,.dropdownchecklist,.dropdownchecklist *,.fcp-range-grid,.chart-btn',
+      distance: 8,
+    };
+    if (hasHandle) { opts.handle = '.fcp-drag-handle'; opts.delay = 150; }
+
+    $cols.sortable(opts);
+  }
+
+  $('#sort-lock-toggle').on('click', function () {
+    sortableUnlocked = !sortableUnlocked;
+    $('html').toggleClass('fcp-locked', !sortableUnlocked);
+    applySortableState();
+  });
 
   $('.disk-select').dropdownchecklist(dropdownChecklistOptions);
 
@@ -976,13 +1053,14 @@ $(function() {
 
     $('.fan-block').each(function () {
       const block = $(this);
+      const name = block.find('.custom-name-input').val() || `#${$(this).index() + 1}`;
       const lowTemp = parseInt(stripUnit(block.find('input[name^="low["]').val()));
       const highTemp = parseInt(stripUnit(block.find('input[name^="high["]').val()));
       const pwmMin = parseInt(stripUnit(block.find('input[name^="pwm_percent["]').val()));
       const pwmMax = parseInt(stripUnit(block.find('input[name^="max_percent["]').val()));
+      const idlePct = parseInt(stripUnit(block.find('input[name^="idle_percent["]').val()));
       const cpuLow = parseInt(stripUnit(block.find('input[name^="cpu_min_temp["]').val()));
       const cpuHigh = parseInt(stripUnit(block.find('input[name^="cpu_max_temp["]').val()));
-      const name = block.find('.custom-name-input').val() || `#${$(this).index() + 1}`;
 
       if (!isNaN(lowTemp) && !isNaN(highTemp) && lowTemp >= highTemp) {
         alert(`Fan configuration "${name}": Disk Low Temp cannot exceed High Temp.`);
@@ -1000,6 +1078,11 @@ $(function() {
         alert(`Fan configuration "${name}": Minimum fan speed cannot exceed Maximum.`);
         rangeValid = false;
         return false;
+      }
+
+      if (!isNaN(idlePct) && !isNaN(pwmMin) && idlePct > pwmMin) {
+        alert(`Fan configuration "${name}": Idle Speed (%) cannot exceed Min Speed (%).`);
+        rangeValid = false; return false;
       }
     });
 
@@ -1164,39 +1247,58 @@ $(function() {
     e.stopPropagation();
   });
 
-    // 风扇排序逻辑
-    $("#fan-column-left, #fan-column-right").sortable({
-      items: ".fan-block:not(.sortable-placeholder)",
-      connectWith: ".fan-column",
-      opacity: 0.6,
-      tolerance: "pointer",
-      helper: "original",
-      disabled: true,
-      placeholder: "fan-placeholder",
-      start: function (event, ui) {
-        // 设置 placeholder 高度与原元素一致
-        ui.placeholder.height(ui.item.outerHeight());
-      },
+    // 初始化sortable
+    function initSortableUnlocked() {
+      const $cols = $('#fan-column-left, #fan-column-right');
 
-      over: function (event, ui) {
-        $(this).find('.sortable-placeholder').remove();
-      },
+      $cols.each(function () {
+        const inst = $(this).sortable('instance');
+        if (inst) $(this).sortable('destroy');
+      });
 
-      out: function (event, ui) {
-        const $col = $(this);
-        const realBlocks = $col.children('.fan-block:not(.sortable-placeholder)');
-        if (realBlocks.length === 0 && $col.find('.sortable-placeholder').length === 0) {
-          const blockHeight = $('.fan-block:not(.sortable-placeholder):first').outerHeight() || 100;
-          const $placeholder = $(`<div class="fan-block sortable-placeholder">Drag Fan Configuration Here</div>`);
-          $placeholder.css('min-height', blockHeight + 'px');
-          $col.append($placeholder);
-        }
-      },
-      update: function () {
-        ensureColumnDroppable();
-        saveFanOrder();
+      const hasHandle = $cols.find('.fcp-drag-handle').length > 0;
+
+      const opts = {
+        items: '> .fan-block:not(.sortable-placeholder)',
+        connectWith: '.fan-column',
+        opacity: 0.6,
+        tolerance: 'pointer',
+        helper: 'original',
+        placeholder: 'fan-placeholder',
+        start: function (e, ui) { ui.placeholder.height(ui.item.outerHeight()); },
+        over:  function () { $(this).find('.sortable-placeholder').remove(); },
+        out:   function () {
+          const $col = $(this);
+          const hasReal = $col.children('.fan-block:not(.sortable-placeholder)').length > 0;
+          if (!hasReal && $col.find('.sortable-placeholder').length === 0) {
+            const h = $('.fan-block:not(.sortable-placeholder):first').outerHeight() || 100;
+            $('<div class="fan-block sortable-placeholder">Drag Fan Configuration Here</div>')
+              .css('min-height', h + 'px').appendTo($col);
+          }
+        },
+        update: function () { ensureColumnDroppable(); saveFanOrder(); },
+
+        distance: 8,
+        delay: 0,
+
+        cancel: 'input,textarea,select,button,.dropdownchecklist,.dropdownchecklist *,.chart-btn'
+      };
+
+      if (hasHandle) {
+        opts.handle = '.fcp-drag-handle';
       }
-    });
+
+      $cols.sortable(opts);
+    }
+
+    // 锁定时彻底销毁；并防止后续旧代码再去 set option 报错
+    function destroySortableLocked() {
+      const $cols = $('#fan-column-left, #fan-column-right');
+      $cols.each(function () {
+        const inst = $(this).sortable('instance');
+        if (inst) $(this).sortable('destroy');
+      });
+    }
 
     // 切换解锁按钮逻辑
     $('#fanctrlplus-sort-toggle').on('click', function () {
@@ -1210,7 +1312,11 @@ $(function() {
       sortableUnlocked = !sortableUnlocked;
 
       // 启用或禁用 sortable
-      $("#fan-column-left, #fan-column-right").sortable("option", "disabled", !sortableUnlocked);
+      if (sortableUnlocked) {
+        initSortableUnlocked();
+      } else {
+        destroySortableLocked();
+      }
 
       if (sortableUnlocked) {
         // 解锁状态
