@@ -163,8 +163,8 @@ ln -sf "$src" "$dst"
 fi
 
 # 清理旧缓存，避免残留数据导致 tile 不更新
-mkdir -p /var/tmp/&name;
-rm -f /var/tmp/&name;/*
+mkdir -p /var/tmp/fanctrlplus
+rm -f /var/tmp/fanctrlplus/*
 
 # 杀掉旧的 array_monitor 实例
 pkill -f "/usr/local/emhttp/plugins/fanctrlplus/scripts/array_monitor.sh"

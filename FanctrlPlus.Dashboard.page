@@ -107,15 +107,15 @@ echo <<<STYLE
 
 /* 数值部分 */
 #fanctrlplus-dashboard .fcp-col-temp .fp-tval{
-  display:inline-block;
-  min-width:16px;
-  text-align:right;
+  display: inline-block;
+  min-width: 16px;
+  text-align: center;
 }
 
 /* 单位（兼容旧 */
 #fanctrlplus-dashboard .fcp-col-temp{
-  display:inline-block;
-  opacity:0.9;
+  display:grid;
+  grid-template-columns: 30px 55px;
 }
 
 /* 来源 */
@@ -125,15 +125,13 @@ echo <<<STYLE
   text-align:center;
   font-size:90%;
   opacity:.65;
+  letter-spacing: 1px;
 }
 
 /* 无来源时的占位（与来源宽度匹配，避免跳动） */
 #fanctrlplus-dashboard .fcp-col-temp .fp-origin-placeholder{
-  display:inline-block;
-  min-width:85px;
   text-align:center;
   color:inherit;
-  opacity:.65;
 }
 
 /* ====== ≤1080px：两行布局，避免 w18 溢出 ====== */
@@ -144,7 +142,7 @@ echo <<<STYLE
   #fanctrlplus-dashboard .fcp-col-temp .fp-tval{
     display:inline-block;         /* 上行：温度 */
   }
-  #fanctrlplus-dashboard .fcp-col-temp .fp-origin{
+  #fanctrlplus-dashboard .fcp-col-temp .fp-origin {
     display:block;             /* 下行：来源 */
     font-size:80%;
     opacity:.65;
@@ -155,10 +153,7 @@ echo <<<STYLE
   #fanctrlplus-dashboard .fcp-col-temp .fp-origin-placeholder{
     display:block;
     min-width:0;
-    margin-top:2px;
-    margin-left:10px;
     text-align:left;
-    opacity:.65;
   }
 }
 </style>
@@ -225,20 +220,31 @@ function setTempCell(label, val, origin) {
   const t = wrap.querySelector('.fp-tval');
   const o = wrap.querySelector('.fp-origin');
 
-  // 温度文本
+  // —— 温度文本 ——
   let show;
   if (val === '*') show = '*';
   else if (val == null || val === '-' || val === '--') show = '--';
   else show = `${val} °C`;
   if (t) t.textContent = show;
 
-  // 来源：有就 (CPU)/(Disk)，没有就插入占位 span，确保列宽不跳
-  if (o) {
-    if (origin && String(origin).trim()) {
-      o.textContent = `(${origin})`;
-    } else {
-      o.innerHTML = `<span class="fp-origin-placeholder">-</span>`;
-    }
+  // —— 来源文本 —— 
+  if (!o) return;
+
+  // 规范化 origin：去掉包裹的括号、trim
+  const oriRaw = (origin ?? '').toString().trim();
+  const ori = oriRaw.replace(/^$begin:math:text$(.*)$end:math:text$$/, '$1');   // "(Idle)" -> "Idle"
+
+  const isEmptyOrigin = ori.length === 0;
+  const isIdle = /^idle$/i.test(ori);
+  const isNoTemp = (val === '*' || val === '-' || val === '--' || val == null);
+
+  if (isEmptyOrigin) {
+    o.innerHTML = `<span class="fp-origin-placeholder">-</span>`;
+  } else if (isIdle && isNoTemp) {
+    o.innerHTML = `<span class="fp-origin-placeholder">(Idle)</span>`;
+  } else {
+    const normalized = /^$begin:math:text$.*$end:math:text$$/.test(oriRaw) ? oriRaw : `(${ori})`;
+    o.textContent = normalized;
   }
 }
 

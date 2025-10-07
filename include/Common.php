@@ -69,7 +69,7 @@ function extract_chip_and_pwm_from_path(string $old_path): ?array {
     }
 
     return null;
-}    
+}
 
 function log_migrate(string $msg): void {
     // 本地独立日志
@@ -103,6 +103,11 @@ function migrate_cfg_and_labels(string $plugin): void {
             $old_path = trim($m[1], " \t\n\r\0\x0B\"'");
             $label    = $m[2];
 
+            if (preg_match('/^__FCP_[A-Z0-9_]+__$/', $old_path)) {
+                $out[] = $line;
+                continue;
+            }
+
             $pair = extract_chip_and_pwm_from_path($old_path);
             if (!$pair) { log_migrate("migrate label: skip (unparsable) $old_path"); $out[]=$line; continue; }
             [$chip,$pwmN] = $pair;
@@ -128,14 +133,25 @@ function migrate_cfg_and_labels(string $plugin): void {
     // --- cfgs ---
     foreach (glob("$cfgpath/{$plugin}_*.cfg") ?: [] as $cfgfile) {
         $ini = @parse_ini_file($cfgfile);
-        if (!$ini || !isset($ini['controller'])) continue;
+        if (!$ini) continue;
 
-        $old_path = trim((string)$ini['controller'], " \t\n\r\0\x0B\"'");
+        $old_path = trim((string)($ini['controller'] ?? ''), " \t\n\r\0\x0B\"'");
+
+        if ($old_path === '' || !preg_match('#/hwmon\d+/pwm\d+$#', $old_path)) {
+            continue;
+        }
+
         $pair = extract_chip_and_pwm_from_path($old_path);
-        if (!$pair) { log_migrate("migrate cfg: skip (unparsable) $cfgfile controller=$old_path"); continue; }
+        if (!$pair) { 
+            log_migrate("migrate cfg: skip (unparsable) $cfgfile controller=$old_path"); 
+            continue; 
+        }
         [$chip,$pwmN] = $pair;
         $key = "$chip:$pwmN";
-        if (!isset($pwm_map[$key])) { log_migrate("migrate cfg: no match for $cfgfile ($chip:$pwmN), keep $old_path"); continue; }
+        if (!isset($pwm_map[$key])) { 
+            log_migrate("migrate cfg: no match for $cfgfile ($chip:$pwmN), keep $old_path"); 
+            continue; 
+        }
 
         $new_path = $pwm_map[$key];
         if ($new_path === $old_path) continue;
@@ -191,48 +207,104 @@ function list_valid_disks_by_id() {
 // 掃描所有 hwmon 傳感器，找出可能的 CPU 溫度路徑，並附上即時溫度與優先排序
 function detect_cpu_sensors(): array {
   $result = [];
+
   $priority_order = [
     'Package id', 'Tctl', 'Tdie', 'CPU Temp',
     'PECI Agent', 'CPUTIN', 'Core 0'
   ];
 
+  $cpu_chips_exact = ['k10temp','coretemp','zenpower'];
+  $superio_prefixes = ['it8','it86','it87','nct6','nct67','nct68','nuvoton'];
+  $deny_chips = ['amdgpu','nvme','gpu'];
+
   foreach (glob('/sys/class/hwmon/hwmon*') as $hwmonPath) {
     $nameFile = "$hwmonPath/name";
     if (!is_readable($nameFile)) continue;
-    $chipName = trim(file_get_contents($nameFile));
+    $chipName = trim(@file_get_contents($nameFile));
+    $chipLower = strtolower($chipName);
 
+    // deny 列表
+    foreach ($deny_chips as $deny) {
+      if (strpos($chipLower, $deny) !== false) continue 2;
+    }
+
+    $isCpuChip  = in_array($chipLower, $cpu_chips_exact, true);
+    $isSuperIO  = false;
+    foreach ($superio_prefixes as $p) {
+      if (strpos($chipLower, $p) === 0) { $isSuperIO = true; break; }
+    }
+
+    // 先收集“有 label”的
     foreach (glob("$hwmonPath/temp*_label") as $labelFile) {
-      $label = trim(file_get_contents($labelFile));
-      $tempInput = str_replace('_label', '_input', $labelFile);
-      if (!is_readable($tempInput)) continue;
+      $label = trim(@file_get_contents($labelFile));
+      $input = str_replace('_label', '_input', $labelFile);
+      if (!is_readable($input)) continue;
 
-      $raw = trim(file_get_contents($tempInput));
-      $c = is_numeric($raw) ? intval($raw) / 1000 : null;
+      $raw = trim(@file_get_contents($input));
+      $c   = is_numeric($raw) ? intval($raw) / 1000 : null;
       if ($c === null || $c <= 0) continue;
 
+      // 仅在 coretemp 上过滤 Core N，避免列表过长
+      if ($chipLower === 'coretemp' && preg_match('/^Core\s+\d+$/i', $label)) {
+        continue;
+      }
+
+      // SuperIO 必须命中关键词；CPU 芯片可降权纳入
+      $prio = 999; $hit = false;
+      foreach ($priority_order as $idx=>$k) {
+        if (stripos($label, $k) !== false) { $hit = true; $prio = $idx; break; }
+      }
+      if (!$isCpuChip && $isSuperIO && !$hit) continue;
+      if (!$isCpuChip && !$isSuperIO) continue;
+
+      // 更稳的 idx 提取
+      $idxNum = 999;
+      if (preg_match('#/temp(\d+)_input$#', $input, $m)) $idxNum = (int)$m[1];
+
       $tempC = round($c, 1) . '°C';
-      $labelFull = "$chipName - $label ($tempC)";
-
-      $priority = array_search(true, array_map(fn($k) => stripos($label, $k) !== false, $priority_order));
-      if ($priority === false) continue;
-
       $result[] = [
-        'path' => $tempInput,
-        'label' => $labelFull,
-        'priority' => $priority
+        'path'     => $input,
+        'label'    => "$chipName - $label ($tempC)",
+        'priority' => $hit ? $prio : 998,
+        'chip'     => $chipName,
+        'idx'      => $idxNum,
       ];
+    }
+
+    // 只有在 k10temp 目录 **没有任何 label 文件** 时，才做 Tctl 兜底（避免重复）
+    if ($isCpuChip && $chipLower === 'k10temp' && count(glob("$hwmonPath/temp*_label")) === 0) {
+      $input = "$hwmonPath/temp1_input";
+      if (is_readable($input)) {
+        $raw = trim(@file_get_contents($input));
+        $c   = is_numeric($raw) ? intval($raw) / 1000 : null;
+        if ($c !== null && $c > 0) {
+          $tempC = round($c, 1) . '°C';
+          $result[] = [
+            'path'     => $input,
+            'label'    => "$chipName - Tctl ($tempC)",
+            'priority' => array_search('Tctl', $priority_order, true) !== false
+                          ? array_search('Tctl', $priority_order, true)
+                          : 0,
+            'chip'     => $chipName,
+            'idx'      => 1
+          ];
+        }
+      }
     }
   }
 
-  // 排序：先按优先级，再按芯片名
-  usort($result, fn($a, $b) => $a['priority'] <=> $b['priority']);
+  // 排序：先优先级，再芯片名，再编号
+  usort($result, function($a, $b){
+    return $a['priority'] <=> $b['priority']
+        ?: strnatcasecmp($a['chip'],$b['chip'])
+        ?: ($a['idx'] <=> $b['idx']);
+  });
 
-  // 生成最终键值对（path => label）
+  // 输出 path => label（天然去重：同 path 只保留最后一个）
   $final = [];
-  foreach ($result as $entry) {
-    $final[$entry['path']] = $entry['label'];
+  foreach ($result as $e) {
+    $final[$e['path']] = $e['label'];
   }
-
   return $final;
 }
 

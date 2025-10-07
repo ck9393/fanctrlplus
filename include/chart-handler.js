@@ -14,12 +14,11 @@ async function fetchRealtimeData(custom) {
   // 统一用同一份 raw
   const [tempPart, rpmStr = ''] = raw.split('|');
 
-  // 1) 星号：磁盘休眠
-  const starMatch = /^\*\s*(?:\((CPU|Disk)\))?/i.exec(tempPart);
+  // 1) 星号：磁盘休眠 / Idle
+  const starMatch = /^\*\s*\((CPU|Disk|Idle)\)/i.exec(tempPart);
   if (starMatch) {
-    const origin = starMatch[1] || 'Disk';
+    const origin = starMatch[1]; // CPU / Disk / Idle
     const rpm = /^\d+$/.test(rpmStr) ? parseInt(rpmStr, 10) : null;
-    // ⭐ 没有有效 RPM → 把它当作没缓存（新 fan 最常见）
     if (rpm === null) return { noCache: true };
     return { temp: null, origin, rpm, spunDown: true };
   }
@@ -306,15 +305,27 @@ window.showFanChart = function (btn) {
         }  
 
         const { temp, origin, rpm, spunDown } = data;
-        const ds = origin === 'CPU' ? dsCPU : dsDisk;
+        const ori = (origin ?? '').toString();
+        const isCPU = /^cpu$/i.test(ori);
+
 
         // 算当前百分比
         let percent = null, html = '';
         if (spunDown) {
-          // *：只显示 RPM，隐藏十字线
-          html = `Current: *°C (${origin}) → RPM ${rpm}<br><span style="color:#999;">(${origin} is spun down — using rule's minimum temperature)</span>`;
+          if (origin === 'Idle') {
+            // Idle：无温度源；若本 block 只选 HDD 且 CPU 未启用，补充“磁盘已休眠”的语义
+            const suffix = (snapDiskSelected && !snapCpuEnabled)
+              ? '(All selected HDDs are spun down — using Idle Speed)'
+              : '(No temperature source — using Idle Speed)';
+
+            html = `Current: *°C (Idle) → RPM ${rpm}<br><span style="color:#999;">${suffix}</span>`;
+          } else {
+            html = `Current: *°C (${origin}) → RPM ${rpm}<br>
+                    <span style="color:#999;">(${origin} is spun down — using rule's minimum temperature)</span>`;
+          }
           vLine.style.display = hLine.style.display = dot.style.display = 'none';
         } else {
+          const ds = origin === 'CPU' ? dsCPU : dsDisk;
           percent = pickPercentNearest(ds, temp);
           if (percent != null) {
             const pwm = Math.round(percent * 2.55);
