@@ -1,13 +1,13 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name "fanctrlplus">
-<!ENTITY version "1.3.2">
+<!ENTITY version "1.3.3">
 <!ENTITY author "ck9393">
 <!ENTITY launch "Settings/fanctrlplus">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/ck9393/fanctrlplus/main/unraid/&name;.plg">
 <!ENTITY source "/boot/config/plugins/&name;">
 <!ENTITY txz "/boot/config/plugins/fanctrlplus/fanctrlplus-&version;.txz">
-<!ENTITY MD5 "0ddc404450645208d4f64c50ec12a7e2">
+<!ENTITY MD5 "28e2fb69f64aa5db6119e7173e56a7da">
 ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.0" support="https://forums.unraid.net/topic/191722-plugin-fancrtl-plus">
@@ -18,6 +18,13 @@
 
 <CHANGES>
 ###&version;
+- Added Fan Speed on Idle option for fans without active temperature sources
+- Dashboard and chart now support display of Idle state
+-	Improved responsive UI touch behavior (less drag interference from sortable blocks)
+-	Refined CPU sensor detection and filtering logic (Tctl fallback, exclude non-CPU sources)
+- General bug fixes
+
+###1.3.2
 - Adapted for Unraid 7.2.0-beta3 responsive UI and dashboard tile
 - Added automatic recovery logic for changed hwmon paths
 - Added new Identify Mode options: Pause (30s), Max Speed (30s), Pulse (40s)
